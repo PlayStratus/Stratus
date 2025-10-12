@@ -1,4 +1,7 @@
 # GameStreamService
+We are going to host a server consisting of several GPU’s that will run and host games for users to connect to. These users will have game data streamed to their devices, while their inputs will be returned to the server for the game to carry out.
+
+## Members
 Our team includes six members: Asher, John, Carol, Izzy, Amin, and Nathen. 
 
 I’m Asher, I am a CS major with a background in Linux, and I’m excited to work on the custom OS and Wayland compositor for this project.
