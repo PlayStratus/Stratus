@@ -1,4 +1,4 @@
-# GameStreamService
+# Stratus
 We are going to host a server consisting of several GPU’s that will run and host games for users to connect to. These users will have game data streamed to their devices, while their inputs will be returned to the server for the game to carry out.
 
 ## Members
