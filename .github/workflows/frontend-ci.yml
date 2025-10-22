@@ -6,9 +6,14 @@ env:
 on:
   push:
     branches:
-      - "*" # Run on ALL branches
+      - main
     paths:
       - "frontend/**" # Only trigger when files inside 'frontend/' change
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "frontend/**"
 
 jobs:
   Deploy:
@@ -20,8 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Enable corepack and pnpm
+        run: |
+          corepack enable
+          # pin to pnpm v8 to match pnpm-lock.yaml v6 (pnpm@8.x)
+          corepack prepare pnpm@8 --activate
+
+      - name: Verify pnpm is available
+        run: |
+          which pnpm || (echo "pnpm not found" && exit 1)
+          pnpm --version
+
+      - name: Install Vercel CLI (with pnpm)
+        run: pnpm add -g vercel@latest
+
+      - name: Install dependencies (pnpm)
+        run: pnpm install --frozen-lockfile
 
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
