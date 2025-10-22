@@ -1,10 +1,10 @@
 export default function Nav() {
   return (
     <div className="nav">
-        <a href="/">Home Page</a>
-        <a href="/service">Service Page</a>
-        <a href="/about">About Page</a>
-        <a href="/settings">Settings Page</a>
+        <a href="/">Home </a>
+        <a href="/catalog">Game Catalog</a>
+        <a href="/about">About Us</a>
+        <a href="/settings">Settings</a>
     </div>
   )
 }
