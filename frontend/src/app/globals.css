@@ -4,13 +4,15 @@
 @custom-variant dark (&:is(.dark *));
 
 .nav a {
-  padding: 0px 20px 5px 20px;
+  padding: 10px 20px;
   background-color:rgb(0, 73, 242);
   text-decoration:none;
+  min-width: 160px;
   color:rgb(0, 204, 255);
   line-height:1;
   vertical-align: top;
   font-size:1.3em;
+  text-align: center;
   font-weight:bold;
   border-radius:3px;
   margin: 2px;
@@ -23,10 +25,38 @@
 
 .nav {
   display: flex;
-  gap: 10px; 
-  padding: 20px; 
-  justify-content: center; 
-  align-items: center; 
+  gap: 10px;
+  padding: 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.game {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  margin: 20px;
+  background-color: rgb(104, 149, 255);
+  border-radius: 3px;
+  gap: 20px;
+}
+
+.description {
+  flex: 1;
+}
+
+.play-button {
+  margin-left: auto; 
+}
+
+.play-button a {
+  padding: 10px 20px;
+  background-color: rgb(135, 102, 255);
+  text-decoration: none;
+  border-radius: 5px;
+  font-weight: bold;
+  margin: 10px;
 }
 
 @theme inline {
