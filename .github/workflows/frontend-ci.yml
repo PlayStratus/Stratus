@@ -2,13 +2,14 @@ name: Frontend CI
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 on:
   push:
     branches:
       - main
     paths:
-      - "frontend/**" # Only trigger when files inside 'frontend/' change
+      - "frontend/**"
   pull_request:
     branches:
       - main
@@ -16,42 +17,40 @@ on:
       - "frontend/**"
 
 jobs:
-  Deploy:
+  deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
 
-      - name: Enable corepack and pnpm
+      - name: Enable and prepare pnpm
         run: |
+          npm install -g corepack
           corepack enable
-          # pin to pnpm v8 to match pnpm-lock.yaml v6 (pnpm@8.x)
           corepack prepare pnpm@8 --activate
 
-      - name: Verify pnpm is available
+      - name: Verify pnpm installation
         run: |
-          which pnpm || (echo "pnpm not found" && exit 1)
           pnpm --version
+          which pnpm
 
-      - name: Install Vercel CLI (with pnpm)
-        run: pnpm add -g vercel@latest
-
-      - name: Install dependencies (pnpm)
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Pull Vercel Environment Information
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Pull Vercel environment info
+        run: pnpm dlx vercel@latest pull --yes --environment=production --token=$VERCEL_TOKEN
 
-      - name: Build Project Artifacts
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build project artifacts
+        run: pnpm dlx vercel@latest build --prod --token=$VERCEL_TOKEN
 
-      - name: Deploy Project Artifacts to Vercel
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel
+        run: pnpm dlx vercel@latest deploy --prebuilt --prod --token=$VERCEL_TOKEN
