@@ -1,4 +1,4 @@
-# Frontend portion of the Game Stream Service
+# Frontend portion of the Stratus
 
 ## Tech Stack
 
