@@ -1,14 +1,18 @@
 name: Frontend CI
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 on:
-  pull_request:
+  push:
     branches:
       - main
     paths:
       - "frontend/**"
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,5 +41,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build project
-        run: pnpm build
+      - name: Pull Vercel environment info
+        run: pnpm dlx vercel@latest pull --yes --environment=production --token=$VERCEL_TOKEN
+
+      - name: Build project artifacts
+        run: pnpm dlx vercel@latest build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy to Vercel
+        run: pnpm dlx vercel@latest deploy --prebuilt --prod --token=$VERCEL_TOKEN
