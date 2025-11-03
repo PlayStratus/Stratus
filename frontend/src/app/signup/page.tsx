@@ -6,7 +6,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { redirect } from "next/navigation"
 
-async function handleLogin(formData: FormData) {
+async function handleSignUp(formData: FormData) {
   "use server"
 
   const username = formData.get("username")
@@ -16,7 +16,7 @@ async function handleLogin(formData: FormData) {
   redirect("/browse")
 }
 
-export default function LogIn() {
+export default function SignUp() {
   return (
     <main className='flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background to-muted/20'>
       <div className='flex flex-col items-center justify-center space-y-8 px-4 py-16 text-center max-w-2xl w-full'>
@@ -33,9 +33,26 @@ export default function LogIn() {
         </h1>
 
         <form
-          action={handleLogin}
+          action={handleSignUp}
           className='w-full max-w-md bg-card p-8 rounded-lg border'
         >
+          <div className='mb-4 text-left'>
+            <Label
+              htmlFor='username'
+              className='block text-sm font-medium text-foreground mb-2'
+            >
+              Oregon State Email
+            </Label>
+
+            <Input
+              type='username'
+              id='username'
+              name='username'
+              placeholder='odin@oregonstate.edu'
+              className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2'
+            />
+          </div>
+
           <div className='mb-4 text-left'>
             <Label
               htmlFor='username'
@@ -48,7 +65,7 @@ export default function LogIn() {
               type='username'
               id='username'
               name='username'
-              placeholder='username'
+              placeholder='Username'
               className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2'
             />
           </div>
