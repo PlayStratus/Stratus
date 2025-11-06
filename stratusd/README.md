@@ -7,9 +7,9 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install libpipewire libwayland-dev`
-    - RHEL, Fedora, etc: `# dnf install pipewire-devel wayland-devel`
-    - Arch: `# pacman -S libpipewire wayland`
+    - Debian, Ubuntu, etc: `# apt install libpipewire libwayland-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
+    - RHEL, Fedora, etc: `# dnf install pipewire-devel wayland-devel ffmpeg-devel`
+    - Arch: `# pacman -S libpipewire wayland ffmpeg`
 
 2.  Generate CMake build files with `cmake -B ./build`
 
