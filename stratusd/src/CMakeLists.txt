@@ -13,4 +13,5 @@ add_subdirectory(Transport)
 add_executable(stratusd ${sourcefiles})
 
 # Link modules here
+target_link_libraries(stratusd PRIVATE Encode)
 #target_link_libraries(Clocked imgui)
