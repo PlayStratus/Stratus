@@ -5,13 +5,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { getBackendPath } from "@/lib/backend/getBackendPath"
 
 import Link from "next/link"
+import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import SearchBar from "./SearchBar"
 
 async function handleLogout() {
   "use server"
+
+  try {
+    await fetch(getBackendPath("/users/logout"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    })
+
+    const cookieStore = await cookies()
+    cookieStore.delete("access_token")
+    cookieStore.delete("refresh_token")
+  } catch (error) {
+    console.error("Logout error:", error)
+  }
 
   redirect("/")
 }

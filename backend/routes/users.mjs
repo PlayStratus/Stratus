@@ -1,12 +1,20 @@
-import express from 'express';
-import { ControllerGetUserById, ControllerCreateUser} from './usersController.mjs';
+import express from "express"
 
-const router = express.Router();
-                                                                        //plan to add implement put for updating username.
-router.get('/:id', ControllerGetUserById);                                     
+import {
+  ControllerCreateUser,
+  ControllerGetUserByCredentials,
+  ControllerRefreshToken,
+  ControllerVerifyToken,
+  ControllerLogout,
+} from "./usersController.mjs"
 
-router.post('/', ControllerCreateUser);
+const router = express.Router()
+//plan to add implement put for updating username.
 
-//router.put('/:id', Controller); 
+router.post("/login", ControllerGetUserByCredentials)
+router.post("/logout", ControllerLogout)
+router.post("/refresh", ControllerRefreshToken)
+router.post("/signup", ControllerCreateUser)
+router.get("/verify", ControllerVerifyToken)
 
-export default router;
+export default router
