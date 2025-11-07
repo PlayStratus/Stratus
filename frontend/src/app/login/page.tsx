@@ -3,15 +3,13 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { getBackendPath } from "@/lib/backend/getBackendPath"
+import { loginAction } from "./actions"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function LogIn() {
-  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -21,25 +19,14 @@ export default function LogIn() {
     setIsLoading(true)
 
     const formData = new FormData(event.currentTarget)
-    const username = formData.get("username") as string
 
     try {
-      const response = await fetch(getBackendPath("/users/login"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ username }),
-      })
+      const result = await loginAction(formData)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed")
+      if (result?.error) {
+        setError(result.error)
       }
-
-      router.push("/browse")
+      // If successful, loginAction will redirect to /browse
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

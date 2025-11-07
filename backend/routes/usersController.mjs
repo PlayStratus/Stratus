@@ -41,14 +41,14 @@ export const ControllerGetUserByCredentials = async (req, res) => {
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true,
+      sameSite: "None",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true,
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     res.status(200).json({
@@ -77,8 +77,8 @@ export const ControllerRefreshToken = async (req, res) => {
 
     res.cookie("access_token", newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
 
@@ -118,13 +118,13 @@ export const ControllerLogout = async (req, res) => {
   try {
     res.clearCookie("access_token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site cookies
     })
     res.clearCookie("refresh_token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site cookies
     })
 
     res.status(200).json({
@@ -170,14 +170,14 @@ export const ControllerCreateUser = async (req, res) => {
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
+      secure: true, // Always true for cross-site cookies
+      sameSite: "None", // Required for cross-site cookies
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
 

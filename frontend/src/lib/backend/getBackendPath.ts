@@ -1,10 +1,6 @@
 export const getBackendPath = (path: string) => {
-  const environment = process.env.NODE_ENV || "development"
+  const backendPath =
+    process.env.NEXT_PUBLIC_BACKEND_PATH || "http://localhost:4000"
 
-  const baseUrl =
-    environment === "production"
-      ? "https://stratus-backend.onrender.com"
-      : "http://localhost:4000"
-
-  return `${baseUrl}${path}`
+  return `${backendPath}${path}`
 }
