@@ -1,22 +1,39 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { loginAction } from "./actions"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { redirect } from "next/navigation"
-
-async function handleLogin(formData: FormData) {
-  "use server"
-
-  const username = formData.get("username")
-
-  console.log(username)
-
-  redirect("/browse")
-}
+import { useState } from "react"
 
 export default function LogIn() {
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setIsLoading(true)
+
+    const formData = new FormData(event.currentTarget)
+
+    try {
+      const result = await loginAction(formData)
+
+      if (result?.error) {
+        setError(result.error)
+      }
+      // If successful, loginAction will redirect to /browse
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
     <main className='flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background to-muted/20'>
       <div className='flex flex-col items-center justify-center space-y-8 px-4 py-16 text-center max-w-2xl w-full'>
@@ -33,10 +50,16 @@ export default function LogIn() {
         </h1>
 
         <form
-          action={handleLogin}
+          onSubmit={handleLogin}
           className='w-full max-w-md bg-card p-8 rounded-lg border'
         >
-          <div className='mb-4 text-left'>
+          {error && (
+            <div className='mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm'>
+              {error}
+            </div>
+          )}
+
+          <div className='mb-6 text-left'>
             <Label
               htmlFor='username'
               className='block text-sm font-medium text-foreground mb-2'
@@ -45,17 +68,29 @@ export default function LogIn() {
             </Label>
 
             <Input
-              type='username'
+              type='text'
               id='username'
               name='username'
               placeholder='username'
               className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2'
+              required
             />
           </div>
 
-          <Button type='submit' className='w-full py-2 rounded-lg'>
-            Log In
+          <Button
+            type='submit'
+            className='w-full py-2 rounded-lg'
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging In..." : "Log In"}
           </Button>
+
+          <div className='mt-4 text-center text-sm text-muted-foreground'>
+            Don't have an account?{" "}
+            <Link href='/signup' className='text-foreground hover:underline'>
+              Sign Up
+            </Link>
+          </div>
         </form>
       </div>
     </main>
