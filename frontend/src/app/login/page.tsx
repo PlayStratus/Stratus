@@ -26,7 +26,6 @@ export default function LogIn() {
       if (result?.error) {
         setError(result.error)
       }
-      // If successful, loginAction will redirect to /browse
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

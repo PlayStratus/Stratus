@@ -3,15 +3,13 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { getBackendPath } from "@/lib/backend/getBackendPath"
+import { signupAction } from "./actions"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 export default function SignUp() {
-  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -21,26 +19,13 @@ export default function SignUp() {
     setIsLoading(true)
 
     const formData = new FormData(event.currentTarget)
-    const email = formData.get("email") as string
-    const username = formData.get("username") as string
 
     try {
-      const response = await fetch(getBackendPath("/users/signup"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({ email, username }),
-      })
+      const result = await signupAction(formData)
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Sign up failed")
+      if (result?.error) {
+        setError(result.error)
       }
-
-      router.push("/browse")
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {

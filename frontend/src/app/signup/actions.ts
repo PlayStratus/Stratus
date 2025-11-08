@@ -4,27 +4,28 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { getBackendPath } from "@/lib/backend/getBackendPath"
 
-export async function loginAction(formData: FormData) {
+export async function signupAction(formData: FormData) {
+  const email = formData.get("email") as string
   const username = formData.get("username") as string
 
-  if (!username) {
-    return { error: "Username is required" }
+  if (!email || !username) {
+    return { error: "Email and username are required" }
   }
 
   try {
-    const response = await fetch(getBackendPath("/users/login"), {
+    const response = await fetch(getBackendPath("/users/signup"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       credentials: "include",
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ email, username }),
     })
 
     const data = await response.json()
 
     if (!response.ok) {
-      return { error: data.error || "Login failed" }
+      return { error: data.error || "Sign up failed" }
     }
 
     const setCookieHeaders = response.headers.getSetCookie()
@@ -54,7 +55,7 @@ export async function loginAction(formData: FormData) {
       }
     }
   } catch (error) {
-    console.error("Login error:", error)
+    console.error("Sign up error:", error)
     return {
       error: error instanceof Error ? error.message : "An error occurred",
     }
