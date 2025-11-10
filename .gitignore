@@ -41,4 +41,7 @@
 *.dwo
 
 # CMake Build Directory
-*/build/
+*build/
+
+# VS Code
+settings.json
