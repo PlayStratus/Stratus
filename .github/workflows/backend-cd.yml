@@ -6,6 +6,11 @@ on:
       - "*"
     paths:
       - "backend/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
 
 jobs:
   deploy:
