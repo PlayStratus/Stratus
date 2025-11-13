@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - "*"
-    # paths:
-    #   - "backend/**"
+    paths:
+      - "backend/**"
 
 jobs:
   deploy:
