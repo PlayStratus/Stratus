@@ -1,10 +1,10 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.mjs",
+    "start": "nodemon server.js",
     "deploy": "serverless deploy",
     "deploy:prod": "serverless deploy --stage prod",
     "remove": "serverless remove",
@@ -27,6 +27,7 @@
     "esbuild": "^0.25.12",
     "nodemon": "^3.1.10",
     "serverless": "^3.38.0",
+    "serverless-dotenv-plugin": "^6.0.0",
     "serverless-esbuild": "^1.55.1"
   }
 }

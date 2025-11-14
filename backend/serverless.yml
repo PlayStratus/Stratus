@@ -1,6 +1,8 @@
 service: stratus-backend
 
-frameworkVersion: "4"
+frameworkVersion: "3"
+
+useDotenv: true
 
 provider:
   name: aws
@@ -40,6 +42,36 @@ functions:
           method: ANY
     timeout: 30
 
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: true
+    exclude:
+      - aws-sdk
+      - "@aws-sdk/*"
+    external:
+      - serverless-http
+      - express
+      - cors
+      - cookie-parser
+      - dotenv
+      - jsonwebtoken
+      - uuid
+      - "@aws-sdk/client-dynamodb"
+      - "@aws-sdk/lib-dynamodb"
+    target: node20
+    platform: node
+    concurrency: 10
+    format: esm
+    outputFileExtension: .mjs
+    packager: npm
+    installExtraArgs:
+      - "--legacy-peer-deps"
+
 package:
   individually: true
   patterns:
@@ -51,8 +83,3 @@ package:
     - "!package-lock.json"
     - "!yarn.lock"
     - "!pnpm-lock.yaml"
-    - "!node_modules/aws-sdk/**"
-    - "!node_modules/@aws-sdk/**"
-
-build:
-  esbuild: false
