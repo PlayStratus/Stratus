@@ -7,10 +7,10 @@ import { loginAction } from "./actions"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 
-export default function LogIn() {
+function LoginContent() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const searchParams = useSearchParams()
@@ -107,5 +107,23 @@ export default function LogIn() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LogIn() {
+  return (
+    <Suspense
+      fallback={
+        <main className='flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background to-muted/20'>
+          <div className='flex flex-col items-center justify-center space-y-8 px-4 py-16 text-center max-w-2xl w-full'>
+            <h1 className='text-4xl md:text-5xl font-extrabold tracking-tight'>
+              Stratus
+            </h1>
+          </div>
+        </main>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   )
 }
