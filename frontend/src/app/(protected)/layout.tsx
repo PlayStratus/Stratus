@@ -9,13 +9,13 @@ async function verifyAuth() {
   const refreshToken = cookieStore.get("refresh_token")
 
   if (!refreshToken) {
-    redirect("/login")
+    redirect("/signin")
   }
 
   if (!accessToken) {
     const refreshed = await refreshAccessToken()
     if (!refreshed) {
-      redirect("/login")
+      redirect("/signin")
     }
     return { valid: true }
   }
@@ -34,7 +34,7 @@ async function verifyAuth() {
     if (!response.ok || !data.valid) {
       const refreshed = await refreshAccessToken()
       if (!refreshed) {
-        redirect("/login")
+        redirect("/signin")
       }
       return { valid: true }
     }
@@ -43,7 +43,7 @@ async function verifyAuth() {
   } catch (error) {
     const refreshed = await refreshAccessToken()
     if (!refreshed) {
-      redirect("/login")
+      redirect("/signin")
     }
     return { valid: true }
   }

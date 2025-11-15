@@ -1,20 +1,9 @@
-export interface GoogleTokenResponse {
-  access_token: string
-  expires_in: number
-  token_type: string
-  scope: string
-  id_token: string
-}
+import { google } from "googleapis"
+import type { OAuth2Client } from "google-auth-library"
 
 export interface GoogleUserInfo {
   id: string
   email: string
-  verified_email: boolean
-  name: string
-  given_name: string
-  family_name: string
-  picture: string
-  locale: string
 }
 
 function getBaseUrl(): string {
@@ -25,68 +14,85 @@ function getBaseUrl(): string {
   return "http://localhost:3000"
 }
 
-export async function getGoogleAuthUrl(): Promise<string> {
-  const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth"
+function getOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID!,
+    process.env.GOOGLE_CLIENT_SECRET!,
+    `${getBaseUrl()}/api/auth/callback/google`
+  )
+}
 
-  const options = {
-    redirect_uri: `${getBaseUrl()}/api/auth/callback/google`,
-    client_id: process.env.GOOGLE_CLIENT_ID!,
+export async function getGoogleAuthUrl(): Promise<string> {
+  const oauth2Client = getOAuth2Client()
+
+  const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
-    response_type: "code",
-    prompt: "consent",
     scope: [
       "https://www.googleapis.com/auth/userinfo.profile",
       "https://www.googleapis.com/auth/userinfo.email",
-    ].join(" "),
-  }
-
-  const qs = new URLSearchParams(options)
-  return `${rootUrl}?${qs.toString()}`
-}
-
-export async function getGoogleTokens(
-  code: string
-): Promise<GoogleTokenResponse> {
-  const url = "https://oauth2.googleapis.com/token"
-
-  const values = {
-    code,
-    client_id: process.env.GOOGLE_CLIENT_ID!,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-    redirect_uri: `${getBaseUrl()}/api/auth/callback/google`,
-    grant_type: "authorization_code",
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams(values),
+    ],
+    prompt: "consent",
   })
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch Google tokens")
-  }
+  return url
+}
+export async function getGoogleTokens(
+  code: string
+): Promise<OAuth2Client["credentials"]> {
+  const oauth2Client = getOAuth2Client()
 
-  return response.json()
+  const { tokens } = await oauth2Client.getToken(code)
+
+  return tokens
 }
 
 export async function getGoogleUser(
   access_token: string
 ): Promise<GoogleUserInfo> {
-  const response = await fetch(
-    `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${access_token}`,
-    {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    }
-  )
+  const oauth2Client = getOAuth2Client()
+  oauth2Client.setCredentials({ access_token })
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch Google user")
+  const oauth2 = google.oauth2({
+    auth: oauth2Client,
+    version: "v2",
+  })
+
+  const { data } = await oauth2.userinfo.get()
+
+  return {
+    id: data.id!,
+    email: data.email!,
   }
+}
 
-  return response.json()
+export async function refreshAccessToken(
+  refreshToken: string
+): Promise<string> {
+  const oauth2Client = getOAuth2Client()
+  oauth2Client.setCredentials({ refresh_token: refreshToken })
+
+  const { credentials } = await oauth2Client.refreshAccessToken()
+
+  return credentials.access_token!
+}
+
+export async function verifyAccessToken(
+  access_token: string
+): Promise<boolean> {
+  try {
+    const oauth2Client = getOAuth2Client()
+    oauth2Client.setCredentials({ access_token })
+
+    const tokenInfo = await oauth2Client.getTokenInfo(access_token)
+
+    // Check if token is expired
+    if (tokenInfo.expiry_date && tokenInfo.expiry_date < Date.now()) {
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error("Token verification failed:", error)
+    return false
+  }
 }

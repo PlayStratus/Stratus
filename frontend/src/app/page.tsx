@@ -75,7 +75,7 @@ export default function Home() {
 
         <div className='flex flex-col sm:flex-row gap-4'>
           <Link
-            href='/signup'
+            href='/signin'
             className={buttonVariants({
               size: "lg",
               className: "text-lg px-10 py-6",
@@ -85,7 +85,7 @@ export default function Home() {
           </Link>
 
           <Link
-            href='/login'
+            href='/signin'
             className={buttonVariants({
               variant: "outline",
               size: "lg",
