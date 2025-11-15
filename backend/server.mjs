@@ -6,6 +6,7 @@ import "dotenv/config"
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import usersRoutes from "./routes/users.mjs"
+//import gamesRoutes from "./routes/games.ts"
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -34,6 +35,7 @@ app.use(
 app.use(express.json())
 app.use(cookieParser())
 app.use("/users", usersRoutes)
+//app.use("/games", gamesRoutes)
 
 // For local development: start the server
 // For Lambda: export the handler
