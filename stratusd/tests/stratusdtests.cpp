@@ -1,10 +1,11 @@
 #include <gtest/gtest.h>
+#include "Encode.h"
 
 TEST(stratusdTests, EmptyTest) {
 
 }
 
 
-TEST(SideCar, FFMPEGInit) {
-
+TEST(Encode, FFMPEGInit) {
+    test_ffmpeg();
 }

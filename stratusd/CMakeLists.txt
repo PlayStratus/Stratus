@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10.0)
+cmake_minimum_required(VERSION 3.16.0)
 
 project(stratusd VERSION 0.1.0)
 
@@ -21,5 +21,5 @@ add_subdirectory(SideCar)
 add_subdirectory(Title)
 add_subdirectory(Transport)
 
-# Add future dependencies like this.
-#add_subdirectory(libs/GoogleTest)
+add_subdirectory(libs/GoogleTest)
+add_subdirectory(tests/)
