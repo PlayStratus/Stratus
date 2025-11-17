@@ -3,17 +3,17 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { loginAction } from "./actions"
+import { signupAction } from "./actions"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { useState } from "react"
 
-export default function LogIn() {
+export default function SignUp() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSignUp(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setIsLoading(true)
@@ -21,7 +21,7 @@ export default function LogIn() {
     const formData = new FormData(event.currentTarget)
 
     try {
-      const result = await loginAction(formData)
+      const result = await signupAction(formData)
 
       if (result?.error) {
         setError(result.error)
@@ -49,7 +49,7 @@ export default function LogIn() {
         </h1>
 
         <form
-          onSubmit={handleLogin}
+          onSubmit={handleSignUp}
           className='w-full max-w-md bg-card p-8 rounded-lg border'
         >
           {error && (
@@ -58,7 +58,25 @@ export default function LogIn() {
             </div>
           )}
 
-          <div className='mb-6 text-left'>
+          <div className='mb-4 text-left'>
+            <Label
+              htmlFor='email'
+              className='block text-sm font-medium text-foreground mb-2'
+            >
+              Oregon State Email
+            </Label>
+
+            <Input
+              type='email'
+              id='email'
+              name='email'
+              placeholder='odin@oregonstate.edu'
+              className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2'
+              required
+            />
+          </div>
+
+          <div className='mb-4 text-left'>
             <Label
               htmlFor='username'
               className='block text-sm font-medium text-foreground mb-2'
@@ -70,7 +88,7 @@ export default function LogIn() {
               type='text'
               id='username'
               name='username'
-              placeholder='username'
+              placeholder='Username'
               className='w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2'
               required
             />
@@ -81,13 +99,13 @@ export default function LogIn() {
             className='w-full py-2 rounded-lg'
             disabled={isLoading}
           >
-            {isLoading ? "Logging In..." : "Log In"}
+            {isLoading ? "Signing Up..." : "Sign Up"}
           </Button>
 
           <div className='mt-4 text-center text-sm text-muted-foreground'>
-            Don't have an account?{" "}
-            <Link href='/signup' className='text-foreground hover:underline'>
-              Sign Up
+            Already have an account?{" "}
+            <Link href='/login' className='text-foreground hover:underline'>
+              Log In
             </Link>
           </div>
         </form>

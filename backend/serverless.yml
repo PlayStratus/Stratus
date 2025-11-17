@@ -1,0 +1,58 @@
+service: stratus-backend
+
+frameworkVersion: "4"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-west-2
+  stage: ${opt:stage, 'dev'}
+  environment:
+    NODE_ENV: production
+    FRONTEND_URL: ${env:FRONTEND_URL}
+    ACCESS_SECRET: ${env:ACCESS_SECRET}
+    REFRESH_SECRET: ${env:REFRESH_SECRET}
+
+  # IAM role permissions for Lambda to access DynamoDB
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - "arn:aws:dynamodb:${self:provider.region}:*:table/Users"
+
+functions:
+  api:
+    handler: server.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    timeout: 30
+
+package:
+  individually: true
+  patterns:
+    - "!.env"
+    - "!*.http"
+    - "!README.md"
+    - "!DEPLOYMENT.md"
+    - "!QUICK-START.md"
+    - "!package-lock.json"
+    - "!yarn.lock"
+    - "!pnpm-lock.yaml"
+    - "!node_modules/aws-sdk/**"
+    - "!node_modules/@aws-sdk/**"
+
+build:
+  esbuild: false

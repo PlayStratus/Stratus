@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Serverless Framework
+.serverless/
+.serverless_plugins/
+
+assignment7-test-requests.http
