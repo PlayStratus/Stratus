@@ -41,7 +41,7 @@
 *.dwo
 
 # CMake Build Directory
-*/build/
+*build/
 
 # CMake specific files
 CMakeLists.txt.user
@@ -56,3 +56,6 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
+
+# VSCODOE
+.vscode/
