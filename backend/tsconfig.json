@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "ESNext", 
+    "target": "ESNext", 
+    "moduleResolution": "node", 
+    "esModuleInterop": true, 
+    "allowSyntheticDefaultImports": true, 
+    "strict": true, 
+    "outDir": "./dist", 
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/*"]
+    },
+    "allowImportingTsExtensions": true, 
+    "noEmit": true, 
+  },
+  
+}

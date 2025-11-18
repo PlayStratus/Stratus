@@ -1,65 +1,88 @@
 import { PutCommand, GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb"
 import jwt from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
+import { Request, Response } from "express";
 
-import { dynamoDb } from "../server.mjs"
 
-export const ControllerGetUserByCredentials = async (req, res) => {
+import { dynamoDb } from "../server.ts"
+
+interface User {
+  UserID: string;              // Partition key
+  Username: string;         
+  Email: string;         
+};
+
+interface Token {
+  userId: string;
+}
+
+const getEnv = (key: string): string => {                                     //ensures Env values are present
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is not defined in environment variables`);
+  }
+  return value;
+};
+
+export const ControllerGetUserByCredentials = async (req: Request, res: Response): Promise<void>  => {
   try {
-    const { username } = req.body
+    const { Username } = req.body as { Username: string};
 
-    if (!username) {
+    if (!Username) {
       throw new Error("Username is required")
     }
 
-    if (typeof username !== "string") {
+    if (typeof Username !== "string") {
       throw new Error("Invalid input types")
     }
 
     const params = {
       TableName: "Users",
-    }
+      FilterExpression: "Username = :username",
+      ExpressionAttributeValues: {
+        ":username": Username,
+      },
+    };
 
     const result = await dynamoDb.send(new ScanCommand(params))
-    const user = result.Items?.find(
-      (item) => item.Username?.toLowerCase() === username.toLowerCase()
-    )
-
+    const user = result.Items?.[0] as User ||  undefined;
     if (!user) {
       throw new Error("User not found")
     }
+    
 
     const accessToken = jwt.sign(
-      { userId: user.UserID },
-      process.env.ACCESS_SECRET
-    )
+      { userId: user.UserID } as Token,
+      getEnv("ACCESS_SECRET"),
+      { expiresIn: "1h" }
+    );
     const refreshToken = jwt.sign(
-      { userId: user.UserID },
-      process.env.REFRESH_SECRET,
+      { userId: user.UserID } as Token,
+      getEnv("REFRESH_SECRET"),
       { expiresIn: "7d" }
     )
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "None",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "None",
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     res.status(200).json({
       message: "Login successful",
     })
-  } catch (error) {
+  } catch (error: any) {
     res.status(401).json({ error: error.message })
   }
 }
 
-export const ControllerRefreshToken = async (req, res) => {
+export const ControllerRefreshToken = async (req: Request, res: Response): Promise<void>  => {
   try {
     const refreshToken = req.cookies.refresh_token
 
@@ -67,18 +90,22 @@ export const ControllerRefreshToken = async (req, res) => {
       throw new Error("Refresh token is required")
     }
 
-    const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
-    const userId = decoded.userId
+    const decoded = jwt.verify(refreshToken,  getEnv("REFRESH_SECRET"))
+    if (typeof decoded === "string") {
+      throw new Error("Invalid token payload");
+    }
+
+    const userId = (decoded as Token).userId;
 
     const newAccessToken = jwt.sign(
       { userId: userId },
-      process.env.ACCESS_SECRET
+       getEnv("ACCESS_SECRET")
     )
 
     res.cookie("access_token", newAccessToken, {
       httpOnly: true,
       secure: true, // Always true for cross-site cookies
-      sameSite: "None", // Required for cross-site cookies
+      sameSite: "none", // Required for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
 
@@ -90,7 +117,7 @@ export const ControllerRefreshToken = async (req, res) => {
   }
 }
 
-export const ControllerVerifyToken = async (req, res) => {
+export const ControllerVerifyToken = async (req: Request, res: Response): Promise<void> => {
   try {
     const authHeader = req.headers.authorization
 
@@ -100,13 +127,18 @@ export const ControllerVerifyToken = async (req, res) => {
 
     const token = authHeader.substring(7)
 
-    const decoded = jwt.verify(token, process.env.ACCESS_SECRET)
+    const decoded = jwt.verify(token, getEnv("ACCESS_SECRET"))
+    if (typeof decoded === "string") {
+      throw new Error("Invalid token payload");
+    }
+
+    const userId = (decoded as Token).userId;
 
     res.status(200).json({
       valid: true,
       userId: decoded.userId,
     })
-  } catch (error) {
+  } catch (error : any) {
     res.status(401).json({
       valid: false,
       error: error.message,
@@ -114,28 +146,28 @@ export const ControllerVerifyToken = async (req, res) => {
   }
 }
 
-export const ControllerLogout = async (req, res) => {
+export const ControllerLogout = async (req: Request, res: Response): Promise<void>  => {
   try {
     res.clearCookie("access_token", {
       httpOnly: true,
       secure: true, // Always true for cross-site cookies
-      sameSite: "None", // Required for cross-site cookies
+      sameSite: "none", // Required for cross-site cookies
     })
     res.clearCookie("refresh_token", {
       httpOnly: true,
       secure: true, // Always true for cross-site cookies
-      sameSite: "None", // Required for cross-site cookies
+      sameSite: "none", // Required for cross-site cookies
     })
 
     res.status(200).json({
       message: "Logged out successfully",
     })
-  } catch (error) {
+  } catch (error : any) {
     res.status(500).json({ error: error.message })
   }
 }
 
-export const ControllerCreateUser = async (req, res) => {
+export const ControllerCreateUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { username, email } = req.body
 
@@ -161,35 +193,35 @@ export const ControllerCreateUser = async (req, res) => {
 
     await createUser(newUser)
 
-    const accessToken = jwt.sign({ userId: userId }, process.env.ACCESS_SECRET)
+    const accessToken = jwt.sign({ userId: userId }, getEnv("ACCESS_SECRET"))
     const refreshToken = jwt.sign(
       { userId: userId },
-      process.env.REFRESH_SECRET,
+      getEnv("REFRESH_SECRET"),
       { expiresIn: "7d" }
     )
 
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: true, // Always true for cross-site cookies
-      sameSite: "None", // Required for cross-site cookies
+      sameSite: "none", // Required for cross-site cookies
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
     res.cookie("refresh_token", refreshToken, {
       httpOnly: true,
       secure: true, // Always true for cross-site cookies
-      sameSite: "None", // Required for cross-site cookies
+      sameSite: "none", // Required for cross-site cookies
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
 
     res.status(200).json({
       message: "User created successfully",
     })
-  } catch (error) {
+  } catch (error : any) {
     res.status(500).json({ error: error.message })
   }
 }
 
-const createUser = async (user) => {
+const createUser = async (user: Partial<User>): Promise<User> => {
   const { UserID, Username, Email } = user
 
   if (typeof UserID !== "string" || !Username || !Email) {

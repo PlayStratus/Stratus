@@ -1,14 +1,14 @@
 import {GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb"
 import type { Request, Response } from 'express';
 
-import { dynamoDb } from "../server.mjs"
+import { dynamoDb } from "../server.ts"
 
 type GameItem = {
   GameID: string;              // Partition key
   developer: string;           // Developer name
-  genres: Set<string>;         // Genres (String set)
+  genres: string[];         // Genres (String array)
   lDescript: string;           // Long description
-  s3: Set<string>;             // S3 links (String set)
+  s3: string[];             // S3 links (String array)
   sDescript: string;           // Short description
   title: string;               // Game title
 };

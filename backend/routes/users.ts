@@ -6,7 +6,7 @@ import {
   ControllerRefreshToken,
   ControllerVerifyToken,
   ControllerLogout,
-} from "./usersController.mjs"
+} from "./usersController.ts"
 
 const router = express.Router()
 //plan to add implement put for updating username.
