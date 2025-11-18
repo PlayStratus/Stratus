@@ -6,7 +6,6 @@ import {
 } from "./gamesController.js"
 
 const router = express.Router()
-//plan to add implement put for updating username.
 
 router.get("/:id", ControllerGetByID)
 

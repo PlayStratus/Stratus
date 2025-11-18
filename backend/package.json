@@ -4,12 +4,13 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.mjs",
+    "start": "nodemon server.ts",
     "deploy": "serverless deploy",
     "deploy:prod": "serverless deploy --stage prod",
     "remove": "serverless remove",
     "logs": "serverless logs -f api -t",
-    "info": "serverless info"
+    "info": "serverless info",
+    "dev": "nodemon --stage local"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.921.0",
@@ -21,12 +22,17 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
     "serverless-http": "^4.0.0",
+    "typescript": "^5.9.3",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
     "esbuild": "^0.25.12",
-    "nodemon": "^3.1.10",
-    "serverless": "^4.23.0",
-    "serverless-esbuild": "^1.55.1"
+    "nodemon": "^3.1.11",
+    "serverless": "^3.40.0",
+    "serverless-esbuild": "^1.55.1",
+    "ts-node": "^10.9.2"
   }
 }
