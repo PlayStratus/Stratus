@@ -30,7 +30,13 @@ jobs:
     - name: Build
       working-directory: ${{github.workspace}}/stratusd/
       run: cmake --build ${{github.workspace}}/stratusd/build --config ${{env.BUILD_TYPE}}
-
+    
+    - uses: actions/upload-artifact@v4
+      with: 
+        name: "stratusd build"
+        path: ${{github.workspace}}/stratusd/build/stratusd
+        
+    
     - name: Test
       working-directory: ${{github.workspace}}/stratusd/build
       # Execute tests defined by the CMake configuration.
