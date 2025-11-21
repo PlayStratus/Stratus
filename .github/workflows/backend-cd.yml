@@ -15,8 +15,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
-      ACCESS_SECRET: ${{ secrets.ACCESS_SECRET }}
-      REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+      AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
     defaults:
       run:
         working-directory: backend
