@@ -12,8 +12,7 @@ import Link from "next/link"
 
 export default async function Browse() {
   const games = await getGames()
-
-  const shuffledGames = [...games].sort(() => Math.random() - 0.5)
+  const shuffledGames = [...(games ?? [])].sort(() => Math.random() - 0.5)
 
   return (
     <>
@@ -36,22 +35,20 @@ export default async function Browse() {
                 key={index}
                 className='md:basis-1/2 lg:basis-1/3 aspect-square'
               >
-                <Link href={"/browse/" + game.id}>
+                <Link href={"/browse/" + game.GameID}>
                   <Card className='transition-all hover:shadow-lg hover:border-primary/50'>
                     <CardContent className='p-2'>
                       <div className='aspect-video bg-muted flex items-center justify-center'>
-                        <span className='text-muted-foreground'>
-                          Game Preview
-                        </span>
+                        <img src={game.s3[0]} alt="Game image" />
                       </div>
 
                       {/* Game info */}
                       <div className='p-4'>
                         <h3 className='font-semibold text-lg mb-2'>
-                          {game.name}
+                          {game.title}
                         </h3>
                         <p className='text-sm text-muted-foreground line-clamp-3'>
-                          {game.description}
+                          {game.sDescript}
                         </p>
                       </div>
                     </CardContent>
@@ -67,3 +64,5 @@ export default async function Browse() {
     </>
   )
 }
+
+
