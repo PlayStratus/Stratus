@@ -12,8 +12,7 @@ provider:
   environment:
     NODE_ENV: production
     FRONTEND_URL: ${env:FRONTEND_URL}
-    ACCESS_SECRET: ${env:ACCESS_SECRET}
-    REFRESH_SECRET: ${env:REFRESH_SECRET}
+    AUTH_SECRET: ${env:AUTH_SECRET}
 
   # IAM role permissions for Lambda to access DynamoDB
   iam:
