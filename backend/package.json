@@ -1,16 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.ts",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.ts",
-    "deploy": "serverless deploy",
-    "deploy:prod": "serverless deploy --stage prod",
-    "remove": "serverless remove",
-    "logs": "serverless logs -f api -t",
-    "info": "serverless info",
-    "dev": "nodemon --stage local"
+    "start": "nodemon --exec ts-node --esm server.ts",
+    "deploy": "serverless deploy"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.921.0",
@@ -28,6 +23,7 @@
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
     "esbuild": "^0.25.12",
     "nodemon": "^3.1.11",
