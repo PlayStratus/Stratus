@@ -10,6 +10,7 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { getBackendPath } from "@/lib/backend/getBackendPath"
 
 async function handleSetUsername(formData: FormData) {
   "use server"
@@ -22,24 +23,31 @@ async function handleSetUsername(formData: FormData) {
 
   // Get the access token from cookies
   const cookieStore = await cookies()
-  const access_token = cookieStore.get("access_token")?.value
+  const auth_token = cookieStore.get("auth_token")?.value
 
-  if (!access_token) {
+  if (!auth_token) {
     redirect("/signin?error=No authentication token found")
   }
 
   try {
-    const { id } = await getGoogleUser(access_token)
+    const response = await fetch(getBackendPath("/users/create"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth_token}`,
+      },
+      body: JSON.stringify({ username }),
+    })
 
-    console.log("Username:", username)
-    console.log("User ID:", id)
-
-    // TODO: Send user ID and username to backend to create/update user
-    // const response = await fetch(`${backendUrl}/users`, {
-    //   method: "POST",
-    //   headers: { "Content-Type": "application/json" },
-    //   body: JSON.stringify({ id, username })
-    // })
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("Error creating user:", errorData)
+      redirect(
+        `/signin?error=${encodeURIComponent(
+          "Failed to set username. Please try again."
+        )}`
+      )
+    }
 
     redirect("/browse")
   } catch (error) {
@@ -50,46 +58,10 @@ async function handleSetUsername(formData: FormData) {
 
 export default async function SetUsernamePage() {
   const cookieStore = await cookies()
-  const access_token = cookieStore.get("access_token")?.value
-  const refresh_token = cookieStore.get("refresh_token")?.value
-  const token_expiry = cookieStore.get("token_expiry")?.value
+  const auth_token = cookieStore.get("auth_token")?.value
 
-  if (!access_token || !refresh_token || !token_expiry) {
+  if (!auth_token) {
     redirect("/signin?error=No authentication token found")
-  }
-
-  const isExpired = token_expiry && parseInt(token_expiry) < Date.now()
-
-  if (isExpired && refresh_token) {
-    try {
-      const newAccessToken = await refreshAccessToken(refresh_token)
-
-      const isProduction = process.env.NODE_ENV === "production"
-      cookieStore.set("access_token", newAccessToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: 3599, // 1 hour
-        path: "/",
-      })
-
-      const newExpiry = Date.now() + 3599 * 1000
-      cookieStore.set("token_expiry", newExpiry.toString(), {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 30,
-        path: "/",
-      })
-    } catch (error) {
-      console.error("Token refresh failed:", error)
-      redirect("/signin?error=Session expired. Please sign in again")
-    }
-  }
-
-  const isValid = await verifyAccessToken(access_token)
-  if (!isValid) {
-    redirect("/signin?error=Invalid authentication token")
   }
 
   return (

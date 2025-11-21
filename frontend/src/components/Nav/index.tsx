@@ -12,6 +12,48 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import SearchBar from "./SearchBar"
 
+export default async function Nav() {
+  const username = await getUserData()
+
+  return (
+    <nav className='sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur'>
+      <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
+        <div className='flex items-center gap-4'>
+          <h1 className='text-xl font-bold'>Stratus</h1>
+
+          <Link href='/browse'>
+            <Button variant='link'>Browse</Button>
+          </Link>
+        </div>
+
+        <div className='flex-1 max-w-xl mx-4'>
+          <SearchBar />
+        </div>
+
+        <div className='flex items-center'>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>{username}</Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem asChild>
+                <Link href='/settings'>Settings</Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem>
+                <form action={handleLogout}>
+                  <button type='submit'>Log Out</button>
+                </form>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </nav>
+  )
+}
+
 async function handleLogout() {
   "use server"
 
@@ -34,42 +76,27 @@ async function handleLogout() {
   redirect("/")
 }
 
-export default function Nav() {
-  return (
-    <nav className='sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur'>
-      <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
-        <div className='flex items-center gap-4'>
-          <h1 className='text-xl font-bold'>Stratus</h1>
+async function getUserData() {
+  const cookieStore = await cookies()
+  const authToken = cookieStore.get("auth_token")
 
-          <Link href='/browse'>
-            <Button variant='link'>Browse</Button>
-          </Link>
-        </div>
+  if (!authToken) {
+    redirect("/signin")
+  }
 
-        <div className='flex-1 max-w-xl mx-4'>
-          <SearchBar />
-        </div>
+  try {
+    const response = await fetch(getBackendPath("/users"), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${authToken.value}`,
+      },
+      cache: "no-store",
+    })
 
-        <div className='flex items-center'>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>Account</Button>
-            </DropdownMenuTrigger>
+    const data = await response.json()
 
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem asChild>
-                <Link href='/settings'>Settings</Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem>
-                <form action={handleLogout}>
-                  <button type='submit'>Log Out</button>
-                </form>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-    </nav>
-  )
+    return data.user.Username
+  } catch (error) {
+    return redirect("/signin")
+  }
 }

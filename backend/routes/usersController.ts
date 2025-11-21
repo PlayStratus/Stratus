@@ -1,233 +1,207 @@
 import { PutCommand, GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb"
 import jwt from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
-import { Request, Response } from "express";
-
+import type { Request, Response } from "express"
 
 import { dynamoDb } from "../server.ts"
 
 interface User {
-  UserID: string;              // Partition key
-  Username: string;         
-  Email: string;         
-};
-
-interface Token {
-  userId: string;
+  UserID: string // Partition key
+  Username: string
+  Email: string
 }
 
-const getEnv = (key: string): string => {                                     //ensures Env values are present
-  const value = process.env[key];
+interface Token {
+  userId: string
+}
+
+const getEnv = (key: string): string => {
+  //ensures Env values are present
+  const value = process.env[key]
   if (!value) {
-    throw new Error(`${key} is not defined in environment variables`);
+    throw new Error(`${key} is not defined in environment variables`)
   }
-  return value;
-};
+  return value
+}
 
-export const ControllerGetUserByCredentials = async (req: Request, res: Response): Promise<void>  => {
+export const ControllerGetUser = async (req: Request, res: Response) => {
   try {
-    const { Username } = req.body as { Username: string};
+    const { id } = req.body as any
 
-    if (!Username) {
-      throw new Error("Username is required")
+    if (!id) {
+      throw new Error("Google ID is required")
     }
 
-    if (typeof Username !== "string") {
-      throw new Error("Invalid input types")
-    }
+    const authToken = jwt.sign({ userId: id } as Token, getEnv("AUTH_SECRET"), {
+      expiresIn: "7d",
+    })
 
     const params = {
       TableName: "Users",
-      FilterExpression: "Username = :username",
-      ExpressionAttributeValues: {
-        ":username": Username,
+      Key: {
+        UserID: id,
       },
-    };
+    }
 
-    const result = await dynamoDb.send(new ScanCommand(params))
-    const user = result.Items?.[0] as User ||  undefined;
+    const result = await dynamoDb.send(new GetCommand(params))
+    const user = (result.Item as User) || undefined
+
+    res.cookie("auth_token", authToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    })
+
     if (!user) {
-      throw new Error("User not found")
+      return res.status(403).json({ error: "User not found" })
     }
-    
 
-    const accessToken = jwt.sign(
-      { userId: user.UserID } as Token,
-      getEnv("ACCESS_SECRET"),
-      { expiresIn: "1h" }
-    );
-    const refreshToken = jwt.sign(
-      { userId: user.UserID } as Token,
-      getEnv("REFRESH_SECRET"),
-      { expiresIn: "7d" }
-    )
-
-    res.cookie("access_token", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    })
-    res.cookie("refresh_token", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
-    res.status(200).json({
-      message: "Login successful",
-    })
+    return res.status(200).json({ user })
   } catch (error: any) {
-    res.status(401).json({ error: error.message })
+    return res.status(404).json({ error: error.message })
   }
 }
 
-export const ControllerRefreshToken = async (req: Request, res: Response): Promise<void>  => {
+export const ControllerCreateUser = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
-    const refreshToken = req.cookies.refresh_token
+    const { username } = req.body as any
 
-    if (!refreshToken) {
-      throw new Error("Refresh token is required")
+    if (!username) {
+      throw new Error("Username is required")
     }
 
-    const decoded = jwt.verify(refreshToken,  getEnv("REFRESH_SECRET"))
-    if (typeof decoded === "string") {
-      throw new Error("Invalid token payload");
-    }
-
-    const userId = (decoded as Token).userId;
-
-    const newAccessToken = jwt.sign(
-      { userId: userId },
-       getEnv("ACCESS_SECRET")
-    )
-
-    res.cookie("access_token", newAccessToken, {
-      httpOnly: true,
-      secure: true, // Always true for cross-site cookies
-      sameSite: "none", // Required for cross-site cookies
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    })
-
-    res.status(200).json({
-      message: "Token refreshed successfully",
-    })
-  } catch (error) {
-    res.status(401).json({ error: "Invalid refresh token" })
-  }
-}
-
-export const ControllerVerifyToken = async (req: Request, res: Response): Promise<void> => {
-  try {
+    // get auth token from header
     const authHeader = req.headers.authorization
-
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new Error("No token provided")
+      throw new Error("Authorization header missing or malformed")
     }
 
-    const token = authHeader.substring(7)
-
-    const decoded = jwt.verify(token, getEnv("ACCESS_SECRET"))
-    if (typeof decoded === "string") {
-      throw new Error("Invalid token payload");
+    const token = authHeader.split(" ")[1]
+    let decodedToken: Token
+    try {
+      decodedToken = jwt.verify(token, getEnv("AUTH_SECRET")) as Token
+    } catch (err) {
+      throw new Error("Invalid or expired token")
     }
 
-    const userId = (decoded as Token).userId;
+    const id = decodedToken.userId
 
-    res.status(200).json({
-      valid: true,
-      userId: decoded.userId,
-    })
-  } catch (error : any) {
-    res.status(401).json({
-      valid: false,
-      error: error.message,
-    })
-  }
-}
-
-export const ControllerLogout = async (req: Request, res: Response): Promise<void>  => {
-  try {
-    res.clearCookie("access_token", {
-      httpOnly: true,
-      secure: true, // Always true for cross-site cookies
-      sameSite: "none", // Required for cross-site cookies
-    })
-    res.clearCookie("refresh_token", {
-      httpOnly: true,
-      secure: true, // Always true for cross-site cookies
-      sameSite: "none", // Required for cross-site cookies
-    })
-
-    res.status(200).json({
-      message: "Logged out successfully",
-    })
-  } catch (error : any) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-export const ControllerCreateUser = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { username, email } = req.body
-
-    if (!username || !email) {
-      throw new Error("Username and Email are required")
-    }
-
-    if (typeof username !== "string" || typeof email !== "string") {
-      throw new Error("Invalid input types")
-    }
-
-    if (!email.endsWith("@oregonstate.edu")) {
-      throw new Error("Email must be an Oregon State University email")
-    }
-
-    const userId = uuidv4()
-
-    const newUser = {
-      UserID: userId,
+    const newUser: Partial<User> = {
+      UserID: id,
       Username: username,
-      Email: email,
+      Email: "", // Email can be set to empty or fetched from another source if needed
     }
 
-    await createUser(newUser)
+    console.log(newUser)
 
-    const accessToken = jwt.sign({ userId: userId }, getEnv("ACCESS_SECRET"))
-    const refreshToken = jwt.sign(
-      { userId: userId },
-      getEnv("REFRESH_SECRET"),
-      { expiresIn: "7d" }
-    )
+    const createdUser = await createUser(newUser)
 
-    res.cookie("access_token", accessToken, {
+    const authToken = jwt.sign({ userId: id } as Token, getEnv("AUTH_SECRET"), {
+      expiresIn: "7d",
+    })
+
+    res.cookie("auth_token", authToken, {
       httpOnly: true,
-      secure: true, // Always true for cross-site cookies
-      sameSite: "none", // Required for cross-site cookies
+      secure: true,
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
-    res.cookie("refresh_token", refreshToken, {
+
+    return res.status(201).json({ user: createdUser })
+  } catch (error: any) {
+    console.log(error)
+
+    return res.status(400).json({ error: error.message })
+  }
+}
+
+export const ControllerGetUserByToken = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    // get auth token from header
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new Error("Authorization header missing or malformed")
+    }
+
+    const token = authHeader.split(" ")[1]
+    let decodedToken: Token
+    try {
+      decodedToken = jwt.verify(token, getEnv("AUTH_SECRET")) as Token
+    } catch (err) {
+      throw new Error("Invalid or expired token")
+    }
+
+    const id = decodedToken.userId
+
+    const params = {
+      TableName: "Users",
+      Key: {
+        UserID: id,
+      },
+    }
+
+    const result = await dynamoDb.send(new GetCommand(params))
+    const user = (result.Item as User) || undefined
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    return res.status(200).json({ user })
+  } catch (error: any) {
+    return res.status(401).json({ error: error.message })
+  }
+}
+
+export const ControllerRefreshToken = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const refreshToken = req.cookies["refresh_token"]
+    if (!refreshToken) {
+      throw new Error("Refresh token missing")
+    }
+
+    let decodedToken: Token
+    try {
+      decodedToken = jwt.verify(refreshToken, getEnv("REFRESH_SECRET")) as Token
+    } catch (err) {
+      throw new Error("Invalid or expired refresh token")
+    }
+
+    const id = decodedToken.userId
+
+    const newAuthToken = jwt.sign(
+      { userId: id } as Token,
+      getEnv("AUTH_SECRET"),
+      {
+        expiresIn: "7d",
+      }
+    )
+
+    res.cookie("auth_token", newAuthToken, {
       httpOnly: true,
-      secure: true, // Always true for cross-site cookies
-      sameSite: "none", // Required for cross-site cookies
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      secure: true,
+      sameSite: "none",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
     })
 
-    res.status(200).json({
-      message: "User created successfully",
-    })
-  } catch (error : any) {
-    res.status(500).json({ error: error.message })
+    return res.status(200).json({ message: "Token refreshed" })
+  } catch (error: any) {
+    return res.status(401).json({ error: error.message })
   }
 }
 
 const createUser = async (user: Partial<User>): Promise<User> => {
   const { UserID, Username, Email } = user
-
-  if (typeof UserID !== "string" || !Username || !Email) {
-    //ToDo: make more thorough
-    throw new Error("Invalid user format")
-  }
 
   const allUsersParams = {
     TableName: "Users",
@@ -236,17 +210,10 @@ const createUser = async (user: Partial<User>): Promise<User> => {
   const allUsersResult = await dynamoDb.send(new ScanCommand(allUsersParams))
 
   const existingUsername = allUsersResult.Items?.find(
-    (item) => item.Username?.toLowerCase() === Username.toLowerCase()
+    (item) => item.Username?.toLowerCase() === Username!.toLowerCase()
   )
   if (existingUsername) {
     throw new Error("Username already exists")
-  }
-
-  const existingEmail = allUsersResult.Items?.find(
-    (item) => item.Email?.toLowerCase() === Email.toLowerCase()
-  )
-  if (existingEmail) {
-    throw new Error("Email already exists")
   }
 
   const params = {
@@ -256,5 +223,5 @@ const createUser = async (user: Partial<User>): Promise<User> => {
   }
 
   await dynamoDb.send(new PutCommand(params)) //send to aws
-  return params.Item
+  return params.Item as User
 }

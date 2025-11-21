@@ -5,91 +5,26 @@ import { redirect } from "next/navigation"
 
 async function verifyAuth() {
   const cookieStore = await cookies()
-  const accessToken = cookieStore.get("access_token")
-  const refreshToken = cookieStore.get("refresh_token")
+  const authToken = cookieStore.get("auth_token")
 
-  if (!refreshToken) {
+  if (!authToken) {
     redirect("/signin")
   }
 
-  if (!accessToken) {
-    const refreshed = await refreshAccessToken()
-    if (!refreshed) {
-      redirect("/signin")
-    }
-    return { valid: true }
-  }
-
   try {
-    const response = await fetch(getBackendPath("/users/verify"), {
+    const response = await fetch(getBackendPath("/users/refresh"), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${accessToken.value}`,
+        Authorization: `Bearer ${authToken.value}`,
       },
       cache: "no-store",
     })
 
     const data = await response.json()
 
-    if (!response.ok || !data.valid) {
-      const refreshed = await refreshAccessToken()
-      if (!refreshed) {
-        redirect("/signin")
-      }
-      return { valid: true }
-    }
-
     return data
   } catch (error) {
-    const refreshed = await refreshAccessToken()
-    if (!refreshed) {
-      redirect("/signin")
-    }
-    return { valid: true }
-  }
-}
-
-async function refreshAccessToken() {
-  try {
-    const cookieStore = await cookies()
-    const refreshToken = cookieStore.get("refresh_token")
-
-    if (!refreshToken) {
-      return false
-    }
-
-    const response = await fetch(getBackendPath("/users/refresh"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: `refresh_token=${refreshToken.value}`,
-      },
-      credentials: "include",
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      return false
-    }
-
-    const setCookieHeader = response.headers.get("set-cookie")
-    if (setCookieHeader) {
-      const match = setCookieHeader.match(/access_token=([^;]+)/)
-      if (match) {
-        const newAccessToken = match[1]
-        cookieStore.set("access_token", newAccessToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
-          maxAge: 24 * 60 * 60, // 24 hours
-        })
-      }
-    }
-
-    return true
-  } catch (error) {
-    console.error("Token refresh error:", error)
-    return false
+    return redirect("/signin")
   }
 }
 
