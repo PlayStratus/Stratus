@@ -25,7 +25,7 @@ export default function SearchBar() {
     }
 
     const filtered = games.filter((game) =>
-      game.name.toLowerCase().includes(value.toLowerCase())
+      game.title.toLowerCase().includes(value.toLowerCase())
     )
     setFilteredItems(filtered)
     setIsOpen(filtered.length > 0)
@@ -46,7 +46,7 @@ export default function SearchBar() {
     const fetchGames = async () => {
       try {
         const games = await getGames()
-        setGames(games)
+        setGames(games ?? [])
       } catch (error) {
         console.error("Error fetching games:", error)
       }
@@ -75,14 +75,14 @@ export default function SearchBar() {
         >
           {filteredItems.map((item, index) => (
             <Link
-              href={"/browse/" + item.id}
+              href={"/browse/" + item.GameID}
               key={index}
               onClick={() => setValue("")}
               className={
                 "px-3 py-2 rounded-sm transition-colors hover:bg-accent/50"
               }
             >
-              {item.name}
+              {item.title}
             </Link>
           ))}
         </Card>

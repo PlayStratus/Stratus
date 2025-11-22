@@ -19,6 +19,9 @@ export default async function Service({ params }: Props) {
   const { id } = await params
 
   const game = await getGameById(id)
+  if(!game){
+    return <div>Game not found</div>;
+  }
 
   return (
     <main className='flex flex-col p-24 container mx-auto'>
@@ -32,16 +35,16 @@ export default async function Service({ params }: Props) {
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
         <div className='space-y-4'>
           <div className='aspect-video bg-muted rounded-lg flex items-center justify-center'>
-            <span className='text-muted-foreground text-lg'>Game Preview</span>
+            <img src={game.s3[0]} alt="Game image" />
           </div>
 
           <Carousel className='w-full'>
             <CarouselContent>
-              {[1, 2, 3, 4, 5].map((index) => (
-                <CarouselItem key={index} className='basis-1/4'>
+              {game.s3.slice(1).map((s3) => (
+                <CarouselItem key={s3} className='basis-1/4'>
                   <div className='aspect-video bg-muted rounded flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors'>
                     <span className='text-xs text-muted-foreground'>
-                      {index}
+                      <img src={s3} alt="Game image" />
                     </span>
                   </div>
                 </CarouselItem>
@@ -54,7 +57,7 @@ export default async function Service({ params }: Props) {
 
         <div className='space-y-6'>
           <div>
-            <h1 className='text-4xl font-bold mb-2'>{game.name}</h1>
+            <h1 className='text-4xl font-bold mb-2'>{game.title}</h1>
             <p className='text-muted-foreground'>Developer: {game.developer}</p>
           </div>
 
@@ -72,11 +75,11 @@ export default async function Service({ params }: Props) {
           <div>
             <h2 className='text-lg font-semibold mb-2'>About</h2>
             <p className='text-muted-foreground leading-relaxed'>
-              {game.description}
+              {game.lDescript}
             </p>
 
             <Link
-              href={"/play/" + game.id}
+              href={"/play/" + game.GameID}
               className={
                 buttonVariants({ variant: "default", size: "lg" }) +
                 " mt-6 w-full text-lg py-6"
