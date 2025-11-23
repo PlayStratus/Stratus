@@ -29,8 +29,12 @@ async function handleSetUsername(formData: FormData) {
     redirect("/signin?error=No authentication token found")
   }
 
+  // Only wrap the network call in try/catch. Avoid catching the special
+  // Next.js redirect exception (NEXT_REDIRECT) by performing redirects
+  // outside of the try/catch so they aren't swallowed and treated as errors.
+  let response: Response | undefined
   try {
-    const response = await fetch(getBackendPath("/users/create"), {
+    response = await fetch(getBackendPath("/users/create"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -38,22 +42,32 @@ async function handleSetUsername(formData: FormData) {
       },
       body: JSON.stringify({ username }),
     })
+  } catch (error) {
+    console.error("Network error creating user:", error)
+    redirect(
+      `/signin?error=${encodeURIComponent(
+        "Failed to set username. Please try again."
+      )}`
+    )
+  }
 
-    if (!response.ok) {
-      const errorData = await response.json()
+  if (!response || !response.ok) {
+    try {
+      const errorData = await response?.json()
       console.error("Error creating user:", errorData)
-      redirect(
-        `/signin?error=${encodeURIComponent(
-          "Failed to set username. Please try again."
-        )}`
-      )
+    } catch (e) {
+      // ignore JSON parse errors
     }
 
-    redirect("/browse")
-  } catch (error) {
-    console.error("Failed to get user info:", error)
-    redirect("/signin?error=Failed to verify user information")
+    redirect(
+      `/signin?error=${encodeURIComponent(
+        "Failed to set username. Please try again."
+      )}`
+    )
   }
+
+  // Successful - perform the redirect outside the try/catch above.
+  redirect("/browse")
 }
 
 export default async function SetUsernamePage() {
