@@ -11,10 +11,11 @@ import Link from "next/link"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import SearchBar from "./SearchBar"
+import { getGames } from "@/lib/actions/games"
 
 export default async function Nav() {
   const username = await getUserData()
-
+  const games = await getGames()
   return (
     <nav className='sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur'>
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
@@ -27,7 +28,7 @@ export default async function Nav() {
         </div>
 
         <div className='flex-1 max-w-xl mx-4'>
-          <SearchBar />
+           <SearchBar games={games ?? []} />
         </div>
 
         <div className='flex items-center'>

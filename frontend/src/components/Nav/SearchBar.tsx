@@ -6,11 +6,10 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 
-import { getGames } from "@/lib/actions/games"
+
 import { GameType } from "@/lib/types"
 
-export default function SearchBar() {
-  const [games, setGames] = useState<GameType[]>([])
+export default function SearchBar({ games }: { games: GameType[] }) {
   const [value, setValue] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [filteredItems, setFilteredItems] = useState<GameType[]>([])
@@ -23,13 +22,12 @@ export default function SearchBar() {
       setFilteredItems([])
       return
     }
-
     const filtered = games.filter((game) =>
       game.title.toLowerCase().includes(value.toLowerCase())
     )
     setFilteredItems(filtered)
     setIsOpen(filtered.length > 0)
-  }, [value])
+  }, [value, games])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -42,17 +40,6 @@ export default function SearchBar() {
         setIsOpen(false)
       }
     }
-
-    const fetchGames = async () => {
-      try {
-        const games = await getGames()
-        setGames(games ?? [])
-      } catch (error) {
-        console.error("Error fetching games:", error)
-      }
-    }
-
-    fetchGames()
 
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)

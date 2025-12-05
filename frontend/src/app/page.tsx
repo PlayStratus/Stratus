@@ -6,29 +6,9 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
+import { getGames } from "@/lib/actions/games"
 
-const featuredGames = [
-  {
-    name: "Solitaire",
-    description:
-      "A single-player card game where you arrange cards into suit-based foundations, clearing the tableau through strategic moves and sequencing.",
-  },
-  {
-    name: "Chess",
-    description:
-      "A two-player strategy board game where each side maneuvers pieces to checkmate the opponent's king.",
-  },
-  {
-    name: "Minecraft",
-    description:
-      "A sandbox building and exploration game where you mine resources, craft tools, and build structures in a procedurally generated world.",
-  },
-  {
-    name: "Sudoku",
-    description:
-      "A logic-based number-placement puzzle: fill a 9x9 grid so each row, column, and 3x3 box contains digits 1-9.",
-  },
-]
+const games = await getGames()
 
 const aboutUs = [
   {
@@ -101,18 +81,18 @@ export default function Home() {
         <h2 className='text-3xl md:text-4xl font-bold mb-4'>Featured Games</h2>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-          {featuredGames.map((game, index) => (
+          {(games ?? []).map((game, index) => (
             <Card
               key={index}
               className='group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1'
             >
               <CardContent className='flex flex-col h-full'>
                 <CardTitle className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>
-                  {game.name}
+                  {game.title}
                 </CardTitle>
 
                 <CardDescription className='grow'>
-                  {game.description}
+                  {game.sDescript}
                 </CardDescription>
               </CardContent>
             </Card>
