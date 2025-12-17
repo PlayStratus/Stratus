@@ -7,7 +7,6 @@ file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 # Load dependencies
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
-find_package(Wayland REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
