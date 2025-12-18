@@ -5,6 +5,7 @@ project(stratusd VERSION 0.1.0 LANGUAGES C)
 file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 
 # Load dependencies
+add_subdirectory(libs/wayland)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
 find_package(PkgConfig REQUIRED)
