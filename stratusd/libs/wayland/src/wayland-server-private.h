@@ -25,11 +25,11 @@
  * SOFTWARE.
  */
 
-// #ifndef WAYLAND_SERVER_PRIVATE_H
-// #define WAYLAND_SERVER_PRIVATE_H
-//
-// #include "wayland-server-core.h"
-//
+#ifndef WAYLAND_SERVER_PRIVATE_H
+#define WAYLAND_SERVER_PRIVATE_H
+
+#include "wayland-server-core.h"
+
 // struct wl_priv_signal {
 // 	struct wl_list listener_list;
 // 	struct wl_list emit_list;
@@ -49,5 +49,5 @@
 //
 // void
 // wl_priv_signal_final_emit(struct wl_priv_signal *signal, void *data);
-//
-// #endif
+
+#endif

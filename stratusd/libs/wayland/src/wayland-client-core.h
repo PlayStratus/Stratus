@@ -23,17 +23,17 @@
  * SOFTWARE.
  */
 
-// #ifndef WAYLAND_CLIENT_CORE_H
-// #define WAYLAND_CLIENT_CORE_H
-//
+#ifndef WAYLAND_CLIENT_CORE_H
+#define WAYLAND_CLIENT_CORE_H
+
 // #include <stdint.h>
 // #include "wayland-util.h"
 // #include "wayland-version.h"
-//
-// #ifdef  __cplusplus
-// extern "C" {
-// #endif
-//
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
 // struct timespec;
 //
 // /** \class wl_proxy
@@ -315,9 +315,13 @@
 // void
 // wl_display_set_max_buffer_size(struct wl_display *display,
 //                                size_t max_buffer_size);
-//
-// #ifdef  __cplusplus
-// }
-// #endif
-//
-// #endif
+
+// STRATUS: made connect_to_socket() non-static
+int
+connect_to_socket(const char *name);
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif

@@ -26,50 +26,29 @@
 // #define _GNU_SOURCE
 //
 // #include <stdbool.h>
-// #include <stdlib.h>
+#include <stdlib.h>
 // #include <stdint.h>
-// #include <stddef.h>
-// #include <stdio.h>
+#include <stddef.h>
+#include <stdio.h>
 // #include <stdarg.h>
-// #include <errno.h>
-// #include <string.h>
-// #include <unistd.h>
-// #include <sys/socket.h>
-// #include <sys/un.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 // #include <dlfcn.h>
 // #include <sys/time.h>
 // #include <fcntl.h>
 // #include <sys/eventfd.h>
-// #include <sys/file.h>
-// #include <sys/stat.h>
-//
-// #include "wayland-util.h"
-// #include "wayland-private.h"
-// #include "wayland-server-private.h"
+#include <sys/file.h>
+#include <sys/stat.h>
+
+#include "wayland-util.h"
+#include "wayland-private.h"
+#include "wayland-server-private.h"
 // #include "wayland-server.h"
-// #include "wayland-os.h"
-//
-// /* This is the size of the char array in struct sock_addr_un.
-//  * No Wayland socket can be created with a path longer than this,
-//  * including the null terminator.
-//  */
-// #ifndef UNIX_PATH_MAX
-// #define UNIX_PATH_MAX	108
-// #endif
-//
-// #define LOCK_SUFFIX	".lock"
-// #define LOCK_SUFFIXLEN	5
-//
-// struct wl_socket {
-// 	int fd;
-// 	int fd_lock;
-// 	struct sockaddr_un addr;
-// 	char lock_addr[UNIX_PATH_MAX + LOCK_SUFFIXLEN];
-// 	struct wl_list link;
-// 	struct wl_event_source *source;
-// 	char *display_name;
-// };
-//
+#include "wayland-os.h"
+
 // struct wl_client {
 // 	struct wl_connection *connection;
 // 	struct wl_event_source *source;
@@ -1246,39 +1225,41 @@
 // 	free(display);
 // 	return NULL;
 // }
-//
-// static void
-// wl_socket_destroy(struct wl_socket *s)
-// {
-// 	if (s->source)
-// 		wl_event_source_remove(s->source);
-// 	if (s->addr.sun_path[0])
-// 		unlink(s->addr.sun_path);
-// 	if (s->fd >= 0)
-// 		close(s->fd);
-// 	if (s->lock_addr[0])
-// 		unlink(s->lock_addr);
-// 	if (s->fd_lock >= 0)
-// 		close(s->fd_lock);
-//
-// 	free(s);
-// }
-//
-// static struct wl_socket *
-// wl_socket_alloc(void)
-// {
-// 	struct wl_socket *s;
-//
-// 	s = zalloc(sizeof *s);
-// 	if (!s)
-// 		return NULL;
-//
-// 	s->fd = -1;
-// 	s->fd_lock = -1;
-//
-// 	return s;
-// }
-//
+
+// STRATUS: made wl_socket_destroy non-static and removed source member from
+// wl_socket struct
+void
+wl_socket_destroy(struct wl_socket *s)
+{
+	// if (s->source)
+	// 	wl_event_source_remove(s->source);
+	if (s->addr.sun_path[0])
+		unlink(s->addr.sun_path);
+	if (s->fd >= 0)
+		close(s->fd);
+	if (s->lock_addr[0])
+		unlink(s->lock_addr);
+	if (s->fd_lock >= 0)
+		close(s->fd_lock);
+
+	free(s);
+}
+
+static struct wl_socket *
+wl_socket_alloc(void)
+{
+	struct wl_socket *s;
+
+	s = zalloc(sizeof *s);
+	if (!s)
+		return NULL;
+
+	s->fd = -1;
+	s->fd_lock = -1;
+
+	return s;
+}
+
 // /** Destroy Wayland display object.
 //  *
 //  * \param display The Wayland display object which should be destroyed.
@@ -1673,150 +1654,154 @@
 //
 // 	display->max_buffer_size = max_buffer_size;
 // }
-//
-// static int
-// socket_data(int fd, uint32_t mask, void *data)
-// {
-// 	struct wl_display *display = data;
-// 	struct sockaddr_un name;
-// 	socklen_t length;
-// 	int client_fd;
-//
-// 	length = sizeof name;
-// 	client_fd = wl_os_accept_cloexec(fd, (struct sockaddr *) &name,
-// 					 &length);
-// 	if (client_fd < 0)
-// 		wl_log("failed to accept: %s\n", strerror(errno));
-// 	else
-// 		if (!wl_client_create(display, client_fd))
-// 			close(client_fd);
-//
-// 	return 1;
-// }
-//
-// static int
-// wl_socket_lock(struct wl_socket *socket)
-// {
-// 	struct stat socket_stat;
-//
-// 	snprintf(socket->lock_addr, sizeof socket->lock_addr,
-// 		 "%s%s", socket->addr.sun_path, LOCK_SUFFIX);
-//
-// 	socket->fd_lock = open(socket->lock_addr, O_CREAT | O_CLOEXEC | O_RDWR,
-// 			       (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
-//
-// 	if (socket->fd_lock < 0) {
-// 		wl_log("unable to open lockfile %s check permissions\n",
-// 			socket->lock_addr);
-// 		goto err;
-// 	}
-//
-// 	if (flock(socket->fd_lock, LOCK_EX | LOCK_NB) < 0) {
-// 		wl_log("unable to lock lockfile %s, maybe another compositor is running\n",
-// 			socket->lock_addr);
-// 		goto err_fd;
-// 	}
-//
-// 	if (lstat(socket->addr.sun_path, &socket_stat) < 0 ) {
-// 		if (errno != ENOENT) {
-// 			wl_log("did not manage to stat file %s\n",
-// 				socket->addr.sun_path);
-// 			goto err_fd;
-// 		}
-// 	} else if (socket_stat.st_mode & S_IWUSR ||
-// 		   socket_stat.st_mode & S_IWGRP) {
-// 		unlink(socket->addr.sun_path);
-// 	}
-//
-// 	return 0;
-// err_fd:
-// 	close(socket->fd_lock);
-// 	socket->fd_lock = -1;
-// err:
-// 	*socket->lock_addr = 0;
-// 	/* we did not set this value here, but without lock the
-// 	 * socket won't be created anyway. This prevents the
-// 	 * wl_socket_destroy from unlinking already existing socket
-// 	 * created by other compositor */
-// 	*socket->addr.sun_path = 0;
-//
-// 	return -1;
-// }
-//
-// static int
-// wl_socket_init_for_display_name(struct wl_socket *s, const char *name)
-// {
-// 	int name_size;
-// 	const char *runtime_dir = "";
-// 	const char *separator = "";
-//
-// 	if (name[0] != '/') {
-// 		runtime_dir = getenv("XDG_RUNTIME_DIR");
-// 		if (!runtime_dir || runtime_dir[0] != '/') {
-// 			wl_log("error: XDG_RUNTIME_DIR is invalid or not set in"
-// 			       " the environment\n");
-//
-// 			/* to prevent programs reporting
-// 			 * "failed to add socket: Success" */
-// 			errno = ENOENT;
-// 			return -1;
-// 		}
-// 		separator = "/";
-// 	}
-//
-// 	s->addr.sun_family = AF_LOCAL;
-// 	name_size = snprintf(s->addr.sun_path, sizeof s->addr.sun_path,
-// 			     "%s%s%s", runtime_dir, separator, name) + 1;
-//
-// 	if (!(name_size > 0))
-// 		wl_abort("Error assigning path name for socket address\n");
-// 	if (name_size > (int)sizeof s->addr.sun_path) {
-// 		wl_log("error: socket path \"%s%s%s\" plus null terminator"
-// 		       " exceeds 108 bytes\n", runtime_dir, separator, name);
-// 		*s->addr.sun_path = 0;
-// 		/* to prevent programs reporting
-// 		 * "failed to add socket: Success" */
-// 		errno = ENAMETOOLONG;
-// 		return -1;
-// 	}
-//
-// 	s->display_name = (s->addr.sun_path + name_size - 1) - strlen(name);
-//
-// 	return 0;
-// }
-//
-// static int
-// _wl_display_add_socket(struct wl_display *display, struct wl_socket *s)
-// {
-// 	socklen_t size;
-//
-// 	s->fd = wl_os_socket_cloexec(PF_LOCAL, SOCK_STREAM, 0);
-// 	if (s->fd < 0) {
-// 		return -1;
-// 	}
-//
-// 	size = offsetof (struct sockaddr_un, sun_path) + strlen(s->addr.sun_path);
-// 	if (bind(s->fd, (struct sockaddr *) &s->addr, size) < 0) {
-// 		wl_log("bind() failed with error: %s\n", strerror(errno));
-// 		return -1;
-// 	}
-//
-// 	if (listen(s->fd, 128) < 0) {
-// 		wl_log("listen() failed with error: %s\n", strerror(errno));
-// 		return -1;
-// 	}
-//
-// 	s->source = wl_event_loop_add_fd(display->loop, s->fd,
-// 					 WL_EVENT_READABLE,
-// 					 socket_data, display);
-// 	if (s->source == NULL) {
-// 		return -1;
-// 	}
-//
-// 	wl_list_insert(display->socket_list.prev, &s->link);
-// 	return 0;
-// }
-//
+
+// STRATUS: made socket_data() non-static and made it return client fd instead
+// of creating a new wl_client
+int
+socket_data(int fd, uint32_t mask, void *data)
+{
+	struct wl_display *display = data;
+	struct sockaddr_un name;
+	socklen_t length;
+	int client_fd;
+
+	length = sizeof name;
+	client_fd = wl_os_accept_cloexec(fd, (struct sockaddr *) &name,
+					 &length);
+	if (client_fd < 0)
+		wl_log("failed to accept: %s\n", strerror(errno));
+	else
+		return client_fd;
+		// if (!wl_client_create(display, client_fd))
+		// 	close(client_fd);
+
+	return -1;
+}
+
+static int
+wl_socket_lock(struct wl_socket *socket)
+{
+	struct stat socket_stat;
+
+	snprintf(socket->lock_addr, sizeof socket->lock_addr,
+		 "%s%s", socket->addr.sun_path, LOCK_SUFFIX);
+
+	socket->fd_lock = open(socket->lock_addr, O_CREAT | O_CLOEXEC | O_RDWR,
+			       (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP));
+
+	if (socket->fd_lock < 0) {
+		wl_log("unable to open lockfile %s check permissions\n",
+			socket->lock_addr);
+		goto err;
+	}
+
+	if (flock(socket->fd_lock, LOCK_EX | LOCK_NB) < 0) {
+		wl_log("unable to lock lockfile %s, maybe another compositor is running\n",
+			socket->lock_addr);
+		goto err_fd;
+	}
+
+	if (lstat(socket->addr.sun_path, &socket_stat) < 0 ) {
+		if (errno != ENOENT) {
+			wl_log("did not manage to stat file %s\n",
+				socket->addr.sun_path);
+			goto err_fd;
+		}
+	} else if (socket_stat.st_mode & S_IWUSR ||
+		   socket_stat.st_mode & S_IWGRP) {
+		unlink(socket->addr.sun_path);
+	}
+
+	return 0;
+err_fd:
+	close(socket->fd_lock);
+	socket->fd_lock = -1;
+err:
+	*socket->lock_addr = 0;
+	/* we did not set this value here, but without lock the
+	 * socket won't be created anyway. This prevents the
+	 * wl_socket_destroy from unlinking already existing socket
+	 * created by other compositor */
+	*socket->addr.sun_path = 0;
+
+	return -1;
+}
+
+static int
+wl_socket_init_for_display_name(struct wl_socket *s, const char *name)
+{
+	int name_size;
+	const char *runtime_dir = "";
+	const char *separator = "";
+
+	if (name[0] != '/') {
+		runtime_dir = getenv("XDG_RUNTIME_DIR");
+		if (!runtime_dir || runtime_dir[0] != '/') {
+			wl_log("error: XDG_RUNTIME_DIR is invalid or not set in"
+			       " the environment\n");
+
+			/* to prevent programs reporting
+			 * "failed to add socket: Success" */
+			errno = ENOENT;
+			return -1;
+		}
+		separator = "/";
+	}
+
+	s->addr.sun_family = AF_LOCAL;
+	name_size = snprintf(s->addr.sun_path, sizeof s->addr.sun_path,
+			     "%s%s%s", runtime_dir, separator, name) + 1;
+
+	if (!(name_size > 0))
+		wl_abort("Error assigning path name for socket address\n");
+	if (name_size > (int)sizeof s->addr.sun_path) {
+		wl_log("error: socket path \"%s%s%s\" plus null terminator"
+		       " exceeds 108 bytes\n", runtime_dir, separator, name);
+		*s->addr.sun_path = 0;
+		/* to prevent programs reporting
+		 * "failed to add socket: Success" */
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	// s->display_name = (s->addr.sun_path + name_size - 1) - strlen(name);
+
+	return 0;
+}
+
+// STRATUS: removed wl_display argument from _wl_display_add_socket()
+static int
+_wl_display_add_socket(struct wl_socket *s)
+{
+	socklen_t size;
+
+	s->fd = wl_os_socket_cloexec(PF_LOCAL, SOCK_STREAM, 0);
+	if (s->fd < 0) {
+		return -1;
+	}
+
+	size = offsetof (struct sockaddr_un, sun_path) + strlen(s->addr.sun_path);
+	if (bind(s->fd, (struct sockaddr *) &s->addr, size) < 0) {
+		wl_log("bind() failed with error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	if (listen(s->fd, 128) < 0) {
+		wl_log("listen() failed with error: %s\n", strerror(errno));
+		return -1;
+	}
+
+	// s->source = wl_event_loop_add_fd(display->loop, s->fd,
+	// 				 WL_EVENT_READABLE,
+	// 				 socket_data, display);
+	// if (s->source == NULL) {
+	// 	return -1;
+	// }
+
+	// wl_list_insert(display->socket_list.prev, &s->link);
+	return 0;
+}
+
 // WL_EXPORT const char *
 // wl_display_add_socket_auto(struct wl_display *display)
 // {
@@ -1902,66 +1887,68 @@
 //
 // 	return 0;
 // }
-//
-// /** Add a socket to Wayland display for the clients to connect.
-//  *
-//  * \param display Wayland display to which the socket should be added.
-//  * \param name Name of the Unix socket.
-//  * \return 0 if success. -1 if failed.
-//  *
-//  * This adds a Unix socket to Wayland display which can be used by clients to
-//  * connect to Wayland display.
-//  *
-//  * If NULL is passed as name, then it would look for WAYLAND_DISPLAY env
-//  * variable for the socket name. If WAYLAND_DISPLAY is not set, then default
-//  * wayland-0 is used.
-//  *
-//  * If the socket name is a relative path, the Unix socket will be created in
-//  * the directory pointed to by environment variable XDG_RUNTIME_DIR. If
-//  * XDG_RUNTIME_DIR is invalid or not set, then this function fails and returns -1.
-//  *
-//  * If the socket name is an absolute path, then it is used as-is for the
-//  * the Unix socket.
-//  *
-//  * The length of the computed socket path must not exceed the maximum length
-//  * of a Unix socket path.
-//  * The function also fails if the user does not have write permission in the
-//  * directory or if the path is already in use.
-//  *
-//  * \memberof wl_display
-//  */
-// WL_EXPORT int
-// wl_display_add_socket(struct wl_display *display, const char *name)
-// {
-// 	struct wl_socket *s;
-//
-// 	s = wl_socket_alloc();
-// 	if (s == NULL)
-// 		return -1;
-//
-// 	if (name == NULL)
-// 		name = getenv("WAYLAND_DISPLAY");
-// 	if (name == NULL)
-// 		name = "wayland-0";
-//
-// 	if (wl_socket_init_for_display_name(s, name) < 0) {
-// 		wl_socket_destroy(s);
-// 		return -1;
-// 	}
-//
-// 	if (wl_socket_lock(s) < 0) {
-// 		wl_socket_destroy(s);
-// 		return -1;
-// 	}
-//
-// 	if (_wl_display_add_socket(display, s) < 0) {
-// 		wl_socket_destroy(s);
-// 		return -1;
-// 	}
-//
-// 	return 0;
-// }
-//
+
+// STRATUS: removed wl_display argument from wl_display_add_socket() and made it
+// return the created socket instead
+/** Add a socket to Wayland display for the clients to connect.
+ *
+ * \param display Wayland display to which the socket should be added.
+ * \param name Name of the Unix socket.
+ * \return 0 if success. -1 if failed.
+ *
+ * This adds a Unix socket to Wayland display which can be used by clients to
+ * connect to Wayland display.
+ *
+ * If NULL is passed as name, then it would look for WAYLAND_DISPLAY env
+ * variable for the socket name. If WAYLAND_DISPLAY is not set, then default
+ * wayland-0 is used.
+ *
+ * If the socket name is a relative path, the Unix socket will be created in
+ * the directory pointed to by environment variable XDG_RUNTIME_DIR. If
+ * XDG_RUNTIME_DIR is invalid or not set, then this function fails and returns -1.
+ *
+ * If the socket name is an absolute path, then it is used as-is for the
+ * the Unix socket.
+ *
+ * The length of the computed socket path must not exceed the maximum length
+ * of a Unix socket path.
+ * The function also fails if the user does not have write permission in the
+ * directory or if the path is already in use.
+ *
+ * \memberof wl_display
+ */
+WL_EXPORT struct wl_socket *
+wl_display_add_socket(const char *name)
+{
+	struct wl_socket *s;
+
+	s = wl_socket_alloc();
+	if (s == NULL)
+		return NULL;
+
+	if (name == NULL)
+		name = getenv("WAYLAND_DISPLAY");
+	if (name == NULL)
+		name = "wayland-0";
+
+	if (wl_socket_init_for_display_name(s, name) < 0) {
+		wl_socket_destroy(s);
+		return NULL;
+	}
+
+	if (wl_socket_lock(s) < 0) {
+		wl_socket_destroy(s);
+		return NULL;
+	}
+
+	if (_wl_display_add_socket(s) < 0) {
+		wl_socket_destroy(s);
+		return NULL;
+	}
+
+	return s;
+}
+
 // WL_EXPORT void
 // wl_display_add_destroy_listener(struct wl_display *display,
 // 				struct wl_listener *listener)

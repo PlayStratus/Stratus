@@ -25,18 +25,18 @@
  * SOFTWARE.
  */
 
-// #ifndef WAYLAND_PRIVATE_H
-// #define WAYLAND_PRIVATE_H
-//
+#ifndef WAYLAND_PRIVATE_H
+#define WAYLAND_PRIVATE_H
+
 // #include <stdarg.h>
-// #include <stdlib.h>
+#include <stdlib.h>
 // #include <stdint.h>
 // #include <stdbool.h>
-//
+
 // #define WL_HIDE_DEPRECATED 1
-//
-// #include "wayland-util.h"
-//
+
+#include "wayland-util.h"
+
 // /* Invalid memory address */
 // #define WL_ARRAY_POISON_PTR (void *) 4
 //
@@ -47,12 +47,12 @@
 // #define WL_SERVER_ID_START 0xff000000
 // #define WL_MAP_MAX_OBJECTS 0x00f00000
 // #define WL_CLOSURE_MAX_ARGS 20
-// #define WL_BUFFER_DEFAULT_SIZE_POT 12
-// #define WL_BUFFER_DEFAULT_MAX_SIZE (1 << WL_BUFFER_DEFAULT_SIZE_POT)
-// #if WL_BUFFER_DEFAULT_MAX_SIZE < WL_MAX_MESSAGE_SIZE
-// # error default buffer cannot hold maximum-sized message
-// #endif
-//
+#define WL_BUFFER_DEFAULT_SIZE_POT 12
+#define WL_BUFFER_DEFAULT_MAX_SIZE (1 << WL_BUFFER_DEFAULT_SIZE_POT)
+#if WL_BUFFER_DEFAULT_MAX_SIZE < WL_MAX_MESSAGE_SIZE
+# error default buffer cannot hold maximum-sized message
+#endif
+
 // /**
 //  * Argument types used in signatures.
 //  */
@@ -123,36 +123,36 @@
 //
 // void
 // wl_map_for_each(struct wl_map *map, wl_iterator_func_t func, void *data);
-//
-// struct wl_connection *
-// wl_connection_create(int fd, size_t max_buffer_size);
-//
-// int
-// wl_connection_destroy(struct wl_connection *connection);
-//
-// void
-// wl_connection_copy(struct wl_connection *connection, void *data, size_t size);
-//
-// void
-// wl_connection_consume(struct wl_connection *connection, size_t size);
-//
-// int
-// wl_connection_flush(struct wl_connection *connection);
-//
+
+struct wl_connection *
+wl_connection_create(int fd, size_t max_buffer_size);
+
+int
+wl_connection_destroy(struct wl_connection *connection);
+
+void
+wl_connection_copy(struct wl_connection *connection, void *data, size_t size);
+
+void
+wl_connection_consume(struct wl_connection *connection, size_t size);
+
+int
+wl_connection_flush(struct wl_connection *connection);
+
 // uint32_t
 // wl_connection_pending_input(struct wl_connection *connection);
-//
-// int
-// wl_connection_read(struct wl_connection *connection);
-//
-// int
-// wl_connection_write(struct wl_connection *connection,
-// 		    const void *data, size_t count);
-//
-// int
-// wl_connection_queue(struct wl_connection *connection,
-// 		    const void *data, size_t count);
-//
+
+int
+wl_connection_read(struct wl_connection *connection);
+
+int
+wl_connection_write(struct wl_connection *connection,
+		    const void *data, size_t count);
+
+int
+wl_connection_queue(struct wl_connection *connection,
+		    const void *data, size_t count);
+
 // int
 // wl_connection_get_fd(struct wl_connection *connection);
 //
@@ -239,26 +239,53 @@
 // wl_closure_destroy(struct wl_closure *closure);
 //
 // extern wl_log_func_t wl_log_handler;
-//
-// void wl_log(const char *fmt, ...);
-// void wl_abort(const char *fmt, ...);
-//
+
+void wl_log(const char *fmt, ...);
+void wl_abort(const char *fmt, ...);
+
 // struct wl_display;
 //
 // struct wl_array *
 // wl_display_get_additional_shm_formats(struct wl_display *display);
-//
-// static inline void *
-// zalloc(size_t s)
-// {
-// 	return calloc(1, s);
-// }
-//
+
+static inline void *
+zalloc(size_t s)
+{
+	return calloc(1, s);
+}
+
 // void
 // wl_connection_close_fds_in(struct wl_connection *connection, int max);
 //
 // void
 // wl_connection_set_max_buffer_size(struct wl_connection *connection,
 // 				  size_t max_buffer_size);
-//
-// #endif
+
+// STRATUS: moved UNIX_PATH_MAX, LOCK_SUFFIX, and LOCK_SUFFIXLEN definitions
+// from wayland-server.c to wayland-server.h
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX	108
+#endif
+#define LOCK_SUFFIX	".lock"
+#define LOCK_SUFFIXLEN	5
+
+// STRATUS: moved wl_socket definition from wayland-server.c to wayland-server.h
+// and removed unused members
+#include <sys/un.h>
+struct wl_socket {
+	int fd;
+	int fd_lock;
+	struct sockaddr_un addr;
+	char lock_addr[UNIX_PATH_MAX + LOCK_SUFFIXLEN];
+	// struct wl_list link;
+	// struct wl_event_source *source;
+	// char *display_name;
+};
+
+// STRATUS: created wl_connection_pop_fd() function
+int wl_connection_pop_fd(struct wl_connection *connection);
+
+// STRATUS: made wl_connection_put_fd() non-static
+int wl_connection_put_fd(struct wl_connection *connection, int32_t fd);
+
+#endif

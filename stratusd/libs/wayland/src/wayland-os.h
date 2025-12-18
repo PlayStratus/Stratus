@@ -23,46 +23,46 @@
  * SOFTWARE.
  */
 
-// #ifndef WAYLAND_OS_H
-// #define WAYLAND_OS_H
+#ifndef WAYLAND_OS_H
+#define WAYLAND_OS_H
 //
 // #include <sys/types.h>
 // #include <sys/socket.h>
-//
-// int
-// wl_os_socket_cloexec(int domain, int type, int protocol);
-//
+
+int
+wl_os_socket_cloexec(int domain, int type, int protocol);
+
 // int
 // wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid);
 //
 // int
 // wl_os_dupfd_cloexec(int fd, int minfd);
-//
-// ssize_t
-// wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags);
-//
+
+ssize_t
+wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags);
+
 // int
 // wl_os_epoll_create_cloexec(void);
-//
-// int
-// wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-//
+
+int
+wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+
 // void *
 // wl_os_mremap_maymove(int fd, void *old_data, ssize_t *old_size,
 // 		     ssize_t new_size, int prot, int flags);
 //
 //
-// /*
-//  * The following are for wayland-os.c and the unit tests.
-//  * Do not use them elsewhere.
-//  */
-//
-// #ifdef __linux__
-//
-// #ifndef SOCK_CLOEXEC
-// #define SOCK_CLOEXEC 02000000
-// #endif
-//
+/*
+* The following are for wayland-os.c and the unit tests.
+* Do not use them elsewhere.
+*/
+
+#ifdef __linux__
+
+#ifndef SOCK_CLOEXEC
+#define SOCK_CLOEXEC 02000000
+#endif
+
 // #ifndef F_DUPFD_CLOEXEC
 // #define F_DUPFD_CLOEXEC 1030
 // #endif
@@ -70,7 +70,7 @@
 // #ifndef MSG_CMSG_CLOEXEC
 // #define MSG_CMSG_CLOEXEC 0x40000000
 // #endif
-//
-// #endif /* __linux__ */
-//
-// #endif
+
+#endif /* __linux__ */
+
+#endif

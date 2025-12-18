@@ -26,25 +26,25 @@
 
 // #define _GNU_SOURCE
 //
-// #include <stdlib.h>
+#include <stdlib.h>
 // #include <stdint.h>
-// #include <stddef.h>
-// #include <stdio.h>
+#include <stddef.h>
+#include <stdio.h>
 // #include <stdbool.h>
-// #include <errno.h>
-// #include <string.h>
-// #include <unistd.h>
-// #include <sys/socket.h>
-// #include <sys/un.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 // #include <ctype.h>
 // #include <fcntl.h>
 // #include <poll.h>
 // #include <pthread.h>
 //
 // #include "wayland-util.h"
-// #include "wayland-os.h"
+#include "wayland-os.h"
 // #include "wayland-client.h"
-// #include "wayland-private.h"
+#include "wayland-private.h"
 // #include "timespec-util.h"
 //
 // /** \cond */
@@ -1143,76 +1143,77 @@
 // 	display_handle_error,
 // 	display_handle_delete_id
 // };
-//
-// static int
-// connect_to_socket(const char *name)
-// {
-// 	struct sockaddr_un addr;
-// 	socklen_t size;
-// 	const char *runtime_dir;
-// 	int name_size, fd;
-// 	bool path_is_absolute;
-//
-// 	if (name == NULL)
-// 		name = getenv("WAYLAND_DISPLAY");
-// 	if (name == NULL)
-// 		name = "wayland-0";
-//
-// 	path_is_absolute = name[0] == '/';
-//
-// 	runtime_dir = getenv("XDG_RUNTIME_DIR");
-// 	if (((!runtime_dir || runtime_dir[0] != '/') && !path_is_absolute)) {
-// 		wl_log("error: XDG_RUNTIME_DIR is invalid or not set in the environment.\n");
-// 		/* to prevent programs reporting
-// 		 * "failed to create display: Success" */
-// 		errno = ENOENT;
-// 		return -1;
-// 	}
-//
-// 	fd = wl_os_socket_cloexec(PF_LOCAL, SOCK_STREAM, 0);
-// 	if (fd < 0)
-// 		return -1;
-//
-// 	memset(&addr, 0, sizeof addr);
-// 	addr.sun_family = AF_LOCAL;
-// 	if (!path_is_absolute) {
-// 		name_size =
-// 			snprintf(addr.sun_path, sizeof addr.sun_path,
-// 			         "%s/%s", runtime_dir, name) + 1;
-// 	} else {
-// 		/* absolute path */
-// 		name_size =
-// 			snprintf(addr.sun_path, sizeof addr.sun_path,
-// 			         "%s", name) + 1;
-// 	}
-//
-// 	if (!(name_size > 0))
-// 		wl_abort("Error assigning path name for socket connection\n");
-// 	if (name_size > (int)sizeof addr.sun_path) {
-// 		if (!path_is_absolute) {
-// 			wl_log("error: socket path \"%s/%s\" plus null terminator"
-// 			       " exceeds %i bytes\n", runtime_dir, name, (int) sizeof(addr.sun_path));
-// 		} else {
-// 			wl_log("error: socket path \"%s\" plus null terminator"
-// 			       " exceeds %i bytes\n", name, (int) sizeof(addr.sun_path));
-// 		}
-// 		close(fd);
-// 		/* to prevent programs reporting
-// 		 * "failed to add socket: Success" */
-// 		errno = ENAMETOOLONG;
-// 		return -1;
-// 	};
-//
-// 	size = offsetof (struct sockaddr_un, sun_path) + name_size;
-//
-// 	if (connect(fd, (struct sockaddr *) &addr, size) < 0) {
-// 		close(fd);
-// 		return -1;
-// 	}
-//
-// 	return fd;
-// }
-//
+
+// STRATUS: made connect_to_socket() non-static
+int
+connect_to_socket(const char *name)
+{
+	struct sockaddr_un addr;
+	socklen_t size;
+	const char *runtime_dir;
+	int name_size, fd;
+	bool path_is_absolute;
+
+	if (name == NULL)
+		name = getenv("WAYLAND_DISPLAY");
+	if (name == NULL)
+		name = "wayland-0";
+
+	path_is_absolute = name[0] == '/';
+
+	runtime_dir = getenv("XDG_RUNTIME_DIR");
+	if (((!runtime_dir || runtime_dir[0] != '/') && !path_is_absolute)) {
+		wl_log("error: XDG_RUNTIME_DIR is invalid or not set in the environment.\n");
+		/* to prevent programs reporting
+		 * "failed to create display: Success" */
+		errno = ENOENT;
+		return -1;
+	}
+
+	fd = wl_os_socket_cloexec(PF_LOCAL, SOCK_STREAM, 0);
+	if (fd < 0)
+		return -1;
+
+	memset(&addr, 0, sizeof addr);
+	addr.sun_family = AF_LOCAL;
+	if (!path_is_absolute) {
+		name_size =
+			snprintf(addr.sun_path, sizeof addr.sun_path,
+			         "%s/%s", runtime_dir, name) + 1;
+	} else {
+		/* absolute path */
+		name_size =
+			snprintf(addr.sun_path, sizeof addr.sun_path,
+			         "%s", name) + 1;
+	}
+
+	if (!(name_size > 0))
+		wl_abort("Error assigning path name for socket connection\n");
+	if (name_size > (int)sizeof addr.sun_path) {
+		if (!path_is_absolute) {
+			wl_log("error: socket path \"%s/%s\" plus null terminator"
+			       " exceeds %i bytes\n", runtime_dir, name, (int) sizeof(addr.sun_path));
+		} else {
+			wl_log("error: socket path \"%s\" plus null terminator"
+			       " exceeds %i bytes\n", name, (int) sizeof(addr.sun_path));
+		}
+		close(fd);
+		/* to prevent programs reporting
+		 * "failed to add socket: Success" */
+		errno = ENAMETOOLONG;
+		return -1;
+	};
+
+	size = offsetof (struct sockaddr_un, sun_path) + name_size;
+
+	if (connect(fd, (struct sockaddr *) &addr, size) < 0) {
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
 // /** Connect to Wayland display on an already open fd
 //  *
 //  * \param fd The fd to use for the connection

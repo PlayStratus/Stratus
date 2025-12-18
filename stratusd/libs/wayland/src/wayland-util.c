@@ -25,13 +25,13 @@
  */
 
 // #include <errno.h>
-// #include <stdlib.h>
+#include <stdlib.h>
 // #include <stdint.h>
-// #include <stdio.h>
+#include <stdio.h>
 // #include <string.h>
-// #include <stdarg.h>
-//
-// #include "wayland-util.h"
+#include <stdarg.h>
+
+#include "wayland-util.h"
 // #include "wayland-private.h"
 //
 // WL_EXPORT void
@@ -445,35 +445,35 @@
 // 	if (ret == WL_ITERATOR_CONTINUE)
 // 		for_each_helper(&map->server_entries, func, data);
 // }
-//
-// static void
-// wl_log_stderr_handler(const char *fmt, va_list arg)
-// {
-// 	vfprintf(stderr, fmt, arg);
-// }
-//
-// wl_log_func_t wl_log_handler = wl_log_stderr_handler;
-//
-// void
-// wl_log(const char *fmt, ...)
-// {
-// 	va_list argp;
-//
-// 	va_start(argp, fmt);
-// 	wl_log_handler(fmt, argp);
-// 	va_end(argp);
-// }
-//
-// void
-// wl_abort(const char *fmt, ...)
-// {
-// 	va_list argp;
-//
-// 	va_start(argp, fmt);
-// 	wl_log_handler(fmt, argp);
-// 	va_end(argp);
-//
-// 	abort();
-// }
-//
+
+static void
+wl_log_stderr_handler(const char *fmt, va_list arg)
+{
+	vfprintf(stderr, fmt, arg);
+}
+
+wl_log_func_t wl_log_handler = wl_log_stderr_handler;
+
+void
+wl_log(const char *fmt, ...)
+{
+	va_list argp;
+
+	va_start(argp, fmt);
+	wl_log_handler(fmt, argp);
+	va_end(argp);
+}
+
+void
+wl_abort(const char *fmt, ...)
+{
+	va_list argp;
+
+	va_start(argp, fmt);
+	wl_log_handler(fmt, argp);
+	va_end(argp);
+
+	abort();
+}
+
 // /** \endcond */

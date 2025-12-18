@@ -28,10 +28,10 @@
 // #include "../config.h"
 //
 // #include <sys/types.h>
-// #include <sys/socket.h>
-// #include <unistd.h>
-// #include <fcntl.h>
-// #include <errno.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
 // #include <string.h>
 // #include <sys/epoll.h>
 // #include <sys/mman.h>
@@ -39,52 +39,52 @@
 // #ifdef HAVE_SYS_UCRED_H
 // #include <sys/ucred.h>
 // #endif
-//
-// #include "wayland-os.h"
-//
+
+#include "wayland-os.h"
+
 // /* used by tests */
-// int (*wl_fcntl)(int fildes, int cmd, ...) = fcntl;
-// int (*wl_socket)(int domain, int type, int protocol) = socket;
-// ssize_t (*wl_recvmsg)(int socket, struct msghdr *message, int flags) = recvmsg;
+int (*wl_fcntl)(int fildes, int cmd, ...) = fcntl;
+int (*wl_socket)(int domain, int type, int protocol) = socket;
+ssize_t (*wl_recvmsg)(int socket, struct msghdr *message, int flags) = recvmsg;
 // int (*wl_epoll_create1)(int flags) = epoll_create1;
-//
-// static int
-// set_cloexec_or_close(int fd)
-// {
-// 	long flags;
-//
-// 	if (fd == -1)
-// 		return -1;
-//
-// 	flags = wl_fcntl(fd, F_GETFD);
-// 	if (flags == -1)
-// 		goto err;
-//
-// 	if (wl_fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
-// 		goto err;
-//
-// 	return fd;
-//
-// err:
-// 	close(fd);
-// 	return -1;
-// }
-//
-// int
-// wl_os_socket_cloexec(int domain, int type, int protocol)
-// {
-// 	int fd;
-//
-// 	fd = wl_socket(domain, type | SOCK_CLOEXEC, protocol);
-// 	if (fd >= 0)
-// 		return fd;
-// 	if (errno != EINVAL)
-// 		return -1;
-//
-// 	fd = wl_socket(domain, type, protocol);
-// 	return set_cloexec_or_close(fd);
-// }
-//
+
+static int
+set_cloexec_or_close(int fd)
+{
+	long flags;
+
+	if (fd == -1)
+		return -1;
+
+	flags = wl_fcntl(fd, F_GETFD);
+	if (flags == -1)
+		goto err;
+
+	if (wl_fcntl(fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+		goto err;
+
+	return fd;
+
+err:
+	close(fd);
+	return -1;
+}
+
+int
+wl_os_socket_cloexec(int domain, int type, int protocol)
+{
+	int fd;
+
+	fd = wl_socket(domain, type | SOCK_CLOEXEC, protocol);
+	if (fd >= 0)
+		return fd;
+	if (errno != EINVAL)
+		return -1;
+
+	fd = wl_socket(domain, type, protocol);
+	return set_cloexec_or_close(fd);
+}
+
 // #if defined(__FreeBSD__)
 // int
 // wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
@@ -143,61 +143,61 @@
 // 	newfd = wl_fcntl(fd, F_DUPFD, minfd);
 // 	return set_cloexec_or_close(newfd);
 // }
-//
-// static ssize_t
-// recvmsg_cloexec_fallback(int sockfd, struct msghdr *msg, int flags)
-// {
-// 	ssize_t len;
-// 	struct cmsghdr *cmsg;
-// 	unsigned char *data;
-// 	int *fd;
-// 	int *end;
-//
-// 	len = wl_recvmsg(sockfd, msg, flags);
-// 	if (len == -1)
-// 		return -1;
-//
-// 	if (!msg->msg_control || msg->msg_controllen == 0)
-// 		return len;
-//
-// 	cmsg = CMSG_FIRSTHDR(msg);
-// 	for (; cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg)) {
-// 		if (cmsg->cmsg_level != SOL_SOCKET ||
-// 		    cmsg->cmsg_type != SCM_RIGHTS)
-// 			continue;
-//
-// 		data = CMSG_DATA(cmsg);
-// 		end = (int *)(data + cmsg->cmsg_len - CMSG_LEN(0));
-// 		for (fd = (int *)data; fd < end; ++fd)
-// 			*fd = set_cloexec_or_close(*fd);
-// 	}
-//
-// 	return len;
-// }
-//
-// ssize_t
-// wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags)
-// {
-// #if HAVE_BROKEN_MSG_CMSG_CLOEXEC
-// 	/*
-// 	 * FreeBSD had a broken implementation of MSG_CMSG_CLOEXEC between 2015
-// 	 * and 2021, so we have to use the non-MSG_CMSG_CLOEXEC fallback
-// 	 * directly when compiling against a version that does not include the
-// 	 * fix (https://cgit.freebsd.org/src/commit/?id=6ceacebdf52211).
-// 	 */
-// #pragma message("Using fallback directly since MSG_CMSG_CLOEXEC is broken.")
-// #else
-// 	ssize_t len;
-//
-// 	len = wl_recvmsg(sockfd, msg, flags | MSG_CMSG_CLOEXEC);
-// 	if (len >= 0)
-// 		return len;
-// 	if (errno != EINVAL)
-// 		return -1;
-// #endif
-// 	return recvmsg_cloexec_fallback(sockfd, msg, flags);
-// }
-//
+
+static ssize_t
+recvmsg_cloexec_fallback(int sockfd, struct msghdr *msg, int flags)
+{
+	ssize_t len;
+	struct cmsghdr *cmsg;
+	unsigned char *data;
+	int *fd;
+	int *end;
+
+	len = wl_recvmsg(sockfd, msg, flags);
+	if (len == -1)
+		return -1;
+
+	if (!msg->msg_control || msg->msg_controllen == 0)
+		return len;
+
+	cmsg = CMSG_FIRSTHDR(msg);
+	for (; cmsg != NULL; cmsg = CMSG_NXTHDR(msg, cmsg)) {
+		if (cmsg->cmsg_level != SOL_SOCKET ||
+		    cmsg->cmsg_type != SCM_RIGHTS)
+			continue;
+
+		data = CMSG_DATA(cmsg);
+		end = (int *)(data + cmsg->cmsg_len - CMSG_LEN(0));
+		for (fd = (int *)data; fd < end; ++fd)
+			*fd = set_cloexec_or_close(*fd);
+	}
+
+	return len;
+}
+
+ssize_t
+wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags)
+{
+#if HAVE_BROKEN_MSG_CMSG_CLOEXEC
+	/*
+	 * FreeBSD had a broken implementation of MSG_CMSG_CLOEXEC between 2015
+	 * and 2021, so we have to use the non-MSG_CMSG_CLOEXEC fallback
+	 * directly when compiling against a version that does not include the
+	 * fix (https://cgit.freebsd.org/src/commit/?id=6ceacebdf52211).
+	 */
+#pragma message("Using fallback directly since MSG_CMSG_CLOEXEC is broken.")
+#else
+	ssize_t len;
+
+	len = wl_recvmsg(sockfd, msg, flags | MSG_CMSG_CLOEXEC);
+	if (len >= 0)
+		return len;
+	if (errno != EINVAL)
+		return -1;
+#endif
+	return recvmsg_cloexec_fallback(sockfd, msg, flags);
+}
+
 // int
 // wl_os_epoll_create_cloexec(void)
 // {
@@ -214,24 +214,24 @@
 // 	fd = epoll_create(1);
 // 	return set_cloexec_or_close(fd);
 // }
-//
-// int
-// wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
-// {
-// 	int fd;
-//
-// #ifdef HAVE_ACCEPT4
-// 	fd = accept4(sockfd, addr, addrlen, SOCK_CLOEXEC);
-// 	if (fd >= 0)
-// 		return fd;
-// 	if (errno != ENOSYS)
-// 		return -1;
-// #endif
-//
-// 	fd = accept(sockfd, addr, addrlen);
-// 	return set_cloexec_or_close(fd);
-// }
-//
+
+int
+wl_os_accept_cloexec(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+	int fd;
+
+#ifdef HAVE_ACCEPT4
+	fd = accept4(sockfd, addr, addrlen, SOCK_CLOEXEC);
+	if (fd >= 0)
+		return fd;
+	if (errno != ENOSYS)
+		return -1;
+#endif
+
+	fd = accept(sockfd, addr, addrlen);
+	return set_cloexec_or_close(fd);
+}
+
 // /*
 //  * Fallback function for operating systems that don't implement
 //  * mremap(MREMAP_MAYMOVE).

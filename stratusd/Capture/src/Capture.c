@@ -1,7 +1,12 @@
 #include <stdio.h>
-#include <stdlib.h>
+
+#include "proxy.h"
 
 int capture_test() {
-    printf("capture_test\n");
+    struct proxy *proxy = proxy_init("stratus");
+    if (proxy != NULL) {
+        proxy_run(proxy);
+        proxy_destroy(proxy);
+    }
     return 0;
 }

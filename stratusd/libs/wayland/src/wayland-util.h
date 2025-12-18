@@ -23,30 +23,30 @@
  * SOFTWARE.
  */
 
-// /** \file wayland-util.h
-//  *
-//  * \brief Utility classes, functions, and macros.
-//  */
-//
-// #ifndef WAYLAND_UTIL_H
-// #define WAYLAND_UTIL_H
-//
+/** \file wayland-util.h
+ *
+ * \brief Utility classes, functions, and macros.
+ */
+
+#ifndef WAYLAND_UTIL_H
+#define WAYLAND_UTIL_H
+
 // #include <math.h>
 // #include <stddef.h>
-// #include <inttypes.h>
-// #include <stdarg.h>
-//
-// #ifdef  __cplusplus
-// extern "C" {
-// #endif
-//
-// /** Visibility attribute */
-// #if defined(__GNUC__) && __GNUC__ >= 4
-// #define WL_EXPORT __attribute__ ((visibility("default")))
-// #else
-// #define WL_EXPORT
-// #endif
-//
+#include <inttypes.h>
+#include <stdarg.h>
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+/** Visibility attribute */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define WL_EXPORT __attribute__ ((visibility("default")))
+#else
+#define WL_EXPORT
+#endif
+
 // /** Deprecated attribute */
 // #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) || (defined(__cplusplus) && __cplusplus >= 201402L)
 // #define WL_DEPRECATED [[deprecated]]
@@ -55,21 +55,21 @@
 // #else
 // #define WL_DEPRECATED
 // #endif
-//
-// /**
-//  * Printf-style argument attribute
-//  *
-//  * \param x Ordinality of the format string argument
-//  * \param y Ordinality of the argument to check against the format string
-//  *
-//  * \sa https://gcc.gnu.org/onlinedocs/gcc-3.2.1/gcc/Function-Attributes.html
-//  */
-// #if defined(__GNUC__) && __GNUC__ >= 4
-// #define WL_PRINTF(x, y) __attribute__((__format__(__printf__, x, y)))
-// #else
-// #define WL_PRINTF(x, y)
-// #endif
-//
+
+/**
+ * Printf-style argument attribute
+ *
+ * \param x Ordinality of the format string argument
+ * \param y Ordinality of the argument to check against the format string
+ *
+ * \sa https://gcc.gnu.org/onlinedocs/gcc-3.2.1/gcc/Function-Attributes.html
+ */
+#if defined(__GNUC__) && __GNUC__ >= 4
+#define WL_PRINTF(x, y) __attribute__((__format__(__printf__, x, y)))
+#else
+#define WL_PRINTF(x, y)
+#endif
+
 // #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 // #define WL_TYPEOF(expr) typeof(expr)
 // #else
@@ -89,15 +89,15 @@
 //  *
 //  */
 // struct wl_object;
-//
-// /**
-//  * The maximum size of a protocol message.
-//  *
-//  * If a message size exceeds this value, the connection will be dropped.
-//  * Servers will send an invalid_method error before disconnecting.
-//  */
-// #define WL_MAX_MESSAGE_SIZE 4096
-//
+
+/**
+ * The maximum size of a protocol message.
+ *
+ * If a message size exceeds this value, the connection will be dropped.
+ * Servers will send an invalid_method error before disconnecting.
+ */
+#define WL_MAX_MESSAGE_SIZE 4096
+
 // /**
 //  * Protocol message signature
 //  *
@@ -721,33 +721,33 @@
 // typedef int (*wl_dispatcher_func_t)(const void *user_data, void *target,
 // 				    uint32_t opcode, const struct wl_message *msg,
 // 				    union wl_argument *args);
-//
-// /**
-//  * Log function type alias
-//  *
-//  * The C implementation of the Wayland protocol abstracts the details of
-//  * logging. Users may customize the logging behavior, with a function conforming
-//  * to the `wl_log_func_t` type, via `wl_log_set_handler_client` and
-//  * `wl_log_set_handler_server`.
-//  *
-//  * A `wl_log_func_t` must conform to the expectations of `vprintf`, and
-//  * expects two arguments: a string to write and a corresponding variable
-//  * argument list. While the string to write may contain format specifiers and
-//  * use values in the variable argument list, the behavior of any `wl_log_func_t`
-//  * depends on the implementation.
-//  *
-//  * \note Take care to not confuse this with `wl_protocol_logger_func_t`, which
-//  *       is a specific server-side logger for requests and events.
-//  *
-//  * \param fmt String to write to the log, containing optional format
-//  *            specifiers
-//  * \param args Variable argument list
-//  *
-//  * \sa wl_log_set_handler_client
-//  * \sa wl_log_set_handler_server
-//  */
-// typedef void (*wl_log_func_t)(const char *fmt, va_list args) WL_PRINTF(1, 0);
-//
+
+/**
+ * Log function type alias
+ *
+ * The C implementation of the Wayland protocol abstracts the details of
+ * logging. Users may customize the logging behavior, with a function conforming
+ * to the `wl_log_func_t` type, via `wl_log_set_handler_client` and
+ * `wl_log_set_handler_server`.
+ *
+ * A `wl_log_func_t` must conform to the expectations of `vprintf`, and
+ * expects two arguments: a string to write and a corresponding variable
+ * argument list. While the string to write may contain format specifiers and
+ * use values in the variable argument list, the behavior of any `wl_log_func_t`
+ * depends on the implementation.
+ *
+ * \note Take care to not confuse this with `wl_protocol_logger_func_t`, which
+ *       is a specific server-side logger for requests and events.
+ *
+ * \param fmt String to write to the log, containing optional format
+ *            specifiers
+ * \param args Variable argument list
+ *
+ * \sa wl_log_set_handler_client
+ * \sa wl_log_set_handler_server
+ */
+typedef void (*wl_log_func_t)(const char *fmt, va_list args) WL_PRINTF(1, 0);
+
 // /**
 //  * Return value of an iterator function
 //  *
@@ -760,9 +760,9 @@
 // 	/** Continue the iteration */
 // 	WL_ITERATOR_CONTINUE
 // };
-//
-// #ifdef  __cplusplus
-// }
-// #endif
-//
-// #endif
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif

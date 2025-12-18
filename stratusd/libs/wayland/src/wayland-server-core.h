@@ -23,19 +23,20 @@
  * SOFTWARE.
  */
 
-// #ifndef WAYLAND_SERVER_CORE_H
-// #define WAYLAND_SERVER_CORE_H
-//
+#ifndef WAYLAND_SERVER_CORE_H
+#define WAYLAND_SERVER_CORE_H
+
 // #include <sys/types.h>
+// #include <sys/un.h>
 // #include <stdint.h>
 // #include <stdbool.h>
 // #include "wayland-util.h"
 // #include "wayland-version.h"
-//
-// #ifdef  __cplusplus
-// extern "C" {
-// #endif
-//
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
 // enum {
 // 	WL_EVENT_READABLE = 0x01,
 // 	WL_EVENT_WRITABLE = 0x02,
@@ -195,10 +196,12 @@
 //
 // struct wl_event_loop *
 // wl_display_get_event_loop(struct wl_display *display);
-//
-// int
-// wl_display_add_socket(struct wl_display *display, const char *name);
-//
+
+// STRATUS: removed wl_display argument from wl_display_add_socket() and made it
+// return the created socket instead
+struct wl_socket *
+wl_display_add_socket(const char *name);
+
 // const char *
 // wl_display_add_socket_auto(struct wl_display *display);
 //
@@ -719,9 +722,41 @@
 //
 // void
 // wl_protocol_logger_destroy(struct wl_protocol_logger *logger);
-//
-// #ifdef  __cplusplus
-// }
-// #endif
-//
-// #endif
+
+// STRATUS: moved UNIX_PATH_MAX, LOCK_SUFFIX, and LOCK_SUFFIXLEN definitions
+// from wayland-server.c to wayland-server-core.h
+/* This is the size of the char array in struct sock_addr_un.
+* No Wayland socket can be created with a path longer than this,
+* including the null terminator.
+*/
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX	108
+#endif
+
+#define LOCK_SUFFIX	".lock"
+#define LOCK_SUFFIXLEN	5
+
+// STRATUS: removed unused members from wl_socket struct
+struct wl_socket {
+	int fd;
+	int fd_lock;
+	struct sockaddr_un addr;
+	char lock_addr[UNIX_PATH_MAX + LOCK_SUFFIXLEN];
+	// struct wl_list link;
+	// struct wl_event_source *source;
+	// char *display_name;
+};
+
+// STRATUS: made wl_socket_destroy non-static
+void
+wl_socket_destroy(struct wl_socket *s);
+
+// STRATUS: made socket_data() non-static
+int
+socket_data(int fd, uint32_t mask, void *data);
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif

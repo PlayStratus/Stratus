@@ -33,12 +33,12 @@
  *  API, excluding the deprecated API below.
  */
 
-// #ifndef WAYLAND_SERVER_H
-// #define WAYLAND_SERVER_H
-//
+#ifndef WAYLAND_SERVER_H
+#define WAYLAND_SERVER_H
+
 // #include <stdint.h>
-// #include "wayland-server-core.h"
-//
+#include "wayland-server-core.h"
+
 // #ifdef  __cplusplus
 // extern "C" {
 // #endif
@@ -107,5 +107,5 @@
 // #endif
 //
 // #include "wayland-server-protocol.h"
-//
-// #endif
+
+#endif
