@@ -37,42 +37,42 @@
 
 #include "wayland-util.h"
 
-// /* Invalid memory address */
-// #define WL_ARRAY_POISON_PTR (void *) 4
-//
+/* Invalid memory address */
+#define WL_ARRAY_POISON_PTR (void *) 4
+
 // #define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 //
-// #define WL_MAP_SERVER_SIDE 0
-// #define WL_MAP_CLIENT_SIDE 1
-// #define WL_SERVER_ID_START 0xff000000
-// #define WL_MAP_MAX_OBJECTS 0x00f00000
-// #define WL_CLOSURE_MAX_ARGS 20
+#define WL_MAP_SERVER_SIDE 0
+#define WL_MAP_CLIENT_SIDE 1
+#define WL_SERVER_ID_START 0xff000000
+#define WL_MAP_MAX_OBJECTS 0x00f00000
+#define WL_CLOSURE_MAX_ARGS 20
 #define WL_BUFFER_DEFAULT_SIZE_POT 12
 #define WL_BUFFER_DEFAULT_MAX_SIZE (1 << WL_BUFFER_DEFAULT_SIZE_POT)
 #if WL_BUFFER_DEFAULT_MAX_SIZE < WL_MAX_MESSAGE_SIZE
 # error default buffer cannot hold maximum-sized message
 #endif
 
-// /**
-//  * Argument types used in signatures.
-//  */
-// enum wl_arg_type {
-// 	WL_ARG_INT = 'i',
-// 	WL_ARG_UINT = 'u',
-// 	WL_ARG_FIXED = 'f',
-// 	WL_ARG_STRING = 's',
-// 	WL_ARG_OBJECT = 'o',
-// 	WL_ARG_NEW_ID = 'n',
-// 	WL_ARG_ARRAY = 'a',
-// 	WL_ARG_FD = 'h',
-// };
-//
-// struct wl_object {
-// 	const struct wl_interface *interface;
-// 	const void *implementation;
-// 	uint32_t id;
-// };
-//
+/**
+ * Argument types used in signatures.
+ */
+enum wl_arg_type {
+	WL_ARG_INT = 'i',
+	WL_ARG_UINT = 'u',
+	WL_ARG_FIXED = 'f',
+	WL_ARG_STRING = 's',
+	WL_ARG_OBJECT = 'o',
+	WL_ARG_NEW_ID = 'n',
+	WL_ARG_ARRAY = 'a',
+	WL_ARG_FD = 'h',
+};
+
+struct wl_object {
+	const struct wl_interface *interface;
+	const void *implementation;
+	uint32_t id;
+};
+
 // int
 // wl_interface_equal(const struct wl_interface *iface1,
 // 		   const struct wl_interface *iface2);
@@ -85,39 +85,39 @@
 // 	WL_MAP_ENTRY_LEGACY = (1 << 0), /* Server side only */
 // 	WL_MAP_ENTRY_ZOMBIE = (1 << 0) /* Client side only */
 // };
-//
-// struct wl_map {
-// 	struct wl_array client_entries;
-// 	struct wl_array server_entries;
-// 	uint32_t side;
-// 	uint32_t free_list;
-// };
-//
+
+struct wl_map {
+	struct wl_array client_entries;
+	struct wl_array server_entries;
+	uint32_t side;
+	uint32_t free_list;
+};
+
 // typedef enum wl_iterator_result (*wl_iterator_func_t)(void *element,
 // 						      void *data,
 // 						      uint32_t flags);
-//
-// void
-// wl_map_init(struct wl_map *map, uint32_t side);
-//
-// void
-// wl_map_release(struct wl_map *map);
-//
-// uint32_t
-// wl_map_insert_new(struct wl_map *map, uint32_t flags, void *data);
-//
-// int
-// wl_map_insert_at(struct wl_map *map, uint32_t flags, uint32_t i, void *data);
-//
-// int
-// wl_map_reserve_new(struct wl_map *map, uint32_t i);
-//
-// void
-// wl_map_remove(struct wl_map *map, uint32_t i);
-//
-// void *
-// wl_map_lookup(struct wl_map *map, uint32_t i);
-//
+
+void
+wl_map_init(struct wl_map *map, uint32_t side);
+
+void
+wl_map_release(struct wl_map *map);
+
+uint32_t
+wl_map_insert_new(struct wl_map *map, uint32_t flags, void *data);
+
+int
+wl_map_insert_at(struct wl_map *map, uint32_t flags, uint32_t i, void *data);
+
+int
+wl_map_reserve_new(struct wl_map *map, uint32_t i);
+
+void
+wl_map_remove(struct wl_map *map, uint32_t i);
+
+void *
+wl_map_lookup(struct wl_map *map, uint32_t i);
+
 // uint32_t
 // wl_map_lookup_flags(struct wl_map *map, uint32_t i);
 //
@@ -155,29 +155,29 @@ wl_connection_queue(struct wl_connection *connection,
 
 // int
 // wl_connection_get_fd(struct wl_connection *connection);
-//
-// struct wl_closure {
-// 	int count;
-// 	const struct wl_message *message;
-// 	uint32_t opcode;
-// 	uint32_t sender_id;
-// 	union wl_argument args[WL_CLOSURE_MAX_ARGS];
-// 	struct wl_list link;
-// 	struct wl_proxy *proxy;
-// 	struct wl_array extra[0];
-// };
-//
-// struct argument_details {
-// 	enum wl_arg_type type;
-// 	int nullable;
-// };
-//
-// const char *
-// get_next_argument(const char *signature, struct argument_details *details);
-//
-// int
-// arg_count_for_signature(const char *signature);
-//
+
+struct wl_closure {
+	int count;
+	const struct wl_message *message;
+	uint32_t opcode;
+	uint32_t sender_id;
+	union wl_argument args[WL_CLOSURE_MAX_ARGS];
+	struct wl_list link;
+	struct wl_proxy *proxy;
+	struct wl_array extra[0];
+};
+
+struct argument_details {
+	enum wl_arg_type type;
+	int nullable;
+};
+
+const char *
+get_next_argument(const char *signature, struct argument_details *details);
+
+int
+arg_count_for_signature(const char *signature);
+
 // int
 // wl_message_count_arrays(const struct wl_message *message);
 //
@@ -197,13 +197,13 @@ wl_connection_queue(struct wl_connection *connection,
 // wl_closure_vmarshal(struct wl_object *sender,
 // 		    uint32_t opcode, va_list ap,
 // 		    const struct wl_message *message);
-//
-// struct wl_closure *
-// wl_connection_demarshal(struct wl_connection *connection,
-// 			uint32_t size,
-// 			struct wl_map *objects,
-// 			const struct wl_message *message);
-//
+
+struct wl_closure *
+wl_connection_demarshal(struct wl_connection *connection,
+			uint32_t size,
+			struct wl_map *objects,
+			const struct wl_message *message);
+
 // bool
 // wl_object_is_zombie(struct wl_map *map, uint32_t id);
 //
@@ -228,16 +228,17 @@ wl_connection_queue(struct wl_connection *connection,
 //
 // int
 // wl_closure_queue(struct wl_closure *closure, struct wl_connection *connection);
-//
-// void
-// wl_closure_print(struct wl_closure *closure,
-// 		 struct wl_object *target, int send, int discarded,
-// 		 uint32_t (*n_parse)(union wl_argument *arg),
-// 		 const char *queue_name);
-//
-// void
-// wl_closure_destroy(struct wl_closure *closure);
-//
+
+// STRATUS: replaced wl_object argument with wl_interface
+void
+wl_closure_print(struct wl_closure *closure,
+		 const struct wl_interface *interface, int send, int discarded,
+		 uint32_t (*n_parse)(union wl_argument *arg),
+		 const char *queue_name);
+
+void
+wl_closure_destroy(struct wl_closure *closure);
+
 // extern wl_log_func_t wl_log_handler;
 
 void wl_log(const char *fmt, ...);
@@ -282,10 +283,15 @@ struct wl_socket {
 	// char *display_name;
 };
 
-// STRATUS: created wl_connection_pop_fd() function
-int wl_connection_pop_fd(struct wl_connection *connection);
+// STRATUS: made wl_closure_send() non-static
+int
+wl_closure_send(struct wl_closure *closure, struct wl_connection *connection);
 
-// STRATUS: made wl_connection_put_fd() non-static
-int wl_connection_put_fd(struct wl_connection *connection, int32_t fd);
+// STRATUS: created wl_connection_pending_fds() and wl_connection_read_fd()
+// functions
+uint32_t
+wl_connection_pending_fds(struct wl_connection *connection);
 
+int
+wl_connection_read_fds(struct wl_connection *connection, int n, int *fds);
 #endif

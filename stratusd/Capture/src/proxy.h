@@ -23,17 +23,35 @@ struct proxy_conn {
 };
 
 /*
+ * Contains data associated with a received Wayland message
+ */
+struct proxy_message {
+    struct proxy_conn *conn;
+    const struct wl_interface *interface;
+    struct wl_closure *closure;
+};
+
+/*
+ * Signature of custom handler called when a proxy receives a Wayland message
+ *
+ * Should return 1 to proxy the message, 0 to swallow the message, and -1 if an
+ * error occurred.
+ */
+typedef int (proxy_on_message_handler)(struct proxy_message *msg);
+
+/*
  * Data for a Wayland proxy between the system compositor (server) and at most
  * one application (client)
  */
 struct proxy {
     char *name;
+    proxy_on_message_handler *on_message;
 
-    // The remaining members aren't meant to be accessed outside of proxy.c:
     int epoll_fd;
     struct wl_socket *socket;
     struct proxy_conn *client;
     struct proxy_conn *server;
+    struct wl_map *objects;
 };
 
 struct proxy *proxy_init(char *name);

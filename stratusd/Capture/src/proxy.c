@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
 #include <sys/epoll.h>
+#include <sys/param.h>
 #include <unistd.h>
 
 #include <wayland-client.h>
@@ -8,6 +10,29 @@
 #include <wayland-server.h>
 
 #include "proxy.h"
+
+/*
+ * Key interfaces defined in libs/wayland/protocols/*.c
+ */
+extern const struct wl_interface *linux_dmabuf_v1_types_all[];
+extern const struct wl_interface *presentation_time_types_all[];
+extern const struct wl_interface *tablet_v2_types_all[];
+extern const struct wl_interface *viewporter_types_all[];
+extern const struct wl_interface *wayland_types_all[];
+extern const struct wl_interface *xdg_shell_types_all[];
+extern const struct wl_interface wl_display_interface;
+
+/*
+ * The available Wayland protocols
+ */
+const struct wl_interface **proxy_protocols[] = {
+    linux_dmabuf_v1_types_all,
+    presentation_time_types_all,
+    tablet_v2_types_all,
+    viewporter_types_all,
+    wayland_types_all,
+    xdg_shell_types_all,
+};
 
 /*
  * Add a file descriptor to a proxy's epoll instance with a custom data pointer
@@ -68,38 +93,145 @@ static void proxy_destroy_connection(struct proxy_conn *conn) {
 }
 
 /*
+ * Lookup a Wayland interface by name
+ *
+ * Returns a pointer to the wl_interface struct, or NULL if it was not found
+ */
+static const struct wl_interface *proxy_lookup_interface(const char *name) {
+    int i, j, protocol_count;
+
+    protocol_count = sizeof(proxy_protocols) / sizeof(struct wl_interface**);
+    for (i = 0; i < protocol_count; i++) {
+        for (j = 0; proxy_protocols[i][j] != NULL; j++) {
+            if (!strcmp(name, proxy_protocols[i][j]->name)) {
+                return proxy_protocols[i][j];
+            }
+        }
+    }
+    return NULL;
+}
+
+/*
+ * Handle a Wayland message received by a proxy
+ *
+ * Returns 0 on success and -1 on failure
+ */
+static int proxy_handle_message(struct proxy_conn *src, int id,
+                                        int size, int opcode) {
+    int ret, i, arg_count;
+    const char *signature;
+    const struct wl_interface *interface, *bind_interface;
+    struct wl_message message;
+    struct wl_closure *closure;
+    struct wl_object target;
+    struct argument_details arg;
+    struct proxy_conn *dst;
+    struct proxy_message msg;
+
+    // Lookup message format
+    interface = wl_map_lookup(src->proxy->objects, id);
+    if (interface == NULL)
+        goto err_pre_closure;
+
+    // Parse message
+    message = (src->side == SIDE_CLIENT) ? interface->methods[opcode] :
+                                           interface->events[opcode];
+    closure = wl_connection_demarshal(src->wl_conn, size,
+                                      src->proxy->objects, &message);
+    if (closure == NULL)
+        goto err_pre_closure;
+
+    ret = 1;
+    if (!strcmp(interface->name, "wl_registry") &&
+        !strcmp(message.name, "global") &&
+        !proxy_lookup_interface(closure->args[1].s)) {
+
+        // Drop wl_registry.global events for unsupported interfaces
+        ret = 0;
+    }
+
+    // Run custom message handler
+    if (ret == 1 && src->proxy->on_message != NULL) {
+        msg.conn = src;
+        msg.interface = interface;
+        msg.closure = closure;
+        ret = (*src->proxy->on_message)(&msg);
+        if (ret < 0)
+            goto err_post_closure;
+    }
+
+    if (ret == 1 && !strcmp(interface->name, "wl_registry") &&
+        !strcmp(message.name, "bind")) {
+
+        // Record type of newly bound interface
+        bind_interface = proxy_lookup_interface(closure->args[1].s);
+        if (bind_interface == NULL)
+            goto err_post_closure;
+        if (wl_map_insert_at(src->proxy->objects, 0, closure->args[3].n,
+                             (void*)bind_interface) < 0)
+            goto err_post_closure;
+
+    } else if (ret == 1) {
+        // Record types of new objects
+        signature = closure->message->signature;
+        arg_count = arg_count_for_signature(signature);
+        for (i = 0; i < arg_count; i++) {
+            signature = get_next_argument(signature, &arg);
+            if (arg.type == WL_ARG_NEW_ID) {
+                if (wl_map_insert_at(src->proxy->objects, 0,
+                                     closure->args[i].n,
+                                     (void*)message.types[0]) < 0)
+                    goto err_post_closure;
+            }
+        }
+    }
+
+    if (ret == 1) {
+        // Proxy message
+        dst = (src->side == SIDE_CLIENT) ? src->proxy->server : src->proxy->client;
+        assert(dst != NULL); // The opposite connection must already exist
+        if (wl_closure_send(closure, dst->wl_conn) < 0)
+            goto err_post_closure;
+    }
+
+    wl_closure_destroy(closure);
+    return ret;
+
+err_post_closure:
+    wl_closure_destroy(closure);
+err_pre_closure:
+    return -1;
+}
+
+/*
  * Handles data received by a proxy
  *
  * Returns 0 on success and -1 on failure
  */
 static int proxy_handle_data(struct proxy_conn *src) {
+    bool proxy_msg;
     char buf[WL_MAX_MESSAGE_SIZE];
-    int len, size, fd;
+    int len, id, size, opcode;
     struct proxy_conn *dst;
-
-    dst = (src->side == SIDE_CLIENT) ? src->proxy->server : src->proxy->client;
-    assert(dst != NULL); // The opposite connection must already exist
 
     len = wl_connection_read(src->wl_conn);
     while (len >= 2 * sizeof(uint32_t)) {
-        // Parse size of next message
+        // Parse header of next message
         wl_connection_copy(src->wl_conn, buf, 2 * sizeof(uint32_t));
+        id = ((uint32_t*)buf)[0];
         size = ((uint32_t*)buf)[1] >> 16;
-        len -= size;
-        assert(size <= WL_MAX_MESSAGE_SIZE);
+        opcode = ((uint32_t*)buf)[1] & 0xffff;
 
-        // Proxy message data
-        wl_connection_copy(src->wl_conn, buf, size);
-        wl_connection_consume(src->wl_conn, size);
-        if (wl_connection_write(dst->wl_conn, buf, size) < 0)
+        // Parse and handle message
+        if (proxy_handle_message(src, id, size, opcode) < 0)
             return -1;
 
-        // Proxy message file descriptors
-        while ((fd = wl_connection_pop_fd(src->wl_conn)) >= 0) {
-            if (wl_connection_put_fd(dst->wl_conn, fd) < 0)
-                return -1;
-        }
+        len -= size;
     }
+
+    // Flush destination connection
+    dst = (src->side == SIDE_CLIENT) ? src->proxy->server : src->proxy->client;
+    assert(dst != NULL); // The opposite connection must already exist
     if (wl_connection_flush(dst->wl_conn) < 0)
         return -1;
 
@@ -141,8 +273,18 @@ struct proxy *proxy_init(char *name) {
     if (proxy_add_connection(proxy, server_fd, SIDE_SERVER) < 0)
         goto err_server_conn;
 
+    // Initialize object map
+    proxy->objects = malloc(sizeof(struct wl_map));
+    if (proxy->objects == NULL)
+        goto err_malloc;
+    wl_map_init(proxy->objects, WL_MAP_CLIENT_SIDE);
+    wl_map_insert_new(proxy->objects, 0, NULL);
+    wl_map_insert_new(proxy->objects, 0, (void*)&wl_display_interface);
+
     return proxy;
 
+err_malloc:
+    proxy_destroy_connection(proxy->server);
 err_server_conn:
     close(server_fd);
 err_server_socket:
@@ -166,8 +308,11 @@ int proxy_run(struct proxy *proxy) {
 
     printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
     while (true) {
-        if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0)
+        if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0) {
+            if (errno == EINTR) continue; // Ignore e.g. GDB interrupts
+            perror("epoll_wait");
             return -1;
+        }
 
         if (ev.events & EPOLLHUP) {
             // Client disconnected
@@ -206,6 +351,8 @@ void proxy_destroy(struct proxy *proxy) {
     if (proxy->server != NULL)
         proxy_destroy_connection(proxy->server);
     wl_socket_destroy(proxy->socket);
+    wl_map_release(proxy->objects);
+    free(proxy->objects);
     close(proxy->epoll_fd);
     free(proxy);
 }
