@@ -47,15 +47,16 @@ static int proxy_epoll_add_fd(struct proxy *proxy, int fd, void *data) {
 }
 
 /*
- * Initialize a proxy's client or server connection from a file descriptor
+ * Initialize a proxy session's client or server connection
  *
  * This function must only be called once per connection type per proxy
  *
  * Returns 0 on success and -1 on failure
  */
-static int proxy_add_connection(struct proxy *proxy, int fd, int side) {
-    struct proxy_conn **conn = (side == SIDE_SERVER) ? &proxy->server :
-        &proxy->client;
+static int proxy_add_connection(struct proxy_session *session, int fd, int side)
+{
+    struct proxy_conn **conn = (side == SIDE_SERVER) ? &session->server :
+        &session->client;
     assert(*conn == NULL); // The connection must not already exist
 
     *conn = malloc(sizeof(struct proxy_conn));
@@ -63,13 +64,13 @@ static int proxy_add_connection(struct proxy *proxy, int fd, int side) {
         goto err_malloc;
 
     (*conn)->side = side;
-    (*conn)->proxy = proxy;
+    (*conn)->session = session;
 
     (*conn)->wl_conn = wl_connection_create(fd, 0);
     if ((*conn)->wl_conn == NULL)
         goto err_conn;
 
-    if (proxy_epoll_add_fd(proxy, fd, *conn) < 0)
+    if (proxy_epoll_add_fd(session->proxy, fd, *conn) < 0)
         goto err_epoll;
 
     return 0;
@@ -84,12 +85,86 @@ err_malloc:
 }
 
 /*
- * Destroy a connection struct and free its resources
+ * Destroy a proxy_conn struct and free its resources
  */
 static void proxy_destroy_connection(struct proxy_conn *conn) {
+    assert(conn != NULL);
     int fd = wl_connection_destroy(conn->wl_conn);
+    epoll_ctl(conn->session->proxy->epoll_fd, EPOLL_CTL_DEL, fd, NULL);
     close(fd);
     free(conn);
+}
+
+/*
+ * Initialize a proxy session
+ *
+ * Returns 0 on success and -1 on failure
+ */
+static int proxy_create_session(struct proxy *proxy, int client_fd) {
+    int server_fd;
+    struct proxy_session *session;
+
+    // Initialize session
+    session = zalloc(sizeof(struct proxy_session));
+    if (session == NULL)
+        goto err_zalloc;
+    session->proxy = proxy;
+
+    // Connect to client
+    if (proxy_add_connection(session, client_fd, SIDE_CLIENT) < 0)
+        goto err_client;
+
+    // Connect to server
+    server_fd = connect_to_socket(NULL);
+    if (server_fd < 0)
+        goto err_server_socket;
+    if (proxy_add_connection(session, server_fd, SIDE_SERVER) < 0)
+        goto err_server_conn;
+
+    // Initialize object map
+    session->objects = malloc(sizeof(struct wl_map));
+    if (session->objects == NULL)
+        goto err_objects;
+    wl_map_init(session->objects, WL_MAP_CLIENT_SIDE);
+    wl_map_insert_new(session->objects, 0, NULL);
+    wl_map_insert_new(session->objects, 0, (void*)&wl_display_interface);
+
+    if (proxy->on_session_create != NULL) {
+        if ((*proxy->on_session_create)(session) < 0)
+            goto err_handler;
+    }
+
+    proxy->session_count++;
+
+    return 0;
+
+err_handler:
+    free(session->objects);
+err_objects:
+    proxy_destroy_connection(session->server);
+err_server_conn:
+    close(server_fd);
+err_server_socket:
+    proxy_destroy_connection(session->client);
+err_client:
+    free(session);
+err_zalloc:
+    return -1;
+}
+
+/*
+ * Destroy a proxy_session struct and free its resources
+ */
+static void proxy_destroy_session(struct proxy_session *session) {
+    assert(session != NULL);
+    if (session->proxy->on_session_destroy != NULL)
+        (*session->proxy->on_session_destroy)(session);
+    proxy_destroy_connection(session->client);
+    proxy_destroy_connection(session->server);
+    wl_map_release(session->objects);
+    free(session->objects);
+    session->proxy->session_count--;
+    free(session);
 }
 
 /*
@@ -116,8 +191,8 @@ static const struct wl_interface *proxy_lookup_interface(const char *name) {
  *
  * Returns 0 on success and -1 on failure
  */
-static int proxy_handle_message(struct proxy_conn *src, int id,
-                                        int size, int opcode) {
+static int proxy_handle_message(struct proxy_conn *src, int id, int size,
+                                int opcode) {
     int ret, i, arg_count;
     const char *signature;
     const struct wl_interface *interface, *bind_interface;
@@ -129,7 +204,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
     struct proxy_message msg;
 
     // Lookup message format
-    interface = wl_map_lookup(src->proxy->objects, id);
+    interface = wl_map_lookup(src->session->objects, id);
     if (interface == NULL)
         goto err_pre_closure;
 
@@ -137,7 +212,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
     message = (src->side == SIDE_CLIENT) ? interface->methods[opcode] :
                                            interface->events[opcode];
     closure = wl_connection_demarshal(src->wl_conn, size,
-                                      src->proxy->objects, &message);
+                                      src->session->objects, &message);
     if (closure == NULL)
         goto err_pre_closure;
 
@@ -150,12 +225,12 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
         ret = 0;
     }
 
-    // Run custom message handler
-    if (ret == 1 && src->proxy->on_message != NULL) {
+    if (ret == 1 && src->session->proxy->on_message != NULL) {
+        // Run custom message handler
         msg.conn = src;
         msg.interface = interface;
         msg.closure = closure;
-        ret = (*src->proxy->on_message)(&msg);
+        ret = (*src->session->proxy->on_message)(&msg);
         if (ret < 0)
             goto err_post_closure;
     }
@@ -167,7 +242,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
         bind_interface = proxy_lookup_interface(closure->args[1].s);
         if (bind_interface == NULL)
             goto err_post_closure;
-        if (wl_map_insert_at(src->proxy->objects, 0, closure->args[3].n,
+        if (wl_map_insert_at(src->session->objects, 0, closure->args[3].n,
                              (void*)bind_interface) < 0)
             goto err_post_closure;
 
@@ -178,7 +253,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
         for (i = 0; i < arg_count; i++) {
             signature = get_next_argument(signature, &arg);
             if (arg.type == WL_ARG_NEW_ID) {
-                if (wl_map_insert_at(src->proxy->objects, 0,
+                if (wl_map_insert_at(src->session->objects, 0,
                                      closure->args[i].n,
                                      (void*)message.types[0]) < 0)
                     goto err_post_closure;
@@ -188,7 +263,8 @@ static int proxy_handle_message(struct proxy_conn *src, int id,
 
     if (ret == 1) {
         // Proxy message
-        dst = (src->side == SIDE_CLIENT) ? src->proxy->server : src->proxy->client;
+        dst = (src->side == SIDE_CLIENT) ? src->session->server :
+            src->session->client;
         assert(dst != NULL); // The opposite connection must already exist
         if (wl_closure_send(closure, dst->wl_conn) < 0)
             goto err_post_closure;
@@ -230,7 +306,8 @@ static int proxy_handle_data(struct proxy_conn *src) {
     }
 
     // Flush destination connection
-    dst = (src->side == SIDE_CLIENT) ? src->proxy->server : src->proxy->client;
+    dst = (src->side == SIDE_CLIENT) ? src->session->server :
+        src->session->client;
     assert(dst != NULL); // The opposite connection must already exist
     if (wl_connection_flush(dst->wl_conn) < 0)
         return -1;
@@ -253,6 +330,7 @@ struct proxy *proxy_init(char *name) {
     if (proxy == NULL)
         goto err_zalloc;
     proxy->name = name;
+    proxy->session_count = 0;
 
     // Initialize proxy epoll instance
     proxy->epoll_fd = epoll_create1(0);
@@ -266,29 +344,8 @@ struct proxy *proxy_init(char *name) {
     if (proxy_epoll_add_fd(proxy, proxy->socket->fd, NULL) < 0)
         goto err_proxy_epoll;
 
-    // Connect to server
-    server_fd = connect_to_socket(NULL);
-    if (server_fd < 0)
-        goto err_server_socket;
-    if (proxy_add_connection(proxy, server_fd, SIDE_SERVER) < 0)
-        goto err_server_conn;
-
-    // Initialize object map
-    proxy->objects = malloc(sizeof(struct wl_map));
-    if (proxy->objects == NULL)
-        goto err_malloc;
-    wl_map_init(proxy->objects, WL_MAP_CLIENT_SIDE);
-    wl_map_insert_new(proxy->objects, 0, NULL);
-    wl_map_insert_new(proxy->objects, 0, (void*)&wl_display_interface);
-
     return proxy;
 
-err_malloc:
-    proxy_destroy_connection(proxy->server);
-err_server_conn:
-    close(server_fd);
-err_server_socket:
-    wl_socket_destroy(proxy->socket);
 err_proxy_epoll:
 err_proxy_socket:
 err_epoll_create:
@@ -306,7 +363,6 @@ int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
     int client_fd;
 
-    printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
     while (true) {
         if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0) {
             if (errno == EINTR) continue; // Ignore e.g. GDB interrupts
@@ -314,25 +370,21 @@ int proxy_run(struct proxy *proxy) {
             return -1;
         }
 
-        if (ev.events & EPOLLHUP) {
+        if (ev.events & EPOLLHUP && ev.data.ptr != NULL) {
             // Client disconnected
-            printf("Client disconnected\n");
-            return 0;
+            proxy_destroy_session(((struct proxy_conn*)(ev.data.ptr))->session);
+            if (proxy->session_count == 0)
+                return 0;
 
         } else if (ev.events & EPOLLIN && ev.data.ptr == NULL) {
             // Client connected
-            if (proxy->client != NULL) {
-                fprintf(stderr, "Error: A second client tried to connect\n");
-                return -1;
-            }
             client_fd = socket_data(proxy->socket->fd, 0, NULL);
             if (client_fd < 0)
                 return -1;
-            if (proxy_add_connection(proxy, client_fd, SIDE_CLIENT) < 0) {
+            if (proxy_create_session(proxy, client_fd) < 0) {
                 close(client_fd);
                 return -1;
             }
-            printf("Client connected\n");
 
         } else if (ev.events & EPOLLIN && ev.data.ptr != NULL) {
             // Client sent data
@@ -346,13 +398,8 @@ int proxy_run(struct proxy *proxy) {
  * Destroy a Wayland proxy and free its resources
  */
 void proxy_destroy(struct proxy *proxy) {
-    if (proxy->client != NULL)
-        proxy_destroy_connection(proxy->client);
-    if (proxy->server != NULL)
-        proxy_destroy_connection(proxy->server);
+    assert(proxy->session_count == 0);
     wl_socket_destroy(proxy->socket);
-    wl_map_release(proxy->objects);
-    free(proxy->objects);
     close(proxy->epoll_fd);
     free(proxy);
 }

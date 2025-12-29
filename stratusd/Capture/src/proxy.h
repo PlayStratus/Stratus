@@ -4,6 +4,7 @@
 #include <wayland-private.h>
 
 struct proxy;
+struct proxy_session;
 
 /*
  * Used to differentiate between a proxy's client and server connections
@@ -14,11 +15,21 @@ enum proxy_sides {
 };
 
 /*
- * Contains data for a proxy's client or server connection
+ * Contains data for one of a proxy's client or server connections
  */
 struct proxy_conn {
     enum proxy_sides side;
     struct wl_connection *wl_conn;
+    struct proxy_session *session;
+};
+
+/*
+ * Contains data for one of a proxy's client/server sessions
+ */
+struct proxy_session {
+    struct proxy_conn *client;
+    struct proxy_conn *server;
+    struct wl_map *objects;
     struct proxy *proxy;
 };
 
@@ -32,6 +43,18 @@ struct proxy_message {
 };
 
 /*
+ * Signature of custom handler called when a new proxy session is created
+ *
+ * Should return 0 on success and -1 on failure.
+ */
+typedef int (proxy_on_session_create_handler)(struct proxy_session *session);
+
+/*
+ * Signature of custom handler called when a proxy session is destroyed
+ */
+typedef void (proxy_on_session_destroy_handler)(struct proxy_session *session);
+
+/*
  * Signature of custom handler called when a proxy receives a Wayland message
  *
  * Should return 1 to proxy the message, 0 to swallow the message, and -1 if an
@@ -40,18 +63,17 @@ struct proxy_message {
 typedef int (proxy_on_message_handler)(struct proxy_message *msg);
 
 /*
- * Data for a Wayland proxy between the system compositor (server) and at most
- * one application (client)
+ * Data for a Wayland proxy
  */
 struct proxy {
     char *name;
+    proxy_on_session_create_handler *on_session_create;
+    proxy_on_session_destroy_handler *on_session_destroy;
     proxy_on_message_handler *on_message;
 
     int epoll_fd;
     struct wl_socket *socket;
-    struct proxy_conn *client;
-    struct proxy_conn *server;
-    struct wl_map *objects;
+    int session_count;
 };
 
 struct proxy *proxy_init(char *name);
