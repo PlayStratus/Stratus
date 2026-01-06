@@ -22,11 +22,11 @@ static void capture_handle_session_destroy(struct proxy_session *session) {
 /*
  * Handle a Wayland message
  */
-static int capture_handle_message(struct proxy_message *msg) {
+static enum proxy_actions capture_handle_message(struct proxy_message *msg) {
     wl_closure_print(msg->closure, msg->interface,
-                     msg->conn->side == SIDE_CLIENT, false, NULL, NULL);
+                     msg->conn->side == PROXY_SIDE_CLIENT, false, NULL, NULL);
 
-    return 1;
+    return PROXY_ACTION_FWD;
 }
 
 int capture_test() {

@@ -10,8 +10,17 @@ struct proxy_session;
  * Used to differentiate between a proxy's client and server connections
  */
 enum proxy_sides {
-    SIDE_CLIENT = 0,
-    SIDE_SERVER = 1,
+    PROXY_SIDE_CLIENT = 0,
+    PROXY_SIDE_SERVER = 1,
+};
+
+/*
+ * Represents different actions the proxy may take in response to a message
+ */
+enum proxy_actions {
+    PROXY_ACTION_ERR = -1,  // An error occured
+    PROXY_ACTION_DROP = 0,  // Drop the message
+    PROXY_ACTION_FWD = 1,   // Forward the message
 };
 
 /*
@@ -56,11 +65,8 @@ typedef void (proxy_on_session_destroy_handler)(struct proxy_session *session);
 
 /*
  * Signature of custom handler called when a proxy receives a Wayland message
- *
- * Should return 1 to proxy the message, 0 to swallow the message, and -1 if an
- * error occurred.
  */
-typedef int (proxy_on_message_handler)(struct proxy_message *msg);
+typedef enum proxy_actions (proxy_on_message_handler)(struct proxy_message *msg);
 
 /*
  * Data for a Wayland proxy

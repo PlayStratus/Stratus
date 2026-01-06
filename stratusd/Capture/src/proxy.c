@@ -55,8 +55,8 @@ static int proxy_epoll_add_fd(struct proxy *proxy, int fd, void *data) {
  */
 static int proxy_add_connection(struct proxy_session *session, int fd, int side)
 {
-    struct proxy_conn **conn = (side == SIDE_SERVER) ? &session->server :
-        &session->client;
+    struct proxy_conn **conn = (side == PROXY_SIDE_SERVER) ? &session->server
+                                                           : &session->client;
     assert(*conn == NULL); // The connection must not already exist
 
     *conn = malloc(sizeof(struct proxy_conn));
@@ -111,14 +111,14 @@ static int proxy_create_session(struct proxy *proxy, int client_fd) {
     session->proxy = proxy;
 
     // Connect to client
-    if (proxy_add_connection(session, client_fd, SIDE_CLIENT) < 0)
+    if (proxy_add_connection(session, client_fd, PROXY_SIDE_CLIENT) < 0)
         goto err_client;
 
     // Connect to server
     server_fd = connect_to_socket(NULL);
     if (server_fd < 0)
         goto err_server_socket;
-    if (proxy_add_connection(session, server_fd, SIDE_SERVER) < 0)
+    if (proxy_add_connection(session, server_fd, PROXY_SIDE_SERVER) < 0)
         goto err_server_conn;
 
     // Initialize object map
@@ -193,8 +193,9 @@ static const struct wl_interface *proxy_lookup_interface(const char *name) {
  */
 static int proxy_handle_message(struct proxy_conn *src, int id, int size,
                                 int opcode) {
-    int ret, i, arg_count;
+    int i, arg_count;
     const char *signature;
+    enum proxy_actions action;
     const struct wl_interface *interface, *bind_interface;
     struct wl_message message;
     struct wl_closure *closure;
@@ -209,35 +210,34 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
         goto err_pre_closure;
 
     // Parse message
-    message = (src->side == SIDE_CLIENT) ? interface->methods[opcode] :
-                                           interface->events[opcode];
+    message = (src->side == PROXY_SIDE_CLIENT) ? interface->methods[opcode]
+                                               : interface->events[opcode];
     closure = wl_connection_demarshal(src->wl_conn, size,
                                       src->session->objects, &message);
     if (closure == NULL)
         goto err_pre_closure;
 
-    ret = 1;
+    action = PROXY_ACTION_FWD;
     if (!strcmp(interface->name, "wl_registry") &&
         !strcmp(message.name, "global") &&
         !proxy_lookup_interface(closure->args[1].s)) {
 
         // Drop wl_registry.global events for unsupported interfaces
-        ret = 0;
+        action = PROXY_ACTION_DROP;
     }
 
-    if (ret == 1 && src->session->proxy->on_message != NULL) {
+    if (action == PROXY_ACTION_FWD && src->session->proxy->on_message != NULL) {
         // Run custom message handler
         msg.conn = src;
         msg.interface = interface;
         msg.closure = closure;
-        ret = (*src->session->proxy->on_message)(&msg);
-        if (ret < 0)
+        action = (*src->session->proxy->on_message)(&msg);
+        if (action == PROXY_ACTION_ERR)
             goto err_post_closure;
     }
 
-    if (ret == 1 && !strcmp(interface->name, "wl_registry") &&
-        !strcmp(message.name, "bind")) {
-
+    if (action == PROXY_ACTION_FWD && !strcmp(interface->name, "wl_registry") &&
+                                      !strcmp(message.name, "bind")) {
         // Record type of newly bound interface
         bind_interface = proxy_lookup_interface(closure->args[1].s);
         if (bind_interface == NULL)
@@ -246,7 +246,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
                              (void*)bind_interface) < 0)
             goto err_post_closure;
 
-    } else if (ret == 1) {
+    } else if (action == PROXY_ACTION_FWD) {
         // Record types of new objects
         signature = closure->message->signature;
         arg_count = arg_count_for_signature(signature);
@@ -261,17 +261,17 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
         }
     }
 
-    if (ret == 1) {
+    if (action == PROXY_ACTION_FWD) {
         // Proxy message
-        dst = (src->side == SIDE_CLIENT) ? src->session->server :
-            src->session->client;
+        dst = (src->side == PROXY_SIDE_CLIENT) ? src->session->server
+                                               : src->session->client;
         assert(dst != NULL); // The opposite connection must already exist
         if (wl_closure_send(closure, dst->wl_conn) < 0)
             goto err_post_closure;
     }
 
     wl_closure_destroy(closure);
-    return ret;
+    return 0;
 
 err_post_closure:
     wl_closure_destroy(closure);
@@ -306,8 +306,8 @@ static int proxy_handle_data(struct proxy_conn *src) {
     }
 
     // Flush destination connection
-    dst = (src->side == SIDE_CLIENT) ? src->session->server :
-        src->session->client;
+    dst = (src->side == PROXY_SIDE_CLIENT) ? src->session->server
+                                           : src->session->client;
     assert(dst != NULL); // The opposite connection must already exist
     if (wl_connection_flush(dst->wl_conn) < 0)
         return -1;
