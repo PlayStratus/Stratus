@@ -38,7 +38,8 @@ struct proxy_conn {
 struct proxy_session {
     struct proxy_conn *client;
     struct proxy_conn *server;
-    struct wl_map *objects;
+    struct wl_map *obj_types;   // for internal use by proxy
+    struct wl_map *obj_data;    // for external use by caller
     struct proxy *proxy;
 };
 

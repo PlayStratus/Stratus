@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/epoll.h>
 #include <sys/param.h>
@@ -121,13 +122,21 @@ static int proxy_create_session(struct proxy *proxy, int client_fd) {
     if (proxy_add_connection(session, server_fd, PROXY_SIDE_SERVER) < 0)
         goto err_server_conn;
 
-    // Initialize object map
-    session->objects = malloc(sizeof(struct wl_map));
-    if (session->objects == NULL)
-        goto err_objects;
-    wl_map_init(session->objects, WL_MAP_CLIENT_SIDE);
-    wl_map_insert_new(session->objects, 0, NULL);
-    wl_map_insert_new(session->objects, 0, (void*)&wl_display_interface);
+    // Initialize object types map
+    session->obj_types = malloc(sizeof(struct wl_map));
+    if (session->obj_types == NULL)
+        goto err_obj_types;
+    wl_map_init(session->obj_types, WL_MAP_CLIENT_SIDE);
+    wl_map_insert_new(session->obj_types, 0, NULL);
+    wl_map_insert_new(session->obj_types, 0, (void*)&wl_display_interface);
+
+    // Initialize object data map
+    session->obj_data = malloc(sizeof(struct wl_map));
+    if (session->obj_data == NULL)
+        goto err_obj_data;
+    wl_map_init(session->obj_data, WL_MAP_CLIENT_SIDE);
+    wl_map_insert_new(session->obj_data, 0, NULL);
+    wl_map_insert_new(session->obj_data, 0, NULL);
 
     if (proxy->on_session_create != NULL) {
         if ((*proxy->on_session_create)(session) < 0)
@@ -139,8 +148,12 @@ static int proxy_create_session(struct proxy *proxy, int client_fd) {
     return 0;
 
 err_handler:
-    free(session->objects);
-err_objects:
+    wl_map_release(session->obj_data);
+    free(session->obj_data);
+err_obj_data:
+    wl_map_release(session->obj_types);
+    free(session->obj_types);
+err_obj_types:
     proxy_destroy_connection(session->server);
 err_server_conn:
     close(server_fd);
@@ -161,8 +174,10 @@ static void proxy_destroy_session(struct proxy_session *session) {
         (*session->proxy->on_session_destroy)(session);
     proxy_destroy_connection(session->client);
     proxy_destroy_connection(session->server);
-    wl_map_release(session->objects);
-    free(session->objects);
+    wl_map_release(session->obj_types);
+    free(session->obj_types);
+    wl_map_release(session->obj_data);
+    free(session->obj_data);
     session->proxy->session_count--;
     free(session);
 }
@@ -187,89 +202,109 @@ static const struct wl_interface *proxy_lookup_interface(const char *name) {
 }
 
 /*
+ * Initialize a new object in a proxy session
+ *
+ * Returns 0 on success and -1 on failure
+ */
+static int proxy_create_object(struct proxy_session *session, uint32_t id,
+                               const struct wl_interface *interface) {
+    if (wl_map_insert_at(session->obj_types, 0, id, (void*)interface) < 0)
+        return -1;
+    if (wl_map_insert_at(session->obj_data, 0, id, NULL) < 0)
+        return -1;
+    return 0;
+}
+
+/*
  * Handle a Wayland message received by a proxy
  *
  * Returns 0 on success and -1 on failure
  */
 static int proxy_handle_message(struct proxy_conn *src, int id, int size,
                                 int opcode) {
+    bool new_objects;
     int i, arg_count;
     const char *signature;
-    enum proxy_actions action;
+    enum proxy_actions handler_ret;
     const struct wl_interface *interface, *bind_interface;
     struct wl_message message;
     struct wl_closure *closure;
-    struct wl_object target;
     struct argument_details arg;
     struct proxy_conn *dst;
     struct proxy_message msg;
 
-    // Lookup message format
-    interface = wl_map_lookup(src->session->objects, id);
+    // Parse message
+    interface = wl_map_lookup(src->session->obj_types, id);
     if (interface == NULL)
         goto err_pre_closure;
-
-    // Parse message
     message = (src->side == PROXY_SIDE_CLIENT) ? interface->methods[opcode]
                                                : interface->events[opcode];
     closure = wl_connection_demarshal(src->wl_conn, size,
-                                      src->session->objects, &message);
+                                      src->session->obj_types, &message);
     if (closure == NULL)
         goto err_pre_closure;
 
-    action = PROXY_ACTION_FWD;
+    // Handle wl_registry@global message
     if (!strcmp(interface->name, "wl_registry") &&
         !strcmp(message.name, "global") &&
         !proxy_lookup_interface(closure->args[1].s)) {
 
-        // Drop wl_registry.global events for unsupported interfaces
-        action = PROXY_ACTION_DROP;
+        // Drop global events for unsupported interfaces
+        goto drop;
     }
 
-    if (action == PROXY_ACTION_FWD && src->session->proxy->on_message != NULL) {
-        // Run custom message handler
-        msg.conn = src;
-        msg.interface = interface;
-        msg.closure = closure;
-        action = (*src->session->proxy->on_message)(&msg);
-        if (action == PROXY_ACTION_ERR)
-            goto err_post_closure;
-    }
-
-    if (action == PROXY_ACTION_FWD && !strcmp(interface->name, "wl_registry") &&
-                                      !strcmp(message.name, "bind")) {
-        // Record type of newly bound interface
+    // Handle created objects
+    new_objects = false;
+    if (!strcmp(interface->name, "wl_registry") &&
+        !strcmp(message.name, "bind")) {
+        // Initialize object for newly bound interface
         bind_interface = proxy_lookup_interface(closure->args[1].s);
         if (bind_interface == NULL)
             goto err_post_closure;
-        if (wl_map_insert_at(src->session->objects, 0, closure->args[3].n,
-                             (void*)bind_interface) < 0)
+        if (proxy_create_object(src->session, closure->args[3].n,
+                                bind_interface) < 0)
             goto err_post_closure;
+        new_objects = true;
 
-    } else if (action == PROXY_ACTION_FWD) {
-        // Record types of new objects
+    } else {
+        // Initialize newly created (non-global) objects
         signature = closure->message->signature;
         arg_count = arg_count_for_signature(signature);
         for (i = 0; i < arg_count; i++) {
             signature = get_next_argument(signature, &arg);
             if (arg.type == WL_ARG_NEW_ID) {
-                if (wl_map_insert_at(src->session->objects, 0,
-                                     closure->args[i].n,
-                                     (void*)message.types[0]) < 0)
+                if (proxy_create_object(src->session, closure->args[i].n,
+                                        message.types[0]) < 0)
                     goto err_post_closure;
+                new_objects = true;
             }
         }
     }
 
-    if (action == PROXY_ACTION_FWD) {
-        // Proxy message
-        dst = (src->side == PROXY_SIDE_CLIENT) ? src->session->server
-                                               : src->session->client;
-        assert(dst != NULL); // The opposite connection must already exist
-        if (wl_closure_send(closure, dst->wl_conn) < 0)
+    // Run custom message handler if defined
+    if (src->session->proxy->on_message != NULL) {
+        msg.conn = src;
+        msg.interface = interface;
+        msg.closure = closure;
+        handler_ret = (*src->session->proxy->on_message)(&msg);
+        if (handler_ret == PROXY_ACTION_ERR) {
             goto err_post_closure;
+        } else if (handler_ret == PROXY_ACTION_DROP) {
+            // Messages creating new objects must be forwarded to maintain
+            // consistency between the client and server
+            assert(!new_objects);
+            goto drop;
+        }
     }
 
+    // Forward message
+    dst = (src->side == PROXY_SIDE_CLIENT) ? src->session->server
+                                           : src->session->client;
+    assert(dst != NULL); // The opposite connection must already exist
+    if (wl_closure_send(closure, dst->wl_conn) < 0)
+        goto err_post_closure;
+
+drop:
     wl_closure_destroy(closure);
     return 0;
 
