@@ -746,7 +746,8 @@ wl_closure_clear_fds(struct wl_closure *closure)
 	}
 }
 
-static struct wl_closure *
+// STRATUS: made wl_closure_init() non-static
+struct wl_closure *
 wl_closure_init(const struct wl_message *message, uint32_t size,
                 int *num_arrays, union wl_argument *args)
 {

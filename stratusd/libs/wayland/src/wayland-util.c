@@ -414,37 +414,38 @@ wl_map_lookup_flags(struct wl_map *map, uint32_t i)
 	return 0;
 }
 
-// static enum wl_iterator_result
-// for_each_helper(struct wl_array *entries, wl_iterator_func_t func, void *data)
-// {
-// 	enum wl_iterator_result ret = WL_ITERATOR_CONTINUE;
-// 	union map_entry entry, *start;
-// 	size_t count;
-//
-// 	start = (union map_entry *) entries->data;
-// 	count = entries->size / sizeof(union map_entry);
-//
-// 	for (size_t idx = 0; idx < count; idx++) {
-// 		entry = start[idx];
-// 		if (entry.data && !map_entry_is_free(entry)) {
-// 			ret = func(map_entry_get_data(entry), data, map_entry_get_flags(entry));
-// 			if (ret != WL_ITERATOR_CONTINUE)
-// 				break;
-// 		}
-// 	}
-//
-// 	return ret;
-// }
-//
-// void
-// wl_map_for_each(struct wl_map *map, wl_iterator_func_t func, void *data)
-// {
-// 	enum wl_iterator_result ret;
-//
-// 	ret = for_each_helper(&map->client_entries, func, data);
-// 	if (ret == WL_ITERATOR_CONTINUE)
-// 		for_each_helper(&map->server_entries, func, data);
-// }
+static enum wl_iterator_result
+for_each_helper(struct wl_array *entries, wl_iterator_func_t func, void *data)
+{
+	enum wl_iterator_result ret = WL_ITERATOR_CONTINUE;
+	union map_entry entry, *start;
+	size_t count;
+
+	start = (union map_entry *) entries->data;
+	count = entries->size / sizeof(union map_entry);
+
+	for (size_t idx = 0; idx < count; idx++) {
+		entry = start[idx];
+		if (entry.data && !map_entry_is_free(entry)) {
+			// STRATUS: added idx arg to wl_iterator_func_t
+			ret = func(map_entry_get_data(entry), data, map_entry_get_flags(entry), idx);
+			if (ret != WL_ITERATOR_CONTINUE)
+				break;
+		}
+	}
+
+	return ret;
+}
+
+void
+wl_map_for_each(struct wl_map *map, wl_iterator_func_t func, void *data)
+{
+	enum wl_iterator_result ret;
+
+	ret = for_each_helper(&map->client_entries, func, data);
+	if (ret == WL_ITERATOR_CONTINUE)
+		for_each_helper(&map->server_entries, func, data);
+}
 
 static void
 wl_log_stderr_handler(const char *fmt, va_list arg)
