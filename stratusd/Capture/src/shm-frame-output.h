@@ -3,6 +3,8 @@
 
 #include "capture-priv.h"
 
+capture_message_handler_func wl_shm_format;
+
 // wl_shm_pool-related messages
 capture_message_handler_func wl_shm_create_pool;
 capture_message_handler_func wl_shm_pool_destroy;

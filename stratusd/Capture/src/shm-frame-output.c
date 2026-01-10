@@ -58,6 +58,19 @@ struct wl_surface {
 };
 
 /*
+ * Handle a wl_shm@format event
+ *
+ * Drop messages advertising unsupported pixel formats
+ */
+enum proxy_actions wl_shm_format(struct proxy_message *msg) {
+    // We only support pixel formats #0 (argb8888) and #1 (xrgb8888)
+    if (msg->closure->args[0].u == 0 || msg->closure->args[0].u == 1)
+        return PROXY_ACTION_FWD;
+    else
+        return PROXY_ACTION_DROP;
+}
+
+/*
  * Handle a wl_shm@create_pool request
  *
  * Mmaps the pool and saves pool metadata.
@@ -155,6 +168,9 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     buf->pool = pool;
     buf->surf_count = 0;
     buf->p = pool->p + msg->closure->args[1].i;
+
+    // Assert pixel format is supported
+    assert(msg->closure->args[5].u == 0 || msg->closure->args[5].u == 1);
 
     assert(wl_map_lookup(map, buf->id) == NULL);
     if (wl_map_insert_at(map, 0, buf->id, buf) < 0)

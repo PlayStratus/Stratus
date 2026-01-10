@@ -27,6 +27,8 @@ struct message_handler {
  * The available Wayland message handlers
  */
 const struct message_handler message_handlers[] = {
+    { "wl_shm",         "format",           &wl_shm_format                  },
+
     { "wl_shm",         "create_pool",      &wl_shm_create_pool             },
     { "wl_shm_pool",    "destroy",          &wl_shm_pool_destroy            },
 
