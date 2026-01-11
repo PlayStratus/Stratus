@@ -25,9 +25,9 @@
 
 #ifndef WAYLAND_OS_H
 #define WAYLAND_OS_H
-//
-// #include <sys/types.h>
-// #include <sys/socket.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
 
 int
 wl_os_socket_cloexec(int domain, int type, int protocol);

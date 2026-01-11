@@ -36,9 +36,9 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+// #ifdef  __cplusplus
+// extern "C" {
+// #endif
 
 /** Visibility attribute */
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -761,8 +761,8 @@ typedef void (*wl_log_func_t)(const char *fmt, va_list args) WL_PRINTF(1, 0);
 // 	WL_ITERATOR_CONTINUE
 // };
 
-#ifdef  __cplusplus
-}
-#endif
+// #ifdef  __cplusplus
+// }
+// #endif
 
 #endif

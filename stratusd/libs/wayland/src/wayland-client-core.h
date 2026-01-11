@@ -29,11 +29,11 @@
 // #include <stdint.h>
 // #include "wayland-util.h"
 // #include "wayland-version.h"
-
-#ifdef  __cplusplus
-extern "C" {
-#endif
-
+//
+// #ifdef  __cplusplus
+// extern "C" {
+// #endif
+//
 // struct timespec;
 //
 // /** \class wl_proxy
@@ -320,8 +320,8 @@ extern "C" {
 int
 connect_to_socket(const char *name);
 
-#ifdef  __cplusplus
-}
-#endif
+// #ifdef  __cplusplus
+// }
+// #endif
 
 #endif
