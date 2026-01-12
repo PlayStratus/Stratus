@@ -5,9 +5,9 @@ project(stratusd VERSION 0.1.0 LANGUAGES C)
 file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 
 # Load dependencies
+add_subdirectory(libs/wayland)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
-find_package(Wayland REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
@@ -27,5 +27,5 @@ add_subdirectory(Transport)
 add_executable(stratusd ${sourcefiles})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Encode)
+target_link_libraries(stratusd PRIVATE Capture Encode)
 #target_link_libraries(Clocked imgui)
