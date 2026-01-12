@@ -27,7 +27,7 @@
 
 #include "wayland-version.h"
 
-// #include <stdbool.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
 // #include <stdint.h>

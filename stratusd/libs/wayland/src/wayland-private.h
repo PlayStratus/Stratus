@@ -31,7 +31,7 @@
 // #include <stdarg.h>
 #include <stdlib.h>
 // #include <stdint.h>
-// #include <stdbool.h>
+#include <stdbool.h>
 
 // #define WL_HIDE_DEPRECATED 1
 
