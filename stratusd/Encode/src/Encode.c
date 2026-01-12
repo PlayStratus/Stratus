@@ -34,6 +34,23 @@ int test_encode(){
     return 0;
 }
 
+void cleanup_encoder(encoder_context *state) {
+    if (!state) return;
+    if (state->pkt) av_packet_free(&state->pkt);
+    if (state->sws_ctx) sws_freeContext(state->sws_ctx);
+    if (state->yuv_frame) {
+        if (state->yuv_frame->data[0]) av_freep(&state->yuv_frame->data[0]);
+        av_frame_free(&state->yuv_frame);
+    }
+    if (state->argb_frame) {
+        if (state->argb_frame->data[0]) av_freep(&state->argb_frame->data[0]);
+        av_frame_free(&state->argb_frame);
+    }
+    if (state->output_file) fclose(state->output_file);
+    if (state->codec_ctx) avcodec_free_context(&state->codec_ctx);
+    free(state);
+}
+
 encoder_context* encoder_startup(/*const char *output_file, */int width, int height) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
@@ -75,16 +92,14 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
 
     if (avcodec_open2(state->codec_ctx, codec, NULL) < 0) {
         fprintf(stderr, "Could not open codec\n");
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
     state->output_file = fopen(output_file, "wb");
     if (!state->output_file) {
         fprintf(stderr, "Could not open output file %s\n", output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
@@ -92,9 +107,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     state->argb_frame = av_frame_alloc();
     if (!state->argb_frame) {
         fprintf(stderr, "Could not allocate ARGB frame\n");
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
     state->argb_frame->format = AV_PIX_FMT_ARGB;
@@ -103,10 +116,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     if (av_image_alloc(state->argb_frame->data, state->argb_frame->linesize,
                        width, height, AV_PIX_FMT_ARGB, 32) < 0) {
         fprintf(stderr, "Could not allocate ARGB frame buffer\n");
-        av_frame_free(&state->argb_frame);
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
@@ -114,11 +124,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     state->yuv_frame = av_frame_alloc();
     if (!state->yuv_frame) {
         fprintf(stderr, "Could not allocate YUV frame\n");
-        av_freep(&state->argb_frame->data[0]);
-        av_frame_free(&state->argb_frame);
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
     state->yuv_frame->format = state->codec_ctx->pix_fmt;
@@ -127,12 +133,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     if (av_image_alloc(state->yuv_frame->data, state->yuv_frame->linesize,
                        width, height, state->codec_ctx->pix_fmt, 32) < 0) {
         fprintf(stderr, "Could not allocate YUV frame buffer\n");
-        av_frame_free(&state->yuv_frame);
-        av_freep(&state->argb_frame->data[0]);
-        av_frame_free(&state->argb_frame);
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
@@ -142,13 +143,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
                                     SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->sws_ctx) {
         fprintf(stderr, "Could not initialize swscale context\n");
-        av_freep(&state->yuv_frame->data[0]);
-        av_frame_free(&state->yuv_frame);
-        av_freep(&state->argb_frame->data[0]);
-        av_frame_free(&state->argb_frame);
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
@@ -156,14 +151,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     state->pkt = av_packet_alloc();
     if (!state->pkt) {
         fprintf(stderr, "Could not allocate packet\n");
-        sws_freeContext(state->sws_ctx);
-        av_freep(&state->yuv_frame->data[0]);
-        av_frame_free(&state->yuv_frame);
-        av_freep(&state->argb_frame->data[0]);
-        av_frame_free(&state->argb_frame);
-        fclose(state->output_file);
-        avcodec_free_context(&state->codec_ctx);
-        free(state);
+        cleanup_encoder(state);
         return NULL;
     }
 
