@@ -19,7 +19,7 @@
     "google-auth-library": "^10.5.0",
     "googleapis": "^166.0.0",
     "lucide-react": "^0.546.0",
-    "next": "^16.0.0",
+    "next": "^16.1.2",
     "next-auth": "^5.0.0-beta.30",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
