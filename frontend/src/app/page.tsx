@@ -19,7 +19,7 @@ const aboutUs = [
   {
     name: "John",
     description:
-      "I am pursuing a bachelor’s degree in Computer Science with a certificate in Cybersecurity, with front-end experience and a little backend experience.",
+      "My name is John Polasek, I am pursuing a bachelor’s degree in Computer Science with a certificate in Cybersecurity. I primarily have front-end development experience and I am excited to learn more about the backend developer role. For this project I am working as a full-stack developer.",
   },
   {
     name: "Carol",
