@@ -6,7 +6,7 @@ Our team includes six members: Asher, John, Carol, Izzy, Amin, and Nathen.
 
 I’m Asher, I am a CS major with a background in Linux, and I’m excited to work on the custom OS and Wayland compositor for this project.
 
-My name is John Polasek, I am pursuing a bachelor’s degree in Computer Science with a certificate in Cybersecurity. I primarily have front-end development experience and am working on learning more about the development backend role. For this project I am working as a full-stack developer.
+My name is John Polasek, I am pursuing a bachelor’s degree in Computer Science with a certificate in Cybersecurity. I primarily have front-end development experience and I am excited to learn more about the backend developer role. For this project I am working as a full-stack developer.
 
 I’m Carol, a Graphic Design and CS double-major, and I was invited onto this project as a designer. 
 
