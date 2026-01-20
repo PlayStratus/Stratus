@@ -13,7 +13,7 @@
 #include "proxy.h"
 
 /*
- * Key interfaces defined in libs/wayland/protocols/*.c
+ * Required Wayland protocol interfaces
  */
 extern const struct wl_interface *linux_dmabuf_v1_types_all[];
 extern const struct wl_interface *presentation_time_types_all[];
