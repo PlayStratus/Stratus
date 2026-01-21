@@ -30,7 +30,7 @@ int test_encode(){
     free(frame_buffer);
     encoder_teardown(encoder);
 
-    printf("\nDone! Play with: ffplay output.h264\n");
+    printf("\nDone! Play with: ffplay %s\n", output_file);
     return 0;
 }
 
@@ -165,10 +165,15 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer) {
     }
 
     // Copy ARGB data into frame
-    for (int y = 0; y < state->height; y++) {
-        memcpy(state->argb_frame->data[0] + y * state->argb_frame->linesize[0],
-               argb_buffer + y * state->width * 4,
-               state->width * 4);
+    if (state->argb_frame->linesize[0] == state->width * 4) {
+        memcpy(state->argb_frame->data[0], argb_buffer, state->width * state->height * 4);
+    } else {
+        // ffmpeg different from wl_buffer stride
+        for (int y = 0; y < state->height; y++) {
+            memcpy(state->argb_frame->data[0] + y * state->argb_frame->linesize[0],
+                   argb_buffer + y * state->width * 4,
+                   state->width * 4);
+        }
     }
 
     // Convert ARGB to YUV420P
@@ -181,34 +186,7 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer) {
 
     state->yuv_frame->pts = state->frame_count;
 
-    // Send frame to encoder
-    int ret = avcodec_send_frame(state->codec_ctx, state->yuv_frame);
-    if (ret < 0) {
-        fprintf(stderr, "Error sending frame to encoder\n");
-        return ret;
-    }
-
-    // Receive encoded packets
-    while (ret >= 0) {
-        ret = avcodec_receive_packet(state->codec_ctx, state->pkt);
-        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-            break;
-        } else if (ret < 0) {
-            fprintf(stderr, "Error encoding frame\n");
-            return ret;
-        }
-
-        // Write Annex B start code
-        uint8_t start_code[4] = {0x00, 0x00, 0x00, 0x01};
-        fwrite(start_code, 1, 4, state->output_file);
-
-        // Write packet data
-        fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
-
-        printf("Encoded frame %3d (size=%5d)\n", state->frame_count, state->pkt->size);
-
-        av_packet_unref(state->pkt);
-    }
+    avcodec_send_and_receive(state, 0);
 
     state->frame_count++;
     return 0;
@@ -220,29 +198,7 @@ int encoder_teardown(encoder_context *state) {
     }
 
     // Flush encoder (send NULL frame)
-    int ret = avcodec_send_frame(state->codec_ctx, NULL);
-    if (ret < 0) {
-        fprintf(stderr, "Error flushing encoder\n");
-    }
-
-    // Receive remaining packets
-    while (ret >= 0) {
-        ret = avcodec_receive_packet(state->codec_ctx, state->pkt);
-        if (ret == AVERROR_EOF) {
-            break;
-        } else if (ret < 0) {
-            fprintf(stderr, "Error during flush\n");
-            break;
-        }
-
-        // Write Annex B start code
-        uint8_t start_code[4] = {0x00, 0x00, 0x00, 0x01};
-        fwrite(start_code, 1, 4, state->output_file);
-        fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
-
-        printf("Flushed packet (size=%5d)\n", state->pkt->size);
-        av_packet_unref(state->pkt);
-    }
+    avcodec_send_and_receive(state, 1);
 
     // Cleanup
     printf("Encoded %d frames total\n", state->frame_count);

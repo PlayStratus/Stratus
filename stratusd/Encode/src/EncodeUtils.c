@@ -23,22 +23,40 @@ void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) 
     }
 }
 
-void create_sample_video(const char *filename, int width, int height, int num_frames) {
-    FILE *f = fopen(filename, "wb");
-    if (!f) {
-        fprintf(stderr, "Cannot open file\n");
-        return;
+// set flush to 0 to send the frame in the yuv_frame buffer, or 1 to flush the encoder and receive the remaining packets
+int avcodec_send_and_receive(encoder_context *state, int flush) {
+
+    // If flushing the encoder, send a NULL frame, otherwise send the converted YUV frame
+    AVFrame *current_frame = flush ? NULL : state->yuv_frame;
+
+    // Send frame to encoder
+    int ret = avcodec_send_frame(state->codec_ctx, current_frame);
+    if (ret < 0) {
+        fprintf(stderr, "Error sending frame to encoder. flush: %d\n", flush);
+        return ret;
     }
 
-    int frame_size = width * height * 4;  // 4 bytes per pixel
-    uint8_t *frame = malloc(frame_size);
+    // Receive encoded packets
+    while (ret >= 0) {
+        ret = avcodec_receive_packet(state->codec_ctx, state->pkt);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        } else if (ret < 0) {
+            fprintf(stderr, "Error receiving frame from encoder\n");
+            return ret;
+        }
 
-    for (int i = 0; i < num_frames; i++) {
-        generate_argb_frame(frame, width, height, i);
-        fwrite(frame, 1, frame_size, f);
+        // Write Annex B start code
+        uint8_t start_code[4] = {0x00, 0x00, 0x00, 0x01};
+        fwrite(start_code, 1, 4, state->output_file);
+
+        // Write packet data
+        fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
+
+        printf("Received encoded frame %3d (size=%5d)\n", state->frame_count, state->pkt->size);
+
+        av_packet_unref(state->pkt);
     }
-
-    free(frame);
-    fclose(f);
 }
+
 

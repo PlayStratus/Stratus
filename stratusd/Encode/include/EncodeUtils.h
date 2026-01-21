@@ -7,9 +7,11 @@
 #include <libswscale/swscale.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "Encode.h"
 
-void create_sample_video(const char *filename, int width, int height, int num_frames);
 void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num);
+int avcodec_send_and_receive(encoder_context *state, int flush);
+
 
 #endif
 
