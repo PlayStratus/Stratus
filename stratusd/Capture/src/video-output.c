@@ -246,3 +246,20 @@ enum proxy_actions wl_surface_destroy(struct proxy_message *msg) {
 
     return PROXY_ACTION_FWD;
 }
+
+/*
+ * The Wayland message handlers for generic video frame capture
+ */
+const struct message_handler video_output_message_handlers[] = {
+    // Generic message handlers for wl_buffers
+    { "wl_buffer",     "release",             &wl_buffer_release               },
+    { "wl_buffer",     "destroy",             &wl_buffer_destroy               },
+
+    // Message handlers for wl_surfaces
+    { "wl_compositor", "create_surface",      &wl_compositor_create_surface    },
+    { "wl_surface",    "attach",              &wl_surface_attach               },
+    { "wl_surface",    "commit",              &wl_surface_commit               },
+    { "wl_surface",    "destroy",             &wl_surface_destroy              },
+
+    { NULL,            NULL,                  NULL                             },
+};

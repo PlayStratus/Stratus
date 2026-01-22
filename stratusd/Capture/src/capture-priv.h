@@ -9,4 +9,13 @@
 typedef enum proxy_actions capture_message_handler_func(
     struct proxy_message *msg);
 
+/*
+ * Contains data for a Wayland message handler
+ */
+struct message_handler {
+    char *obj_name;
+    char *msg_name;
+    capture_message_handler_func *handler;
+};
+
 #endif

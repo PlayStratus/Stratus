@@ -3,10 +3,6 @@
 
 #include "capture-priv.h"
 
-// message handlers for shm-backed wl_buffers
-capture_message_handler_func wl_shm_format;
-capture_message_handler_func wl_shm_create_pool;
-capture_message_handler_func wl_shm_pool_destroy;
-capture_message_handler_func wl_shm_pool_create_buffer;
+extern const struct message_handler shm_buffers_message_handlers[];
 
 #endif

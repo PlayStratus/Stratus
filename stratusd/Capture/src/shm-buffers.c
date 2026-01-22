@@ -206,3 +206,15 @@ enum proxy_actions wl_shm_surface_commit(struct wl_surface *surf) {
 
     return PROXY_ACTION_FWD;
 }
+
+/*
+ * The Wayland message handlers for shm-backed wl_buffers
+ */
+const struct message_handler shm_buffers_message_handlers[] = {
+    { "wl_shm",      "format",        &wl_shm_format             },
+    { "wl_shm",      "create_pool",   &wl_shm_create_pool        },
+    { "wl_shm_pool", "destroy",       &wl_shm_pool_destroy       },
+    { "wl_shm_pool", "create_buffer", &wl_shm_pool_create_buffer },
+
+    { NULL,          NULL,            NULL                       },
+};

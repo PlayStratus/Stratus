@@ -16,31 +16,11 @@
 static bool wayland_debug = false;
 
 /*
- * Contains data for a Wayland message handler
- */
-struct message_handler {
-    char *obj_name;
-    char *msg_name;
-    capture_message_handler_func *handler;
-};
-
-/*
  * The available Wayland message handlers
  */
-const struct message_handler message_handlers[] = {
-    { "wl_shm",        "format",              &wl_shm_format                   },
-
-    { "wl_shm",        "create_pool",         &wl_shm_create_pool              },
-    { "wl_shm_pool",   "destroy",             &wl_shm_pool_destroy             },
-
-    { "wl_shm_pool",   "create_buffer",       &wl_shm_pool_create_buffer       },
-    { "wl_buffer",     "release",             &wl_buffer_release               },
-    { "wl_buffer",     "destroy",             &wl_buffer_destroy               },
-
-    { "wl_compositor", "create_surface",      &wl_compositor_create_surface    },
-    { "wl_surface",    "attach",              &wl_surface_attach               },
-    { "wl_surface",    "commit",              &wl_surface_commit               },
-    { "wl_surface",    "destroy",             &wl_surface_destroy              },
+const struct message_handler *message_handlers[] = {
+    video_output_message_handlers,
+    shm_buffers_message_handlers,
 };
 
 /*
@@ -58,7 +38,7 @@ static int handle_session_create(struct proxy_session *session) {
  * Handle a Wayland message received by the proxy
  */
 static enum proxy_actions handle_message(struct proxy_message *msg) {
-    int i, count;
+    int i, j, count;
 
     if (wayland_debug) {
         wl_closure_print(msg->closure, msg->interface,
@@ -67,11 +47,13 @@ static enum proxy_actions handle_message(struct proxy_message *msg) {
     }
 
     // Call the appropriate Wayland message handler
-    count = sizeof(message_handlers) / sizeof(struct message_handler);
+    count = sizeof(message_handlers) / sizeof(struct message_handler*);
     for (i = 0; i < count; i++) {
-        if (!strcmp(msg->interface->name, message_handlers[i].obj_name) &&
-            !strcmp(msg->closure->message->name, message_handlers[i].msg_name))
-            return (*message_handlers[i].handler)(msg);
+        for (j = 0; message_handlers[i][j].handler != NULL; j++) {
+            if (!strcmp(msg->interface->name, message_handlers[i][j].obj_name) &&
+                !strcmp(msg->closure->message->name, message_handlers[i][j].msg_name))
+                return (*message_handlers[i][j].handler)(msg);
+        }
     }
 
     return PROXY_ACTION_FWD;
