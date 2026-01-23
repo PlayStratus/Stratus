@@ -1,0 +1,23 @@
+#ifndef CAPTURE_SHM_FRAME_OUTPUT_H
+#define CAPTURE_SHM_FRAME_OUTPUT_H
+
+#include "capture-priv.h"
+
+capture_message_handler_func wl_shm_format;
+
+// wl_shm_pool-related messages
+capture_message_handler_func wl_shm_create_pool;
+capture_message_handler_func wl_shm_pool_destroy;
+
+// wl_buffer-related messages
+capture_message_handler_func wl_shm_pool_create_buffer;
+capture_message_handler_func wl_buffer_release;
+capture_message_handler_func wl_buffer_destroy;
+
+// wl_surface-related messages
+capture_message_handler_func wl_compositor_create_surface;
+capture_message_handler_func wl_surface_attach;
+capture_message_handler_func wl_surface_commit;
+capture_message_handler_func wl_surface_destroy;
+
+#endif

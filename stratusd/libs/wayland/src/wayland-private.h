@@ -93,9 +93,11 @@ struct wl_map {
 	uint32_t free_list;
 };
 
-// typedef enum wl_iterator_result (*wl_iterator_func_t)(void *element,
-// 						      void *data,
-// 						      uint32_t flags);
+// STRATUS: added idx arg to wl_iterator_func_t
+typedef enum wl_iterator_result (*wl_iterator_func_t)(void *element,
+						      void *data,
+						      uint32_t flags,
+						      size_t idx);
 
 void
 wl_map_init(struct wl_map *map, uint32_t side);
@@ -120,9 +122,9 @@ wl_map_lookup(struct wl_map *map, uint32_t i);
 
 // uint32_t
 // wl_map_lookup_flags(struct wl_map *map, uint32_t i);
-//
-// void
-// wl_map_for_each(struct wl_map *map, wl_iterator_func_t func, void *data);
+
+void
+wl_map_for_each(struct wl_map *map, wl_iterator_func_t func, void *data);
 
 struct wl_connection *
 wl_connection_create(int fd, size_t max_buffer_size);
@@ -283,7 +285,11 @@ struct wl_socket {
 	// char *display_name;
 };
 
-// STRATUS: made wl_closure_send() non-static
+// STRATUS: made wl_closure_init() and wl_closure_send() non-static
+struct wl_closure *
+wl_closure_init(const struct wl_message *message, uint32_t size,
+                int *num_arrays, union wl_argument *args);
+
 int
 wl_closure_send(struct wl_closure *closure, struct wl_connection *connection);
 

@@ -36,9 +36,9 @@
 #include <inttypes.h>
 #include <stdarg.h>
 
-#ifdef  __cplusplus
-extern "C" {
-#endif
+// #ifdef  __cplusplus
+// extern "C" {
+// #endif
 
 /** Visibility attribute */
 #if defined(__GNUC__) && __GNUC__ >= 4
@@ -748,21 +748,21 @@ union wl_argument {
  */
 typedef void (*wl_log_func_t)(const char *fmt, va_list args) WL_PRINTF(1, 0);
 
-// /**
-//  * Return value of an iterator function
-//  *
-//  * \sa wl_client_for_each_resource_iterator_func_t
-//  * \sa wl_client_for_each_resource
-//  */
-// enum wl_iterator_result {
-// 	/** Stop the iteration */
-// 	WL_ITERATOR_STOP,
-// 	/** Continue the iteration */
-// 	WL_ITERATOR_CONTINUE
-// };
+/**
+ * Return value of an iterator function
+ *
+ * \sa wl_client_for_each_resource_iterator_func_t
+ * \sa wl_client_for_each_resource
+ */
+enum wl_iterator_result {
+	/** Stop the iteration */
+	WL_ITERATOR_STOP,
+	/** Continue the iteration */
+	WL_ITERATOR_CONTINUE
+};
 
-#ifdef  __cplusplus
-}
-#endif
+// #ifdef  __cplusplus
+// }
+// #endif
 
 #endif
