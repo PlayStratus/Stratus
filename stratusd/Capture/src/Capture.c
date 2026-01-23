@@ -9,13 +9,6 @@
 #include "video-output-pub.h"
 
 /*
- * Whether to log all proxied Wayland messages
- *
- * Set in handle_session_create according to the WAYLAND_DEBUG variable.
- */
-static bool wayland_debug = false;
-
-/*
  * The available Wayland message handlers
  */
 const struct message_handler *message_handlers[] = {
@@ -29,8 +22,6 @@ const struct message_handler *message_handlers[] = {
 static int handle_session_create(struct proxy_session *session) {
     printf("Client connected\n");
 
-    wayland_debug = (getenv("WAYLAND_DEBUG") != NULL);
-
     return 0;
 }
 
@@ -39,12 +30,6 @@ static int handle_session_create(struct proxy_session *session) {
  */
 static enum proxy_actions handle_message(struct proxy_message *msg) {
     int i, j, count;
-
-    if (wayland_debug) {
-        wl_closure_print(msg->closure, msg->interface,
-                         msg->conn->side == PROXY_SIDE_CLIENT, false, NULL,
-                         NULL);
-    }
 
     // Call the appropriate Wayland message handler
     count = sizeof(message_handlers) / sizeof(struct message_handler*);
