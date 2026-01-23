@@ -39,7 +39,7 @@ enum proxy_actions wl_buffer_release(struct proxy_message *msg)
     id = msg->closure->sender_id;
     map = msg->conn->session->obj_data;
     buf = wl_map_lookup(map, id);
-    if (buf != NULL && buf->dependents > 0)
+    if (buf != NULL)
         // We will release buffer manually in wl_surface_commit()
         return PROXY_ACTION_DROP;
     else
@@ -120,6 +120,20 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
 }
 
 /*
+ * Unattaches a buffer from a surface, and frees the buffer if possible
+ */
+static void wl_surface_unattach(struct wl_surface *surf) {
+    if (surf->buf != NULL) {
+        surf->buf->dependents--;
+        if (surf->buf->id == 0 && surf->buf->dependents == 0)
+            // Previously attached wl_buffer was destroyed and is no longer
+            // attached anywhere, so we can free it now
+            wl_buffer_free(surf->buf);
+        surf->buf = NULL;
+    }
+}
+
+/*
  * Handle a wl_surface@attach request
  *
  * Updates surface buffer if buffer is known.
@@ -138,13 +152,7 @@ enum proxy_actions wl_surface_attach(struct proxy_message *msg) {
     buf = wl_map_lookup(map, buf_id);
 
     // Unattach previous buffer, if known
-    if (surf->buf != NULL) {
-        surf->buf->dependents--;
-        if (surf->buf->id == 0 && surf->buf->dependents == 0)
-            // Previously attached wl_buffer was destroyed and is no longer
-            // attached anywhere, so we can free it now
-            wl_buffer_free(surf->buf);
-    }
+    wl_surface_unattach(surf);
 
     // Attach new buffer if known
     surf->buf = buf;
@@ -195,6 +203,11 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
         wl_closure_destroy(res);
         if (ret < 0)
             return PROXY_ACTION_ERR;
+
+        // Unattach buffer. This prevents us from sending duplicate release
+        // events when the client commits without actually attaching a new
+        // buffer.
+        wl_surface_unattach(surf);
     }
 
     return PROXY_ACTION_FWD;
@@ -232,13 +245,8 @@ enum proxy_actions wl_surface_destroy(struct proxy_message *msg) {
     wl_map_remove(map, id);
     surf->id = 0;
 
-    // Free attached buffer if possible
-    if (surf->buf != NULL) {
-        surf->buf->dependents--;
-        if (surf->buf->id == 0 && surf->buf->dependents == 0) {
-            wl_buffer_free(surf->buf);
-        }
-    }
+    // Unattach and free buffer, if known
+    wl_surface_unattach(surf);
 
     // Free surface if possible
     if (surf->dependents == 0)
