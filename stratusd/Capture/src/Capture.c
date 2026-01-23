@@ -119,6 +119,7 @@ int capture_test() {
     }
     data->width = 640; // TODO: set client dimensions dynamically
     data->height = 480;
+    data->encoder = NULL; // Will be initialized on first frame
 
     // Capture frames
     printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
@@ -128,6 +129,8 @@ int capture_test() {
     }
 
 err_proxy_run:
+    if (data->encoder != NULL)
+        encoder_teardown(data->encoder);
     free(data);
 err_malloc:
     proxy_destroy(proxy);
