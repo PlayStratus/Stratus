@@ -1,0 +1,62 @@
+#include "EncodeUtils.h"
+
+void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) {
+    uint8_t r, g, b;
+
+    // 40 red frames, 40 blue frames, 40 green frames
+    if (frame_num < 40) {
+        r = 255; g = 0; b = 0;  // Red
+    } else if (frame_num < 80) {
+        r = 0; g = 0; b = 255;  // Blue
+    } else {
+        r = 0; g = 255; b = 0;  // Green
+    }
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int offset = (y * width + x) * 4;
+            buffer[offset + 0] = 255;  // A
+            buffer[offset + 1] = r;    // R
+            buffer[offset + 2] = g;    // G
+            buffer[offset + 3] = b;    // B
+        }
+    }
+}
+
+// set flush to 0 to send the frame in the yuv_frame buffer, or 1 to flush the encoder and receive the remaining packets
+int avcodec_send_and_receive(encoder_context *state, int flush) {
+
+    // If flushing the encoder, send a NULL frame, otherwise send the converted YUV frame
+    AVFrame *current_frame = flush ? NULL : state->yuv_frame;
+
+    // Send frame to encoder
+    int ret = avcodec_send_frame(state->codec_ctx, current_frame);
+    if (ret < 0) {
+        fprintf(stderr, "Error sending frame to encoder. flush: %d\n", flush);
+        return ret;
+    }
+
+    // Receive encoded packets
+    while (ret >= 0) {
+        ret = avcodec_receive_packet(state->codec_ctx, state->pkt);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        } else if (ret < 0) {
+            fprintf(stderr, "Error receiving frame from encoder\n");
+            return ret;
+        }
+
+        // Write Annex B start code
+        uint8_t start_code[4] = {0x00, 0x00, 0x00, 0x01};
+        fwrite(start_code, 1, 4, state->output_file);
+
+        // Write packet data
+        fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
+
+        printf("Received encoded frame %3d (size=%5d)\n", state->frame_count, state->pkt->size);
+
+        av_packet_unref(state->pkt);
+    }
+}
+
+
