@@ -77,6 +77,7 @@ struct proxy {
     proxy_on_session_create_handler *on_session_create;
     proxy_on_session_destroy_handler *on_session_destroy;
     proxy_on_message_handler *on_message;
+    void *userdata; // for external use by caller
 
     int epoll_fd;
     struct wl_socket *socket;

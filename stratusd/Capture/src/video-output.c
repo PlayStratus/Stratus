@@ -16,9 +16,10 @@
 #include <stdbool.h>
 #include <sys/mman.h>
 
+#include "capture-priv.h"
+#include "shm-buffers-priv.h"
 #include "video-output-pub.h"
 #include "video-output-priv.h"
-#include "shm-buffers-priv.h"
 
 /*
  * Required Wayland protocol interfaces
@@ -157,8 +158,7 @@ enum proxy_actions wl_surface_attach(struct proxy_message *msg) {
     // Attach new buffer if known
     surf->buf = buf;
     if (surf->buf != NULL) {
-        // We only support frame buffers that fill the entire surface (we'll
-        // check the width & height later after a wl_surface@commit request)
+        // We only support frame buffers that fill the entire surface
         assert(msg->closure->args[1].i == 0);
         assert(msg->closure->args[2].i == 0);
 
@@ -190,7 +190,6 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     if (buf != NULL) {
         if (buf->width > 64 && buf->height > 64) {
             // A >64x64 frame probably isn't the cursor, so let's process it.
-
             if (buf->shm_buf != NULL)
                 wl_shm_surface_commit(surf); // Handle shm frame
         }

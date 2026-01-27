@@ -5,6 +5,7 @@
 #include <wayland-private.h>
 
 #include "capture-priv.h"
+#include "resize-pub.h"
 #include "shm-buffers-pub.h"
 #include "video-output-pub.h"
 
@@ -12,8 +13,9 @@
  * The available Wayland message handlers
  */
 const struct message_handler *message_handlers[] = {
-    video_output_message_handlers,
+    resize_message_handlers,
     shm_buffers_message_handlers,
+    video_output_message_handlers,
 };
 
 /*
@@ -96,22 +98,39 @@ static void handle_session_destroy(struct proxy_session *session) {
 }
 
 int capture_test() {
-    struct proxy *proxy = proxy_init("stratus");
+    struct proxy *proxy;
+    struct capture_data *data;
+
+    // Initialize proxy
+    proxy = proxy_init("stratus");
     if (proxy == NULL) {
         fprintf(stderr, "Failed to initialize proxy\n");
-        return 1;
+        goto err_proxy_init;
     }
     proxy->on_session_create    = &handle_session_create;
     proxy->on_message           = &handle_message;
     proxy->on_session_destroy   = &handle_session_destroy;
 
+    // Initialize capture data
+    proxy->userdata = data = malloc(sizeof(struct capture_data));
+    if (data == NULL) {
+        fprintf(stderr, "Failed to allocate capture data\n");
+        goto err_malloc;
+    }
+    data->width = 640; // TODO: set client dimensions dynamically
+    data->height = 480;
+
+    // Capture frames
     printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
     if (proxy_run(proxy) < 0) {
         fprintf(stderr, "Proxy exited unsucessfully\n");
-        proxy_destroy(proxy);
-        return 1;
+        goto err_proxy_run;
     }
 
+err_proxy_run:
+    free(data);
+err_malloc:
     proxy_destroy(proxy);
+err_proxy_init:
     return 0;
 }
