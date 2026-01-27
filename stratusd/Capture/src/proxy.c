@@ -16,7 +16,9 @@
  * Required Wayland protocol interfaces
  */
 extern const struct wl_interface *linux_dmabuf_v1_types_all[];
+extern const struct wl_interface *pointer_constraints_unstable_v1_types_all[];
 extern const struct wl_interface *presentation_time_types_all[];
+extern const struct wl_interface *relative_pointer_unstable_v1_types_all[];
 extern const struct wl_interface *tablet_v2_types_all[];
 extern const struct wl_interface *viewporter_types_all[];
 extern const struct wl_interface *wayland_types_all[];
@@ -35,7 +37,9 @@ static bool wayland_debug = false;
  */
 const struct wl_interface **proxy_protocols[] = {
     linux_dmabuf_v1_types_all,
+    pointer_constraints_unstable_v1_types_all,
     presentation_time_types_all,
+    relative_pointer_unstable_v1_types_all,
     tablet_v2_types_all,
     viewporter_types_all,
     wayland_types_all,
