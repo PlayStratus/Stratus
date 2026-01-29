@@ -114,7 +114,7 @@ class CounterHandler:
         self._counters = defaultdict(int)
         self.c = 0
 
-        asyncio.create_task(self._send_loop())
+        asyncio.create_task(self.loop())
 
     def h3_event_received(self, event: H3Event) -> None:            # send images
         if isinstance(event, DatagramReceived):
@@ -141,11 +141,9 @@ class CounterHandler:
                     response_id, payload, end_stream=True)
                 self.stream_closed(event.stream_id)
 
-    async def _send_loop(self):
+    async def loop(self):
         while True:
-            if self._http._quic._close_pending:
-                print("Session no longer valid, stopping send loop.") 
-                break
+            
             filename = "image2.png" if self.c % 2 == 0 else "image1.png"
             print(filename)
             with open(filename, "rb") as f: 
