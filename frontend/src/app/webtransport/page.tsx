@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 export default function WebTransportClient() {
-  const [images, setImages] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const [outgoing, setOutgoing] = useState("");
 
@@ -27,13 +26,23 @@ export default function WebTransportClient() {
         async function readLoop() {
           
           if (!reader) return;
-
-          while (true) {                                          //read images
+          const canvas = document.getElementById("canvas") as HTMLCanvasElement;                                                    //https://www.w3schools.com/tags/ref_canvas.asp
+          const ctx = canvas.getContext("2d");
+          while (true) {                                                                                                            //read images
             const { value, done } = await reader.read();
             if (done) break;
-            if (!value) continue;
-                                                                    //work on implementing reciever here. My attempts have not worked https://stackoverflow.com/questions/21585681/send-image-data-over-rtc-data-channel
-            
+            if (!value) continue;                                                                                                   //work on implementing reciever here. My attempts have not worked https://stackoverflow.com/questions/21585681/send-image-data-over-rtc-data-channel
+            console.log("Received datagram:"); 
+            try {
+              const temp = new Uint8Array(value).buffer;
+              const blob = new Blob([temp], { type: "image/png" });                                                                 //https://developer.mozilla.org/en-US/docs/Web/API/Blob
+              const bitmap = await createImageBitmap(blob);                                                                         // Resize to match image https://developer.mozilla.org/en-US/docs/Web/API/Window/createImageBitmap
+              canvas.width = bitmap.width; 
+              canvas.height = bitmap.height;                                                                                        //Draw image 
+              ctx?.drawImage(bitmap, 0, 0); 
+            } catch (err) { 
+              console.error("Failed to decode image:", err); 
+            }
             
           }
         }
@@ -52,8 +61,9 @@ export default function WebTransportClient() {
     };
   }, []);
 
-  async function sendMessage() {                          //send message to get images
+  async function sendMessage() {                                                                      //send message to get images
     if (!writerRef.current) return;
+    console.log("send:"); 
     const data = new TextEncoder().encode("a");
     await writerRef.current.write(data);
 
@@ -73,13 +83,7 @@ export default function WebTransportClient() {
       </div>
 
       <h2>Images</h2>
-      {images.map((src, i) => (
-        <img
-          key={i}
-          src={src}
-          style={{ maxWidth: "300px", marginBottom: 20 }}
-        />
-      ))}
+      <canvas id="canvas"></canvas>
     </div>
   );
 }

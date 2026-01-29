@@ -77,6 +77,7 @@ This will output "13" (the length of "Hello, world!") into the console.
 import argparse
 import asyncio
 import logging
+import time
 from collections import defaultdict
 from typing import Dict, Optional
 
@@ -92,6 +93,7 @@ BIND_PORT = 4433
 
 logger = logging.getLogger(__name__)
 
+
 # CounterHandler implements a really simple protocol:
 #   - For every incoming bidirectional stream, it counts bytes it receives on
 #     that stream until the stream is closed, and then replies with that byte
@@ -103,18 +105,28 @@ logger = logging.getLogger(__name__)
 #     datagram that was just received.
 class CounterHandler:
 
-    def __init__(self, session_id, http: H3Connection) -> None:
+
+
+    def __init__(self, session_id, http: H3Connection, protocol) -> None:
         self._session_id = session_id
         self._http = http
+        self._protocol = protocol
         self._counters = defaultdict(int)
+        self.c = 0
+
+        asyncio.create_task(self._send_loop())
 
     def h3_event_received(self, event: H3Event) -> None:            # send images
         if isinstance(event, DatagramReceived):
             print(f"Datagram received.")
-            for filename in ["image1.png", "image2.png", "image3.png"]:
-                with open(filename, "rb") as f:
-                    data = f.read() 
-                    self._http.send_datagram(self._session_id, data)
+            
+            print(f"Sending.")
+            filename = "image2.png" if self.c % 2 == 0 else "image1.png"
+            print(filename)
+            with open(filename, "rb") as f: 
+                data = f.read() 
+                self._http.send_datagram(self._session_id, data)
+            self.c += 1
 
         if isinstance(event, WebTransportStreamDataReceived):
             self._counters[event.stream_id] += len(event.data)
@@ -129,11 +141,30 @@ class CounterHandler:
                     response_id, payload, end_stream=True)
                 self.stream_closed(event.stream_id)
 
+    async def _send_loop(self):
+        while True:
+            if self._http._quic._close_pending:
+                print("Session no longer valid, stopping send loop.") 
+                break
+            filename = "image2.png" if self.c % 2 == 0 else "image1.png"
+            print(filename)
+            with open(filename, "rb") as f: 
+                data = f.read() 
+                self._http.send_datagram(self._session_id, data)
+            self.c += 1
+            self._protocol.transmit()
+            await asyncio.sleep(.1)
+
+
     def stream_closed(self, stream_id: int) -> None:
         try:
             del self._counters[stream_id]
         except KeyError:
             pass
+
+
+
+    
 
 
 # WebTransportProtocol handles the beginning of a WebTransport connection: it
@@ -184,7 +215,7 @@ class WebTransportProtocol(QuicConnectionProtocol):
             return
         if path == b"/":
             assert(self._handler is None)
-            self._handler = CounterHandler(stream_id, self._http)
+            self._handler = CounterHandler(stream_id, self._http, protocol=self)
             self._send_response(stream_id, 200)
             
             
