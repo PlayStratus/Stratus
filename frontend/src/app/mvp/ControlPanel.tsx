@@ -1,8 +1,5 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
-import React, { useEffect, useRef, useState } from "react"
-import FullScreenButton from "./FullScreenButton"
+import React, { useEffect, useState } from "react"
 
 interface CodecSupport {
   videoDecoder: boolean
@@ -16,18 +13,19 @@ type Props = {
   datagramWriter: WritableStreamDefaultWriter<Uint8Array>
   logs: string[]
   setLogs: React.Dispatch<React.SetStateAction<string[]>>
+  containerRef: React.RefObject<HTMLDivElement | null>
 }
 
-export default function Play({
+export default function ControlPanel({
   transport,
   datagramWriter,
   logs,
   setLogs,
+  containerRef,
 }: Readonly<Props>) {
-  const containerRef: React.Ref<HTMLDivElement> = useRef(null)
   const [rawData, setRawData] = useState("")
   const [sendType, setSendType] = useState<"datagram" | "unidi" | "bidi">(
-    "datagram"
+    "datagram",
   )
 
   const handleSend = async () => {
@@ -82,6 +80,19 @@ export default function Play({
       const currentHeight = element.clientHeight
 
       console.log(`Width: ${currentWidth}, Height: ${currentHeight}`)
+
+      // send the new dimensions to the server
+      const encoder = new TextEncoder()
+      const data = encoder.encode(
+        JSON.stringify({
+          type: "resize",
+          width: currentWidth,
+          height: currentHeight,
+        }),
+      )
+      datagramWriter.write(data).catch((e) => {
+        console.error("Error sending resize datagram:", e)
+      })
     })
 
     resizeObserver.observe(element)
@@ -90,17 +101,15 @@ export default function Play({
   }, [])
 
   return (
-    <div
-      ref={containerRef}
-      className='bg-white grid place-items-center relative w-screen h-screen'
-    >
-      <div className='w-72 flex flex-col items-center gap-4 border p-4'>
-        <h1>Send data</h1>
+    <div className='absolute bottom-4 left-4 w-80 max-w-[90vw]'>
+      <div className='w-full flex flex-col gap-3 border bg-white/90 p-4 rounded shadow'>
+        <h1 className='font-semibold text-sm'>Send message</h1>
 
         <textarea
           value={rawData}
           onChange={(e) => setRawData(e.target.value)}
-          className='border w-full'
+          className='border w-full rounded px-2 py-1 text-sm resize-none min-h-16'
+          placeholder='Type a message to send to the server...'
         />
 
         <select
@@ -108,32 +117,30 @@ export default function Play({
           onChange={(e) =>
             setSendType(e.target.value as "datagram" | "unidi" | "bidi")
           }
-          className='border w-full'
+          className='border w-full rounded px-2 py-1 text-sm'
         >
           <option value='datagram'>Datagram</option>
           <option value='unidi'>Unidirectional Stream</option>
           <option value='bidi'>Bidirectional Stream</option>
         </select>
 
-        <Button className='w-full' onClick={handleSend}>
+        <Button className='w-full text-sm' onClick={handleSend}>
           Send
         </Button>
 
-        <div className='text-left max-h-64 overflow-y-auto border w-full p-4 rounded'>
+        <div className='text-left max-h-48 overflow-y-auto border w-full p-3 rounded bg-white text-xs leading-snug'>
           {logs.map((log, index) => (
-            <p key={index} className='mb-2'>
+            <p key={index} className='mb-1'>
               {log}
             </p>
           ))}
         </div>
       </div>
-
-      <FullScreenButton containerRef={containerRef} />
     </div>
   )
 }
 
-const checkCodecSupport = async () => {
+async function checkCodecSupport() {
   const videoCodecsToTest = [
     "vp8",
     "vp09.00.10.08",
@@ -182,6 +189,7 @@ const checkCodecSupport = async () => {
       try {
         const config = {
           codec,
+          description: `Test ${codec}`,
           sampleRate: 48000,
           numberOfChannels: 2,
         }

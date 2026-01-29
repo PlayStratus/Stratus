@@ -3,9 +3,10 @@
 import { useEffect, useState, useRef } from "react"
 
 import Connecting from "./Connecting"
-import Play from "./Play"
+import ControlPanel from "./ControlPanel"
+import FullScreenButton from "./FullScreenButton"
 
-const WEBTRANSPORT_URL = "https://localhost:4433/counter"
+const WEBTRANSPORT_URL = "https://localhost:4433/"
 
 export default function FullscreenBox() {
   const [isConnected, setIsConnected] = useState(false)
@@ -14,6 +15,13 @@ export default function FullscreenBox() {
   const [datagramWriter, setDatagramWriter] =
     useState<WritableStreamDefaultWriter<Uint8Array> | null>(null)
   const streamNumberRef = useRef<number>(1)
+
+  // Container that represents the full viewport we tell the server about.
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Canvas and decoder state for VP8 frames sent from the server.
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const videoDecoderRef = useRef<VideoDecoder | null>(null)
 
   function addToEventLog(text: string, _severity: string = "info") {
     setLogs((prevLog) => [...prevLog, text])
@@ -53,14 +61,13 @@ export default function FullscreenBox() {
           ...prevLog,
           `Connection closed with error: ${(error as Error).message}`,
         ])
-      }
+      },
     )
     setTransport(transport)
 
     try {
       const datagramWriter = transport.datagrams.writable.getWriter()
       setLogs((prevLog) => [...prevLog, "Datagram writer obtained."])
-      // You can send initial datagrams here if needed
       setDatagramWriter(datagramWriter)
     } catch (error) {
       setLogs((prevLog) => [
@@ -85,7 +92,7 @@ export default function FullscreenBox() {
       const errorMessage = e instanceof Error ? e.message : String(e)
       addToEventLog(
         "Receiving datagrams not supported: " + errorMessage,
-        "error"
+        "error",
       )
       return
     }
@@ -126,12 +133,74 @@ export default function FullscreenBox() {
     }
   }
 
+  function ensureVideoDecoder() {
+    if (!videoDecoderRef.current) {
+      if (typeof VideoDecoder === "undefined") {
+        addToEventLog("VideoDecoder API not available in this browser", "error")
+        return null
+      }
+
+      const canvas = canvasRef.current
+      if (!canvas) {
+        addToEventLog("Canvas not ready for VP8 rendering", "error")
+        return null
+      }
+
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        addToEventLog("Could not get 2D context for canvas", "error")
+        return null
+      }
+
+      const decoder = new VideoDecoder({
+        output: (frame) => {
+          // Resize canvas to the incoming frame and draw it.
+          canvas.width = frame.codedWidth
+          canvas.height = frame.codedHeight
+          try {
+            // Some TS lib versions don't yet have transferToImageBitmap
+            const anyFrame: any = frame
+            if (typeof anyFrame.transferToImageBitmap === "function") {
+              const bitmap = anyFrame.transferToImageBitmap()
+              ctx.drawImage(bitmap, 0, 0)
+            } else {
+              ctx.drawImage(anyFrame as any, 0, 0)
+            }
+          } finally {
+            frame.close()
+          }
+        },
+        error: (error) => {
+          addToEventLog(`VideoDecoder error: ${error}`, "error")
+        },
+      })
+
+      decoder.configure({
+        codec: "vp8",
+        codedWidth: 640,
+        codedHeight: 360,
+      })
+
+      videoDecoderRef.current = decoder
+      addToEventLog("VideoDecoder for VP8 initialized")
+    }
+
+    return videoDecoderRef.current
+  }
+
   async function readFromIncomingStream(
     stream: ReadableStream<Uint8Array>,
-    number: number
+    number: number,
   ) {
-    const decoder = new TextDecoderStream()
-    const reader = stream.pipeThrough(decoder as any).getReader()
+    const reader = stream.getReader()
+    let buffer = new Uint8Array(0)
+
+    const decoder = ensureVideoDecoder()
+    if (!decoder) {
+      addToEventLog("Cannot read VP8 stream without decoder", "error")
+      return
+    }
+
     try {
       while (true) {
         const { value, done } = await reader.read()
@@ -139,14 +208,45 @@ export default function FullscreenBox() {
           addToEventLog("Stream #" + number + " closed")
           return
         }
-        const data = value
-        addToEventLog("Received data on stream #" + number + ": " + data)
+
+        if (!value) continue
+
+        // Concatenate the new chunk to our buffer.
+        const tmp = new Uint8Array(buffer.length + value.length)
+        tmp.set(buffer, 0)
+        tmp.set(value, buffer.length)
+        buffer = tmp
+
+        // Process as many length-prefixed VP8 frames as are fully available.
+        while (buffer.length >= 4) {
+          const frameLength =
+            (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]
+
+          if (buffer.length < 4 + frameLength) {
+            // Wait for more data.
+            break
+          }
+
+          const frameData = buffer.subarray(4, 4 + frameLength)
+          buffer = buffer.subarray(4 + frameLength)
+
+          addToEventLog(
+            `Received VP8 frame of ${frameData.byteLength} bytes on stream #${number}`,
+          )
+
+          const chunk = new EncodedVideoChunk({
+            type: "key",
+            timestamp: 0,
+            data: frameData,
+          })
+          decoder.decode(chunk)
+        }
       }
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e)
       addToEventLog(
         "Error while reading from stream #" + number + ": " + errorMessage,
-        "error"
+        "error",
       )
       addToEventLog("    " + errorMessage)
     }
@@ -157,12 +257,26 @@ export default function FullscreenBox() {
   }, [])
 
   return isConnected && transport && datagramWriter ? (
-    <Play
-      transport={transport}
-      datagramWriter={datagramWriter}
-      logs={logs}
-      setLogs={setLogs}
-    />
+    <div
+      ref={containerRef}
+      className='relative w-screen h-screen bg-black overflow-hidden'
+    >
+      <canvas
+        ref={canvasRef}
+        className='w-full h-full object-contain bg-black'
+        aria-label='VP8 photo from server'
+      />
+
+      <ControlPanel
+        transport={transport}
+        datagramWriter={datagramWriter}
+        logs={logs}
+        setLogs={setLogs}
+        containerRef={containerRef}
+      />
+
+      <FullScreenButton containerRef={containerRef} />
+    </div>
   ) : (
     <Connecting connectingLog={logs} />
   )

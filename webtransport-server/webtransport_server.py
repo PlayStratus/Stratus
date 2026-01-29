@@ -1,84 +1,11 @@
-#!/usr/bin/env python3
-
-# Copyright 2020 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-An example WebTransport over HTTP/3 server based on the aioquic library.
-Processes incoming streams and datagrams, and
-replies with the ASCII-encoded length of the data sent in bytes.
-Example use:
-  python3 webtransport_server.py certificate.pem certificate.key
-Example use from JavaScript:
-  let transport = new WebTransport("https://localhost:4433/counter");
-  await transport.ready;
-  let stream = await transport.createBidirectionalStream();
-  let encoder = new TextEncoder();
-  let writer = stream.writable.getWriter();
-  await writer.write(encoder.encode("Hello, world!"))
-  writer.close();
-  console.log(await new Response(stream.readable).text());
-This will output "13" (the length of "Hello, world!") into the console.
-"""
-
-# ---- Dependencies ----
-#
-# This server only depends on Python standard library and aioquic 0.9.19 or
-# later. See https://github.com/aiortc/aioquic for instructions on how to
-# install aioquic.
-#
-# ---- Certificates ----
-#
-# HTTP/3 always operates using TLS, meaning that running a WebTransport over
-# HTTP/3 server requires a valid TLS certificate.  The easiest way to do this
-# is to get a certificate from a real publicly trusted CA like
-# <https://letsencrypt.org/>.
-# https://developers.google.com/web/fundamentals/security/encrypt-in-transit/enable-https
-# contains a detailed explanation of how to achieve that.
-#
-# As an alternative, Chromium can be instructed to trust a self-signed
-# certificate using command-line flags.  Here are step-by-step instructions on
-# how to do that:
-#
-#   1. Generate a certificate and a private key:
-#         openssl req -newkey rsa:2048 -nodes -keyout certificate.key \
-#                   -x509 -out certificate.pem -subj '/CN=Test Certificate' \
-#                   -addext "subjectAltName = DNS:localhost"
-#
-#   2. Compute the fingerprint of the certificate:
-#         openssl x509 -pubkey -noout -in certificate.pem |
-#                   openssl rsa -pubin -outform der |
-#                   openssl dgst -sha256 -binary | base64
-#      The result should be a base64-encoded blob that looks like this:
-#          "Gi/HIwdiMcPZo2KBjnstF5kQdLI5bPrYJ8i3Vi6Ybck="
-#
-#   3. Pass a flag to Chromium indicating what host and port should be allowed
-#      to use the self-signed certificate.  For instance, if the host is
-#      localhost, and the port is 4433, the flag would be:
-#         --origin-to-force-quic-on=localhost:4433
-#
-#   4. Pass a flag to Chromium indicating which certificate needs to be trusted.
-#      For the example above, that flag would be:
-#         --ignore-certificate-errors-spki-list=Gi/HIwdiMcPZo2KBjnstF5kQdLI5bPrYJ8i3Vi6Ybck=
-#
-# See https://www.chromium.org/developers/how-tos/run-chromium-with-flags for
-# details on how to run Chromium with flags.
-
 import argparse
 import asyncio
+import io
 import logging
 from collections import defaultdict
 from typing import Dict, Optional
+
+import av
 
 from aioquic.asyncio import QuicConnectionProtocol, serve
 from aioquic.h3.connection import H3_ALPN, H3Connection
@@ -91,42 +18,122 @@ BIND_ADDRESS = '::1'
 BIND_PORT = 4433
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.propagate = False
+handler = logging.StreamHandler()
+formatter = logging.Formatter('[%(asctime)s] %(name)s [%(levelname)s] %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.info(f"Logger initialized: {logger}")
 
-# CounterHandler implements a really simple protocol:
-#   - For every incoming bidirectional stream, it counts bytes it receives on
-#     that stream until the stream is closed, and then replies with that byte
-#     count on the same stream.
-#   - For every incoming unidirectional stream, it counts bytes it receives on
-#     that stream until the stream is closed, and then replies with that byte
-#     count on a new unidirectional stream.
-#   - For every incoming datagram, it sends a datagram with the length of
-#     datagram that was just received.
-class CounterHandler:
+
+class ImageHandler:
 
     def __init__(self, session_id, http: H3Connection) -> None:
         self._session_id = session_id
         self._http = http
         self._counters = defaultdict(int)
+        self._datagram_stream_id: Optional[int] = None
+
+    def _encode_png_to_vp8_frame(self) -> bytes:
+        """
+        Encode `photo.png` as a single VP8 frame (raw bitstream).
+        Uses container-based encoding and extracts VP8 payload.
+        """
+        # Decode PNG into a frame
+        in_container = av.open("photo.png")
+        in_stream = in_container.streams.video[0]
+        frame = next(in_container.decode(in_stream))
+        width, height = frame.width, frame.height
+        in_container.close()
+
+        # Encode to WebM container with VP8 codec
+        buffer = io.BytesIO()
+        out_container = av.open(buffer, mode="w", format="webm")
+        try:
+            out_stream = out_container.add_stream("libvpx-vp8", rate=1)  # Try libvpx-vp8 first
+        except Exception:
+            try:
+                out_stream = out_container.add_stream("vp8", rate=1)  # Fallback to vp8
+            except Exception as e:
+                out_container.close()
+                logger.error(f"VP8 encoder not available. Install FFmpeg with libvpx support: {e}")
+                raise
+        
+        out_stream.width = width
+        out_stream.height = height
+        out_stream.pix_fmt = "yuv420p"
+
+        # Encode the frame
+        for packet in out_stream.encode(frame):
+            out_container.mux(packet)
+        # Flush encoder
+        for packet in out_stream.encode():
+            out_container.mux(packet)
+        out_container.close()
+
+        # Extract VP8 frame from WebM: decode the WebM we just created
+        buffer.seek(0)
+        webm_container = av.open(buffer, mode="r")
+        webm_stream = webm_container.streams.video[0]
+        
+        # Get the VP8 packet data
+        vp8_data = b""
+        for packet in webm_container.demux(webm_stream):
+            if packet:
+                # In current PyAV versions, bytes(packet) returns the encoded payload.
+                vp8_data += bytes(packet)
+        webm_container.close()
+        
+        return vp8_data
 
     def h3_event_received(self, event: H3Event) -> None:
         if isinstance(event, DatagramReceived):
-            payload = str(len(event.data)).encode('ascii')
-            self._http.send_datagram(self._session_id, payload)
+            logger.info(f"Datagram received: {event.data}")
+
+            frame_bytes = self._encode_png_to_vp8_frame()
+            frame_len = len(frame_bytes)
+
+            # 4-byte big-endian length prefix, as expected by the client.
+            length_prefix = bytes(
+                [
+                    (frame_len >> 24) & 0xFF,
+                    (frame_len >> 16) & 0xFF,
+                    (frame_len >> 8) & 0xFF,
+                    frame_len & 0xFF,
+                ]
+            )
+            payload = length_prefix + frame_bytes
+
+            if self._datagram_stream_id is None:
+                self._datagram_stream_id = self._http.create_webtransport_stream(
+                    self._session_id, is_unidirectional=True
+                )
+
+            # Send the single length-prefixed VP8 keyframe.
+            self._http._quic.send_stream_data(
+                self._datagram_stream_id, payload, end_stream=False
+            )
 
         if isinstance(event, WebTransportStreamDataReceived):
+            logger.info(f"Stream data received on stream {event.stream_id}: {len(event.data)} bytes")
             self._counters[event.stream_id] += len(event.data)
             if event.stream_ended:
                 if stream_is_unidirectional(event.stream_id):
                     response_id = self._http.create_webtransport_stream(
-                        self._session_id, is_unidirectional=True)
+                        self._session_id, is_unidirectional=True
+                    )
                 else:
                     response_id = event.stream_id
-                payload = str(self._counters[event.stream_id]).encode('ascii')
+                payload = str(self._counters[event.stream_id]).encode("ascii")
                 self._http._quic.send_stream_data(
-                    response_id, payload, end_stream=True)
+                    response_id, payload, end_stream=True
+                )
                 self.stream_closed(event.stream_id)
 
     def stream_closed(self, stream_id: int) -> None:
+        if self._datagram_stream_id == stream_id:
+            self._datagram_stream_id = None
         try:
             del self._counters[stream_id]
         except KeyError:
@@ -141,7 +148,7 @@ class WebTransportProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._http: Optional[H3Connection] = None
-        self._handler: Optional[CounterHandler] = None
+        self._handler: Optional[ImageHandler] = None
 
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, ProtocolNegotiated):
@@ -179,9 +186,9 @@ class WebTransportProtocol(QuicConnectionProtocol):
             # `:authority` and `:path` must be provided.
             self._send_response(stream_id, 400, end_stream=True)
             return
-        if path == b"/counter":
+        if path == b"/":
             assert(self._handler is None)
-            self._handler = CounterHandler(stream_id, self._http)
+            self._handler = ImageHandler(stream_id, self._http)
             self._send_response(stream_id, 200)
         else:
             self._send_response(stream_id, 404, end_stream=True)
@@ -197,10 +204,10 @@ class WebTransportProtocol(QuicConnectionProtocol):
             stream_id=stream_id, headers=headers, end_stream=end_stream)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('certificate')
-    parser.add_argument('key')
+    parser.add_argument("certificate")
+    parser.add_argument("key")
     args = parser.parse_args()
 
     configuration = QuicConfiguration(
@@ -210,17 +217,20 @@ if __name__ == '__main__':
     )
     configuration.load_cert_chain(args.certificate, args.key)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(
         serve(
             BIND_ADDRESS,
             BIND_PORT,
             configuration=configuration,
             create_protocol=WebTransportProtocol,
-        ))
+        )
+    )
     try:
         logging.info(
-            "Listening on https://{}:{}".format(BIND_ADDRESS, BIND_PORT))
+            "Listening on https://{}:{}".format(BIND_ADDRESS, BIND_PORT)
+        )
         loop.run_forever()
     except KeyboardInterrupt:
         pass
