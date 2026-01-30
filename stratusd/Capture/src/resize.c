@@ -38,7 +38,7 @@ enum proxy_actions xdg_surface_get_toplevel(struct proxy_message *msg) {
     if (args[2].a == NULL)
         goto err_malloc;
     wl_array_init(args[2].a);
-    if (wl_array_add(args[2].a, 6) == NULL)
+    if (wl_array_add(args[2].a, 6 * sizeof(uint32_t)) == NULL)
         goto err_add;
     ((uint32_t*)args[2].a->data)[0] = 2; // set fullscreen state
     ((uint32_t*)args[2].a->data)[1] = 4; // set activated state
@@ -51,11 +51,15 @@ enum proxy_actions xdg_surface_get_toplevel(struct proxy_message *msg) {
     res->opcode = 0; // xdg_toplevel event #0 is configure event
     if (wl_closure_send(res, msg->conn->session->client->wl_conn) < 0)
         goto err_send;
+    wl_array_release(args[2].a);
+    free(args[2].a);
     wl_closure_destroy(res);
 
     return PROXY_ACTION_FWD;
 
 err_send:
+    wl_array_release(args[2].a);
+    free(args[2].a);
     wl_closure_destroy(res);
 err_add:
     free(args[2].a);
