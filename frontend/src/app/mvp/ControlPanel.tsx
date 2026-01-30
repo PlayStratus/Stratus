@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button"
 import React, { useEffect, useState } from "react"
 
+import { LogType } from "./page"
+
 interface CodecSupport {
   videoDecoder: boolean
   audioDecoder: boolean
@@ -11,8 +13,8 @@ interface CodecSupport {
 type Props = {
   transport: WebTransport
   datagramWriter: WritableStreamDefaultWriter<Uint8Array>
-  logs: string[]
-  setLogs: React.Dispatch<React.SetStateAction<string[]>>
+  logs: LogType[]
+  addLogEvent: (message: string, severity?: "info" | "error") => void
   containerRef: React.RefObject<HTMLDivElement | null>
 }
 
@@ -20,7 +22,7 @@ export default function ControlPanel({
   transport,
   datagramWriter,
   logs,
-  setLogs,
+  addLogEvent,
   containerRef,
 }: Readonly<Props>) {
   const [rawData, setRawData] = useState("")
@@ -33,39 +35,33 @@ export default function ControlPanel({
     const data = encoder.encode(rawData)
 
     if (!transport) {
-      setLogs((prevLogs) => [...prevLogs, "Transport not connected."])
+      addLogEvent("Transport not connected.", "error")
       return
     }
 
     try {
       if (sendType === "datagram") {
         if (!datagramWriter) {
-          setLogs((prevLogs) => [...prevLogs, "Datagram writer not available."])
+          addLogEvent("Datagram writer not available.", "error")
           return
         }
         await datagramWriter.write(data)
-        setLogs((prevLogs) => [...prevLogs, `Sent datagram: ${rawData}`])
+        addLogEvent(`Sent datagram: ${rawData}`)
       } else if (sendType === "unidi") {
         const stream = await transport.createUnidirectionalStream()
         const writer = stream.getWriter()
         await writer.write(data)
         await writer.close()
-        setLogs((prevLogs) => [
-          ...prevLogs,
-          `Sent unidirectional stream: ${rawData}`,
-        ])
+        addLogEvent(`Sent unidirectional stream: ${rawData}`)
       } else if (sendType === "bidi") {
         const stream = await transport.createBidirectionalStream()
         const writer = stream.writable.getWriter()
         await writer.write(data)
         await writer.close()
-        setLogs((prevLogs) => [
-          ...prevLogs,
-          `Sent bidirectional stream: ${rawData}`,
-        ])
+        addLogEvent(`Sent bidirectional stream: ${rawData}`)
       }
     } catch (e) {
-      setLogs((prevLogs) => [...prevLogs, `Error sending data: ${e}`])
+      addLogEvent(`Error sending data: ${e}`, "error")
     }
   }
 
@@ -130,8 +126,11 @@ export default function ControlPanel({
 
         <div className='text-left max-h-48 overflow-y-auto border w-full p-3 rounded bg-white text-xs leading-snug'>
           {logs.map((log, index) => (
-            <p key={index} className='mb-1'>
-              {log}
+            <p
+              key={index}
+              className={`mb-1 ${log.severity === "error" ? "text-red-600" : ""}`}
+            >
+              {log.message}
             </p>
           ))}
         </div>
@@ -187,9 +186,9 @@ async function checkCodecSupport() {
   if (support.audioDecoder && AudioDecoder.isConfigSupported) {
     for (const codec of audioCodecsToTest) {
       try {
-        const config = {
+        const config: AudioDecoderConfig = {
           codec,
-          description: `Test ${codec}`,
+          description: new TextEncoder().encode(`Test ${codec}`),
           sampleRate: 48000,
           numberOfChannels: 2,
         }

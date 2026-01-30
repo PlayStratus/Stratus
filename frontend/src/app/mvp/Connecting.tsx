@@ -1,5 +1,7 @@
+import { LogType } from "./page"
+
 type Props = {
-  connectingLog: string[]
+  connectingLog: LogType[]
 }
 
 export default function Connecting({ connectingLog }: Readonly<Props>) {
@@ -10,8 +12,11 @@ export default function Connecting({ connectingLog }: Readonly<Props>) {
 
         <div className='text-left max-h-64 overflow-y-auto border border-gray-700 p-4 rounded'>
           {connectingLog.map((log, index) => (
-            <p key={index} className='mb-2'>
-              {log}
+            <p
+              key={index}
+              className={`mb-2 ${log.severity === "error" ? "text-red-600" : ""}`}
+            >
+              {log.message}
             </p>
           ))}
         </div>

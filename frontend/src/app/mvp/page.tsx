@@ -6,25 +6,28 @@ import Connecting from "./Connecting"
 import ControlPanel from "./ControlPanel"
 import FullScreenButton from "./FullScreenButton"
 
+export type LogType = {
+  message: string
+  severity: "info" | "error"
+}
+
 const WEBTRANSPORT_URL = "https://localhost:4433/"
 
-export default function FullscreenBox() {
+export default function MVPPage() {
   const [isConnected, setIsConnected] = useState(false)
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<LogType[]>([])
   const [transport, setTransport] = useState<WebTransport | null>(null)
   const [datagramWriter, setDatagramWriter] =
     useState<WritableStreamDefaultWriter<Uint8Array> | null>(null)
   const streamNumberRef = useRef<number>(1)
 
-  // Container that represents the full viewport we tell the server about.
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // Canvas and decoder state for VP8 frames sent from the server.
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const videoDecoderRef = useRef<VideoDecoder | null>(null)
 
-  function addToEventLog(text: string, _severity: string = "info") {
-    setLogs((prevLog) => [...prevLog, text])
+  function addToEventLog(message: string, severity: "info" | "error" = "info") {
+    setLogs((prevLog) => [...prevLog, { message, severity }])
   }
 
   const handleConnecting = async () => {
@@ -32,48 +35,45 @@ export default function FullscreenBox() {
 
     try {
       transport = new WebTransport(WEBTRANSPORT_URL)
-      setLogs((prevLog) => [...prevLog, "WebTransport instance created."])
+      addToEventLog("WebTransport instance created.")
     } catch (error) {
-      setLogs((prevLog) => [
-        ...prevLog,
+      addToEventLog(
         `Connection Object Error: ${(error as Error).message}`,
-      ])
+        "error",
+      )
       return
     }
 
     try {
       await transport?.ready
-      setLogs((prevLog) => [...prevLog, "Connection ready."])
+      addToEventLog("Connection ready.")
     } catch (error) {
-      setLogs((prevLog) => [
-        ...prevLog,
-        `Connection failed: ${(error as Error).message}`,
-      ])
+      addToEventLog(`Connection failed: ${(error as Error).message}`, "error")
       return
     }
 
     transport.closed.then(
       () => {
-        setLogs((prevLog) => [...prevLog, "Connection closed normally."])
+        addToEventLog("Connection closed normally.")
       },
       (error) => {
-        setLogs((prevLog) => [
-          ...prevLog,
+        addToEventLog(
           `Connection closed with error: ${(error as Error).message}`,
-        ])
+          "error",
+        )
       },
     )
     setTransport(transport)
 
     try {
       const datagramWriter = transport.datagrams.writable.getWriter()
-      setLogs((prevLog) => [...prevLog, "Datagram writer obtained."])
+      addToEventLog("Datagram writer obtained.")
       setDatagramWriter(datagramWriter)
     } catch (error) {
-      setLogs((prevLog) => [
-        ...prevLog,
+      addToEventLog(
         `Datagram writer error: ${(error as Error).message}`,
-      ])
+        "error",
+      )
       return
     }
 
@@ -142,7 +142,7 @@ export default function FullscreenBox() {
 
       const canvas = canvasRef.current
       if (!canvas) {
-        addToEventLog("Canvas not ready for VP8 rendering", "error")
+        addToEventLog("Canvas not ready for VP9 rendering", "error")
         return null
       }
 
@@ -164,7 +164,7 @@ export default function FullscreenBox() {
               const bitmap = anyFrame.transferToImageBitmap()
               ctx.drawImage(bitmap, 0, 0)
             } else {
-              ctx.drawImage(anyFrame as any, 0, 0)
+              ctx.drawImage(anyFrame, 0, 0)
             }
           } finally {
             frame.close()
@@ -175,14 +175,10 @@ export default function FullscreenBox() {
         },
       })
 
-      decoder.configure({
-        codec: "vp8",
-        codedWidth: 640,
-        codedHeight: 360,
-      })
+      decoder.configure({ codec: "vp09.00.10.08" })
 
       videoDecoderRef.current = decoder
-      addToEventLog("VideoDecoder for VP8 initialized")
+      addToEventLog("VideoDecoder for VP9 (vp09.00.10.08) initialized")
     }
 
     return videoDecoderRef.current
@@ -197,7 +193,7 @@ export default function FullscreenBox() {
 
     const decoder = ensureVideoDecoder()
     if (!decoder) {
-      addToEventLog("Cannot read VP8 stream without decoder", "error")
+      addToEventLog("Cannot read VP9 stream without decoder", "error")
       return
     }
 
@@ -217,7 +213,7 @@ export default function FullscreenBox() {
         tmp.set(value, buffer.length)
         buffer = tmp
 
-        // Process as many length-prefixed VP8 frames as are fully available.
+        // Process as many length-prefixed VP9 frames as are fully available.
         while (buffer.length >= 4) {
           const frameLength =
             (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]
@@ -231,7 +227,7 @@ export default function FullscreenBox() {
           buffer = buffer.subarray(4 + frameLength)
 
           addToEventLog(
-            `Received VP8 frame of ${frameData.byteLength} bytes on stream #${number}`,
+            `Received VP9 frame of ${frameData.byteLength} bytes on stream #${number}`,
           )
 
           const chunk = new EncodedVideoChunk({
@@ -264,14 +260,13 @@ export default function FullscreenBox() {
       <canvas
         ref={canvasRef}
         className='w-full h-full object-contain bg-black'
-        aria-label='VP8 photo from server'
       />
 
       <ControlPanel
         transport={transport}
         datagramWriter={datagramWriter}
         logs={logs}
-        setLogs={setLogs}
+        addLogEvent={addToEventLog}
         containerRef={containerRef}
       />
 

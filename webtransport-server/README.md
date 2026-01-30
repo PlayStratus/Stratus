@@ -17,8 +17,27 @@ Works with frontend web app `http://localhost:3000/mvp`
 1. `npm run dev` to start the frontend server
 1. Open `http://localhost:3000/mvp` in the Chrome instance you opened with the flags
 
-## Next steps
+## Notes
 
-- Get a video on the server and encode it using some codec with ffmpeg
-- Have the server send the video on loop to every client that connects
-- Get the frontend to decode and play the video using WebCodecs API
+- How I think is going to work:
+  1. Client spins up a game instance on Stratus D server
+  1. Client connects to WebTransport server on Stratus D and starts a bidirectional stream
+  1. Compositor D has game frames and uses some codec to encode them
+  1. WebTransport server sends the encoded frames to the client using the bidirectional stream
+  1. Client decodes the frames using WebCodecs API and displays them
+  1. Client sends input events to the server using the same bidirectional stream
+- What schemas we need
+  - What the client sends to the server to spin up a game instance
+    - User ID
+    - Game ID
+    - Resolution
+    - usable Codecs
+  - 'Header bytes' for each frame so the client knows how to decode them
+    - Size of the frame
+    - Timestamp
+    - Codec used
+  - Input event schema
+    - Type of event (mouse, keyboard, etc)
+    - Event data (key code, mouse position, etc)
+  - Updated resolution schema
+    - New resolution (width, height)

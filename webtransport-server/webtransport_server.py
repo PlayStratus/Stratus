@@ -29,16 +29,20 @@ logger.info(f"Logger initialized: {logger}")
 
 class ImageHandler:
 
-    def __init__(self, session_id, http: H3Connection) -> None:
+    def __init__(self, session_id, http: H3Connection, protocol: QuicConnectionProtocol) -> None:
         self._session_id = session_id
         self._http = http
+        self._protocol = protocol
         self._counters = defaultdict(int)
         self._datagram_stream_id: Optional[int] = None
+        
+        asyncio.create_task(self._loop())
 
-    def _encode_png_to_vp8_frame(self) -> bytes:
+    def _encode_png_to_vp9_frame(self) -> bytes:
         """
-        Encode `photo.png` as a single VP8 frame (raw bitstream).
-        Uses container-based encoding and extracts VP8 payload.
+        Encode `photo.png` as a single VP9 frame (raw bitstream).
+        Uses container-based encoding and extracts VP9 payload.
+        Profile: vp09.00.10.08 (VP9 Profile 0, Level 1.0, 8-bit)
         """
         # Decode PNG into a frame
         in_container = av.open("photo.png")
@@ -47,22 +51,24 @@ class ImageHandler:
         width, height = frame.width, frame.height
         in_container.close()
 
-        # Encode to WebM container with VP8 codec
+        # Encode to WebM container with VP9 codec
         buffer = io.BytesIO()
         out_container = av.open(buffer, mode="w", format="webm")
         try:
-            out_stream = out_container.add_stream("libvpx-vp8", rate=1)  # Try libvpx-vp8 first
+            out_stream = out_container.add_stream("libvpx-vp9", rate=1)  # Try libvpx-vp9 first
         except Exception:
             try:
-                out_stream = out_container.add_stream("vp8", rate=1)  # Fallback to vp8
+                out_stream = out_container.add_stream("vp9", rate=1)  # Fallback to vp9
             except Exception as e:
                 out_container.close()
-                logger.error(f"VP8 encoder not available. Install FFmpeg with libvpx support: {e}")
+                logger.error(f"VP9 encoder not available. Install FFmpeg with libvpx-vp9 support: {e}")
                 raise
         
         out_stream.width = width
         out_stream.height = height
         out_stream.pix_fmt = "yuv420p"
+        # Configure VP9 Profile 0 (vp09.00.10.08: Profile 0, Level 1.0, 8-bit)
+        out_stream.options = {"profile": "0"}
 
         # Encode the frame
         for packet in out_stream.encode(frame):
@@ -72,26 +78,68 @@ class ImageHandler:
             out_container.mux(packet)
         out_container.close()
 
-        # Extract VP8 frame from WebM: decode the WebM we just created
+        # Extract VP9 frame from WebM: decode the WebM we just created
         buffer.seek(0)
         webm_container = av.open(buffer, mode="r")
         webm_stream = webm_container.streams.video[0]
         
-        # Get the VP8 packet data
-        vp8_data = b""
+        # Get the VP9 packet data
+        vp9_data = b""
         for packet in webm_container.demux(webm_stream):
             if packet:
                 # In current PyAV versions, bytes(packet) returns the encoded payload.
-                vp8_data += bytes(packet)
+                vp9_data += bytes(packet)
         webm_container.close()
         
-        return vp8_data
+        return vp9_data
 
     def h3_event_received(self, event: H3Event) -> None:
         if isinstance(event, DatagramReceived):
             logger.info(f"Datagram received: {event.data}")
 
-            frame_bytes = self._encode_png_to_vp8_frame()
+            # frame_bytes = self._encode_png_to_vp9_frame()
+            # frame_len = len(frame_bytes)
+
+            # # 4-byte big-endian length prefix, as expected by the client.
+            # length_prefix = bytes(
+            #     [
+            #         (frame_len >> 24) & 0xFF,
+            #         (frame_len >> 16) & 0xFF,
+            #         (frame_len >> 8) & 0xFF,
+            #         frame_len & 0xFF,
+            #     ]
+            # )
+            # payload = length_prefix + frame_bytes
+
+            # if self._datagram_stream_id is None:
+            #     self._datagram_stream_id = self._http.create_webtransport_stream(
+            #         self._session_id, is_unidirectional=True
+            #     )
+
+            # # Send the single length-prefixed VP9 keyframe.
+            # self._http._quic.send_stream_data(
+            #     self._datagram_stream_id, payload, end_stream=False
+            # )
+
+        if isinstance(event, WebTransportStreamDataReceived):
+            logger.info(f"Stream data received on stream {event.stream_id}: {event.data}")
+            self._counters[event.stream_id] += len(event.data)
+            if event.stream_ended:
+                if stream_is_unidirectional(event.stream_id):
+                    response_id = self._http.create_webtransport_stream(
+                        self._session_id, is_unidirectional=True
+                    )
+                else:
+                    response_id = event.stream_id
+                payload = str(self._counters[event.stream_id]).encode("ascii")
+                self._http._quic.send_stream_data(
+                    response_id, payload, end_stream=True
+                )
+                self.stream_closed(event.stream_id)
+                
+    async def _loop(self):
+        while True:
+            frame_bytes = self._encode_png_to_vp9_frame()
             frame_len = len(frame_bytes)
 
             # 4-byte big-endian length prefix, as expected by the client.
@@ -110,26 +158,14 @@ class ImageHandler:
                     self._session_id, is_unidirectional=True
                 )
 
-            # Send the single length-prefixed VP8 keyframe.
+            # Send the single length-prefixed VP9 keyframe.
             self._http._quic.send_stream_data(
                 self._datagram_stream_id, payload, end_stream=False
             )
-
-        if isinstance(event, WebTransportStreamDataReceived):
-            logger.info(f"Stream data received on stream {event.stream_id}: {len(event.data)} bytes")
-            self._counters[event.stream_id] += len(event.data)
-            if event.stream_ended:
-                if stream_is_unidirectional(event.stream_id):
-                    response_id = self._http.create_webtransport_stream(
-                        self._session_id, is_unidirectional=True
-                    )
-                else:
-                    response_id = event.stream_id
-                payload = str(self._counters[event.stream_id]).encode("ascii")
-                self._http._quic.send_stream_data(
-                    response_id, payload, end_stream=True
-                )
-                self.stream_closed(event.stream_id)
+            
+            self._protocol.transmit()
+            
+            await asyncio.sleep(1/30)  # 30 FPS
 
     def stream_closed(self, stream_id: int) -> None:
         if self._datagram_stream_id == stream_id:
@@ -188,7 +224,7 @@ class WebTransportProtocol(QuicConnectionProtocol):
             return
         if path == b"/":
             assert(self._handler is None)
-            self._handler = ImageHandler(stream_id, self._http)
+            self._handler = ImageHandler(stream_id, self._http, protocol=self)
             self._send_response(stream_id, 200)
         else:
             self._send_response(stream_id, 404, end_stream=True)
@@ -206,8 +242,8 @@ class WebTransportProtocol(QuicConnectionProtocol):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("certificate")
-    parser.add_argument("key")
+    parser.add_argument('certificate')
+    parser.add_argument('key')
     args = parser.parse_args()
 
     configuration = QuicConfiguration(
@@ -225,12 +261,11 @@ if __name__ == "__main__":
             BIND_PORT,
             configuration=configuration,
             create_protocol=WebTransportProtocol,
-        )
-    )
+        ))
     try:
         logging.info(
-            "Listening on https://{}:{}".format(BIND_ADDRESS, BIND_PORT)
-        )
+            "Listening on https://{}:{}".format(BIND_ADDRESS, BIND_PORT))
         loop.run_forever()
     except KeyboardInterrupt:
         pass
+    
