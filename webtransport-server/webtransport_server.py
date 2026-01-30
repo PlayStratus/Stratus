@@ -24,10 +24,10 @@ handler = logging.StreamHandler()
 formatter = logging.Formatter('[%(asctime)s] %(name)s [%(levelname)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.info(f"Logger initialized: {logger}")
+logger.info("Logger initialized: %s", logger)
 
 
-class ImageHandler:
+class VideoHandler:
 
     def __init__(self, session_id, http: H3Connection, protocol: QuicConnectionProtocol) -> None:
         self._session_id = session_id
@@ -36,7 +36,7 @@ class ImageHandler:
         self._counters = defaultdict(int)
         self._datagram_stream_id: Optional[int] = None
         
-        asyncio.create_task(self._loop())
+        # self._loop = asyncio.create_task(self._loop())
 
     def _encode_png_to_vp9_frame(self) -> bytes:
         """
@@ -96,30 +96,6 @@ class ImageHandler:
     def h3_event_received(self, event: H3Event) -> None:
         if isinstance(event, DatagramReceived):
             logger.info(f"Datagram received: {event.data}")
-
-            # frame_bytes = self._encode_png_to_vp9_frame()
-            # frame_len = len(frame_bytes)
-
-            # # 4-byte big-endian length prefix, as expected by the client.
-            # length_prefix = bytes(
-            #     [
-            #         (frame_len >> 24) & 0xFF,
-            #         (frame_len >> 16) & 0xFF,
-            #         (frame_len >> 8) & 0xFF,
-            #         frame_len & 0xFF,
-            #     ]
-            # )
-            # payload = length_prefix + frame_bytes
-
-            # if self._datagram_stream_id is None:
-            #     self._datagram_stream_id = self._http.create_webtransport_stream(
-            #         self._session_id, is_unidirectional=True
-            #     )
-
-            # # Send the single length-prefixed VP9 keyframe.
-            # self._http._quic.send_stream_data(
-            #     self._datagram_stream_id, payload, end_stream=False
-            # )
 
         if isinstance(event, WebTransportStreamDataReceived):
             logger.info(f"Stream data received on stream {event.stream_id}: {event.data}")
@@ -184,7 +160,7 @@ class WebTransportProtocol(QuicConnectionProtocol):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._http: Optional[H3Connection] = None
-        self._handler: Optional[ImageHandler] = None
+        self._handler: Optional[VideoHandler] = None
 
     def quic_event_received(self, event: QuicEvent) -> None:
         if isinstance(event, ProtocolNegotiated):
@@ -224,7 +200,7 @@ class WebTransportProtocol(QuicConnectionProtocol):
             return
         if path == b"/":
             assert(self._handler is None)
-            self._handler = ImageHandler(stream_id, self._http, protocol=self)
+            self._handler = VideoHandler(stream_id, self._http, protocol=self)
             self._send_response(stream_id, 200)
         else:
             self._send_response(stream_id, 404, end_stream=True)
