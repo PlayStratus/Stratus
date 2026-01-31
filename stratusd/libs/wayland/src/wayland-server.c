@@ -1226,7 +1226,7 @@
 // 	return NULL;
 // }
 
-// STRATUS: made wl_socket_destroy non-static and removed source member from
+// STRATUS: made wl_socket_destroy() non-static and removed source member from
 // wl_socket struct
 void
 wl_socket_destroy(struct wl_socket *s)
