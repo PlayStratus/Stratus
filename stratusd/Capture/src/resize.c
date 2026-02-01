@@ -1,11 +1,10 @@
 /*
- * Wayland client resizing logic
+ * Logic for enforcing Wayland client dimensions
  *
- * Enforces desired client dimensions by modifying messages advertising monitor
- * sizes and the compositor's preferred window size. The client is also
- * configured to be in fullscreen mode, while the compositor is prevented from
- * actually displaying the client in fullscreen mode. Note that the specified
- * client dimensions cannot be changed after startup.
+ * Modifies messages advertising monitor sizes and the compositor's preferred
+ * window size. Also configures the client to be in fullscreen mode while
+ * preventing the server from actually rendering it in fullscreen mode. Note
+ * that the specified client dimensions cannot be changed after startup.
  */
 
 #include <assert.h>

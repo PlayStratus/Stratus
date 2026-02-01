@@ -1,3 +1,25 @@
+/*
+ * Wayland video frame capture system
+ *
+ * Extends the generic Wayland proxy implemented in proxy.c to create a system
+ * of Wayland message handlers (defined in resize.c, shm-buffers.c, and
+ * video-output.c) that collectively implement video capture functionality.
+ *
+ * Since proxy.c uses a custom version of libwayland, message handlers must
+ * implement the Wayland object lifecycle boilerplate functionality themselves.
+ * One particularly tedious edge case is that Wayland objects may be destroyed
+ * while still referenced by another object. This means that objects cannot be
+ * immediately freed after they're destroyed. To address this issue, we set an
+ * object's ID to zero to indicate that it has been destroyed, and then free its
+ * resources once the number of references by other objects (tracked in the
+ * dependents field) reaches zero.
+ *
+ * For more background information on Wayland, refer to the Wayland Book [1] and
+ * the definitions for the relevant Wayland protocols.
+ *
+ * [1]: https://wayland-book.com
+ */
+
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>

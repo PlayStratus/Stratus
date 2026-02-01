@@ -1,3 +1,22 @@
+/*
+ * Generic Wayland proxy implementation.
+ *
+ * Heavily inspired by Boyan Ding's wayland-tracer project [1]. Proxies Wayland
+ * messages between connected client(s) and the Wayland server. Messages from
+ * unknown protocols are dropped while messages from known protocols are parsed
+ * and provided to a caller-registered message handler function. Callers may
+ * also store per-object data via the obj_data field of each proxy_session
+ * struct.
+ *
+ * The standard libwayland library provides separate interfaces for client-side
+ * and server-side use, which makes implemented a two-sided proxy difficult. So
+ * this proxy implementation instead relys on a custom version of libwayland
+ * (located in libs/wayland) which provides access to libwayland's core
+ * low-level functionality, but at the expense of its higher-level abstractions.
+ *
+ * [1]: https://github.com/dboyan/wayland-tracer
+ */
+
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>

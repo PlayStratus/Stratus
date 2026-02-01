@@ -1,15 +1,9 @@
 /*
- * Generic video frame capture logic
+ * Logic for monitoring wl_surfaces for new frames
  *
- * These functions are in charge of all wl_buffer and wl_surface objects. Logic
- * specific to shm-backed wl_buffers is delegated to the shm-buffers.c
- * functions.
- *
- * Note that Wayland objects might be destroyed while still referenced by
- * another object. This means that objects cannot be immediately freed after
- * they're destroyed. We set an object's ID to zero to indicate that it has been
- * destroyed. Then once the number of references by other objects (tracked in
- * the dependents field) reaches zero, we may free the object's resources.
+ * Keeps track of wl_surface objects and generic wl_buffer objects, and
+ * processes frames when a wl_surface is committed. Logic specific to shm-backed
+ * wl_buffers are delegated to shm-buffers.c.
  */
 
 #include <assert.h>
