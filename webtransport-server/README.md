@@ -4,6 +4,32 @@ Works with frontend web app `http://localhost:3000/mvp`
 
 > Taken from [here](https://github.com/googlechrome/samples/tree/gh-pages/webtransport)
 
+## System Flow (H.264 – avc1.42C01E)
+
+1. The frontend connects to the WebTransport server  
+   (`./mvp/page.tsx – handleConnecting()`).
+1. The server accepts the WebTransport connection.
+1. The server opens a unidirectional WebTransport stream and sends a
+   configuration message containing the H.264 avcC description
+   (SPS/PPS packaged as an `AVCDecoderConfigurationRecord`).  
+   (`webtransport_server.py – _loop()` / session handler)
+1. The client receives the configuration message and:
+   - creates a `VideoDecoder` (if it does not already exist)
+   - calls `decoder.configure({ codec: "avc1.42C01E", description: avcC })`  
+     (`./mvp/page.tsx – handleStream()` + `ensureVideoDecoder()`)
+   - an `isKey` flag (IDR keyframe vs. delta frame)
+   - AVCC-formatted frame bytes (length-prefixed NAL units, not Annex-B)
+1. The client buffers and parses incoming stream data, then:
+   - ignores frame messages until a keyframe is received after
+     `decoder.configure()`
+   - creates `EncodedVideoChunk` objects with:
+     - `type: "key"` or `"delta"`
+     - monotonically increasing timestamps
+     - the received AVCC frame bytes
+   - calls `decoder.decode(chunk)`
+1. The `VideoDecoder` outputs decoded `VideoFrame` objects.
+1. The client renders each `VideoFrame` to the canvas and closes the frame.
+
 ## How to use
 
 > Tested only on MacOS with M1 chip
@@ -16,28 +42,3 @@ Works with frontend web app `http://localhost:3000/mvp`
 1. Open a new terminal tab and `cd frontend`
 1. `npm run dev` to start the frontend server
 1. Open `http://localhost:3000/mvp` in the Chrome instance you opened with the flags
-
-## Notes
-
-- How I think is going to work:
-  1. Client spins up a game instance on Stratus D server
-  1. Client connects to WebTransport server on Stratus D and starts a bidirectional stream
-  1. Compositor D has game frames and uses some codec to encode them
-  1. WebTransport server sends the encoded frames to the client using the bidirectional stream
-  1. Client decodes the frames using WebCodecs API and displays them
-  1. Client sends input events to the server using the same bidirectional stream
-- What schemas we need
-  - What the client sends to the server to spin up a game instance
-    - User ID
-    - Game ID
-    - Resolution
-    - usable Codecs
-  - 'Header bytes' for each frame so the client knows how to decode them
-    - Size of the frame
-    - Timestamp
-    - Codec used
-  - Input event schema
-    - Type of event (mouse, keyboard, etc)
-    - Event data (key code, mouse position, etc)
-  - Updated resolution schema
-    - New resolution (width, height)

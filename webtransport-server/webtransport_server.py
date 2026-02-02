@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import io
 import logging
 from collections import defaultdict
 from typing import Dict, Optional
@@ -13,6 +12,8 @@ from aioquic.h3.events import H3Event, HeadersReceived, WebTransportStreamDataRe
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import stream_is_unidirectional
 from aioquic.quic.events import ProtocolNegotiated, StreamReset, QuicEvent
+
+from avcC_utils import annexb_au_to_avcc, make_avcc_description
 
 BIND_ADDRESS = '::1'
 BIND_PORT = 4433
@@ -36,113 +37,108 @@ class VideoHandler:
         self._counters = defaultdict(int)
         self._datagram_stream_id: Optional[int] = None
         
-        # self._loop = asyncio.create_task(self._loop())
-
-    def _encode_png_to_vp9_frame(self) -> bytes:
-        """
-        Encode `photo.png` as a single VP9 frame (raw bitstream).
-        Uses container-based encoding and extracts VP9 payload.
-        Profile: vp09.00.10.08 (VP9 Profile 0, Level 1.0, 8-bit)
-        """
-        # Decode PNG into a frame
-        in_container = av.open("photo.png")
-        in_stream = in_container.streams.video[0]
-        frame = next(in_container.decode(in_stream))
-        width, height = frame.width, frame.height
-        in_container.close()
-
-        # Encode to WebM container with VP9 codec
-        buffer = io.BytesIO()
-        out_container = av.open(buffer, mode="w", format="webm")
-        try:
-            out_stream = out_container.add_stream("libvpx-vp9", rate=1)  # Try libvpx-vp9 first
-        except Exception:
-            try:
-                out_stream = out_container.add_stream("vp9", rate=1)  # Fallback to vp9
-            except Exception as e:
-                out_container.close()
-                logger.error(f"VP9 encoder not available. Install FFmpeg with libvpx-vp9 support: {e}")
-                raise
-        
-        out_stream.width = width
-        out_stream.height = height
-        out_stream.pix_fmt = "yuv420p"
-        # Configure VP9 Profile 0 (vp09.00.10.08: Profile 0, Level 1.0, 8-bit)
-        out_stream.options = {"profile": "0"}
-
-        # Encode the frame
-        for packet in out_stream.encode(frame):
-            out_container.mux(packet)
-        # Flush encoder
-        for packet in out_stream.encode():
-            out_container.mux(packet)
-        out_container.close()
-
-        # Extract VP9 frame from WebM: decode the WebM we just created
-        buffer.seek(0)
-        webm_container = av.open(buffer, mode="r")
-        webm_stream = webm_container.streams.video[0]
-        
-        # Get the VP9 packet data
-        vp9_data = b""
-        for packet in webm_container.demux(webm_stream):
-            if packet:
-                # In current PyAV versions, bytes(packet) returns the encoded payload.
-                vp9_data += bytes(packet)
-        webm_container.close()
-        
-        return vp9_data
+        self._loop_task = asyncio.create_task(self._loop())
 
     def h3_event_received(self, event: H3Event) -> None:
         if isinstance(event, DatagramReceived):
-            logger.info(f"Datagram received: {event.data}")
+            logger.info("Datagram received: %s", event.data)
+            
+            self._http._quic.send_datagram_frame("Datagram response".encode("ascii"))
 
         if isinstance(event, WebTransportStreamDataReceived):
-            logger.info(f"Stream data received on stream {event.stream_id}: {event.data}")
-            self._counters[event.stream_id] += len(event.data)
             if event.stream_ended:
                 if stream_is_unidirectional(event.stream_id):
                     response_id = self._http.create_webtransport_stream(
                         self._session_id, is_unidirectional=True
                     )
+                    
+                    logger.info("Unidirectional [%s] received: %s", event.stream_id, event.data)
+                    
+                    self._http._quic.send_stream_data(
+                        response_id, b"Unidirectional response", end_stream=True
+                    )
                 else:
                     response_id = event.stream_id
-                payload = str(self._counters[event.stream_id]).encode("ascii")
-                self._http._quic.send_stream_data(
-                    response_id, payload, end_stream=True
-                )
+                    
+                    logger.info("Bidirectional [%s] received: %s", event.stream_id, event.data)
+                    
+                    self._http._quic.send_stream_data(
+                        response_id, b"Bidirectional response", end_stream=True
+                    )
                 self.stream_closed(event.stream_id)
                 
+    def _get_frames_bytes(self) -> list[bytes]:
+        frames = []
+        
+        container = av.open("encode_output.h264", format="h264")
+        stream = next((s for s in container.streams if s.type == "video"), None)
+
+        for packet in container.demux(stream):
+            if packet is None:
+                continue
+
+            encoded_bytes = bytes(packet)
+            frames.append(encoded_bytes) 
+        return frames
+                
     async def _loop(self):
+        frames = self._get_frames_bytes()
+        total = len(frames)
+        logger.info("Total packets to stream: %s", total)
+
+        # Create uni stream once
+        if self._datagram_stream_id is None:
+            self._datagram_stream_id = self._http.create_webtransport_stream(
+                self._session_id, is_unidirectional=True
+            )
+
+        # 1) Find SPS/PPS and build description
+        description = None
+        start_index = 0
+        for i, pkt in enumerate(frames):
+            avcc, is_idr, sps, pps = annexb_au_to_avcc(pkt)
+            # Often SPS/PPS appear near the beginning (or right before IDR).
+            if sps and pps:
+                description = make_avcc_description(sps, pps)
+            if description and is_idr:
+                start_index = i
+                break
+
+        if not description:
+            logger.error("Could not find SPS/PPS in the stream. Can't build avcC description.")
+            return
+
+        # 2) Send CONFIG message once
+        def send_msg(msg_type: int, payload: bytes):
+            header = bytes([msg_type]) + len(payload).to_bytes(4, "big")
+            self._http._quic.send_stream_data(self._datagram_stream_id, header + payload, end_stream=False)
+
+        send_msg(0x00, description)   # config
+        self._protocol.transmit()
+        logger.info("Sent avcC description (%d bytes).", len(description))
+
+        # 3) Stream frames, starting at an IDR
+        idx = start_index
         while True:
-            frame_bytes = self._encode_png_to_vp9_frame()
-            frame_len = len(frame_bytes)
+            pkt = frames[idx]
+            avcc, is_idr, _, _ = annexb_au_to_avcc(pkt)
 
-            # 4-byte big-endian length prefix, as expected by the client.
-            length_prefix = bytes(
-                [
-                    (frame_len >> 24) & 0xFF,
-                    (frame_len >> 16) & 0xFF,
-                    (frame_len >> 8) & 0xFF,
-                    frame_len & 0xFF,
-                ]
-            )
-            payload = length_prefix + frame_bytes
-
-            if self._datagram_stream_id is None:
-                self._datagram_stream_id = self._http.create_webtransport_stream(
-                    self._session_id, is_unidirectional=True
-                )
-
-            # Send the single length-prefixed VP9 keyframe.
-            self._http._quic.send_stream_data(
-                self._datagram_stream_id, payload, end_stream=False
-            )
-            
+            # Send FRAME message: type(1) + isKey(1) + len(4) + data
+            payload = bytes([1 if is_idr else 0]) + avcc
+            send_msg(0x01, payload)
             self._protocol.transmit()
-            
-            await asyncio.sleep(1/30)  # 30 FPS
 
+            idx += 1
+            if idx >= total:
+                # IMPORTANT: looping safely means restarting at an IDR and
+                # ideally resending config + telling client to flush/reconfigure.
+                # Simplest: restart at the same start_index (known IDR).
+                idx = start_index
+                send_msg(0x00, description)   # resend config at loop boundary
+                self._protocol.transmit()
+
+            await asyncio.sleep(1 / 30) 
+        
     def stream_closed(self, stream_id: int) -> None:
         if self._datagram_stream_id == stream_id:
             self._datagram_stream_id = None
@@ -239,8 +235,7 @@ if __name__ == "__main__":
             create_protocol=WebTransportProtocol,
         ))
     try:
-        logging.info(
-            "Listening on https://{}:{}".format(BIND_ADDRESS, BIND_PORT))
+        logging.info("Listening on https://%s:%s", BIND_ADDRESS, BIND_PORT)
         loop.run_forever()
     except KeyboardInterrupt:
         pass

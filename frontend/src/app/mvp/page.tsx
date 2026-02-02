@@ -133,7 +133,9 @@ export default function MVPPage() {
     }
   }
 
-  function ensureVideoDecoder() {
+  function ensureVideoDecoder(description: Uint8Array) {
+    // If we already have a decoder, optionally reconfigure if description changed.
+    // (Simplest: only configure once; recreate on stream restart if needed.)
     if (!videoDecoderRef.current) {
       if (typeof VideoDecoder === "undefined") {
         addToEventLog("VideoDecoder API not available in this browser", "error")
@@ -142,7 +144,7 @@ export default function MVPPage() {
 
       const canvas = canvasRef.current
       if (!canvas) {
-        addToEventLog("Canvas not ready for VP9 rendering", "error")
+        addToEventLog("Canvas not ready for AVC rendering", "error")
         return null
       }
 
@@ -154,11 +156,9 @@ export default function MVPPage() {
 
       const decoder = new VideoDecoder({
         output: (frame) => {
-          // Resize canvas to the incoming frame and draw it.
           canvas.width = frame.codedWidth
           canvas.height = frame.codedHeight
           try {
-            // Some TS lib versions don't yet have transferToImageBitmap
             const anyFrame: any = frame
             if (typeof anyFrame.transferToImageBitmap === "function") {
               const bitmap = anyFrame.transferToImageBitmap()
@@ -170,15 +170,24 @@ export default function MVPPage() {
             frame.close()
           }
         },
-        error: (error) => {
-          addToEventLog(`VideoDecoder error: ${error}`, "error")
-        },
+        error: (error) =>
+          addToEventLog(`VideoDecoder error: ${error}`, "error"),
       })
 
-      decoder.configure({ codec: "vp09.00.10.08" })
-
       videoDecoderRef.current = decoder
-      addToEventLog("VideoDecoder for VP9 (vp09.00.10.08) initialized")
+      addToEventLog("VideoDecoder created (not yet configured)")
+    }
+
+    // Configure only when we have description (avcC)
+    if (description && videoDecoderRef.current.state === "unconfigured") {
+      videoDecoderRef.current.configure({
+        codec: "avc1.42C01E",
+        description,
+        optimizeForLatency: true,
+      })
+      addToEventLog(
+        `VideoDecoder configured with avcC (${description.byteLength} bytes)`,
+      )
     }
 
     return videoDecoderRef.current
@@ -191,10 +200,24 @@ export default function MVPPage() {
     const reader = stream.getReader()
     let buffer = new Uint8Array(0)
 
-    const decoder = ensureVideoDecoder()
-    if (!decoder) {
-      addToEventLog("Cannot read VP9 stream without decoder", "error")
-      return
+    // Decoder state
+    let decoder: VideoDecoder | null = null
+    let haveConfig = false
+    let waitingForKeyAfterConfig = true
+
+    // Use a running timestamp. WebCodecs expects microseconds.
+    const frameDurationUs = Math.round(1_000_000 / 30) // or derive from sender
+    let ts = 0
+
+    function readU32BE(b: Uint8Array, off: number) {
+      // >>> 0 to force unsigned
+      return (
+        ((b[off] << 24) |
+          (b[off + 1] << 16) |
+          (b[off + 2] << 8) |
+          b[off + 3]) >>>
+        0
+      )
     }
 
     try {
@@ -204,38 +227,81 @@ export default function MVPPage() {
           addToEventLog("Stream #" + number + " closed")
           return
         }
+        if (!value || value.length === 0) continue
 
-        if (!value) continue
-
-        // Concatenate the new chunk to our buffer.
+        // append to buffer
         const tmp = new Uint8Array(buffer.length + value.length)
         tmp.set(buffer, 0)
         tmp.set(value, buffer.length)
         buffer = tmp
 
-        // Process as many length-prefixed VP9 frames as are fully available.
-        while (buffer.length >= 4) {
-          const frameLength =
-            (buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]
+        // parse messages
+        while (buffer.length >= 5) {
+          const msgType = buffer[0]
+          const payloadLen = readU32BE(buffer, 1)
 
-          if (buffer.length < 4 + frameLength) {
-            // Wait for more data.
-            break
+          if (buffer.length < 5 + payloadLen) break
+
+          const payload = buffer.subarray(5, 5 + payloadLen)
+          buffer = buffer.subarray(5 + payloadLen)
+
+          if (msgType === 0x00) {
+            // CONFIG (avcC)
+            const description = payload // already a Uint8Array view
+            decoder = ensureVideoDecoder(description)
+            if (!decoder) {
+              addToEventLog("No decoder; dropping config", "error")
+              continue
+            }
+
+            haveConfig = true
+            waitingForKeyAfterConfig = true
+
+            addToEventLog(
+              `Received config (avcC) ${description.byteLength} bytes on stream #${number}`,
+            )
+            continue
           }
 
-          const frameData = buffer.subarray(4, 4 + frameLength)
-          buffer = buffer.subarray(4 + frameLength)
+          if (msgType === 0x01) {
+            if (!haveConfig) {
+              addToEventLog("Received frame before config; dropping", "error")
+              continue
+            }
+            if (!decoder || decoder.state === "unconfigured") {
+              addToEventLog(
+                "Decoder not configured yet; dropping frame",
+                "error",
+              )
+              continue
+            }
 
-          addToEventLog(
-            `Received VP9 frame of ${frameData.byteLength} bytes on stream #${number}`,
-          )
+            if (payloadLen < 1) continue
+            const isKey = payload[0] === 1
+            const frameData = payload.subarray(1)
 
-          const chunk = new EncodedVideoChunk({
-            type: "key",
-            timestamp: 0,
-            data: frameData,
-          })
-          decoder.decode(chunk)
+            // Enforce keyframe requirement after configure/flush/restart
+            if (waitingForKeyAfterConfig) {
+              if (!isKey) {
+                // drop until first IDR
+                continue
+              }
+              waitingForKeyAfterConfig = false
+            }
+
+            const chunk = new EncodedVideoChunk({
+              type: isKey ? "key" : "delta",
+              timestamp: ts,
+              data: frameData,
+            })
+            ts += frameDurationUs
+
+            decoder.decode(chunk)
+            continue
+          }
+
+          // Unknown msg type
+          addToEventLog(`Unknown message type ${msgType}; dropping`, "error")
         }
       }
     } catch (e) {
@@ -244,7 +310,6 @@ export default function MVPPage() {
         "Error while reading from stream #" + number + ": " + errorMessage,
         "error",
       )
-      addToEventLog("    " + errorMessage)
     }
   }
 
