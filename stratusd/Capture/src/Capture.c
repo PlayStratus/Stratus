@@ -22,7 +22,7 @@ const struct message_handler *message_handlers[] = {
  * Handle a new proxy session
  */
 static int handle_session_create(struct proxy_session *session) {
-    printf("Client connected\n");
+    printf("Client %s connected\n", session->name);
 
     return 0;
 }
@@ -91,7 +91,7 @@ static enum wl_iterator_result destroy_object(void *element, void *data,
  * Handle a proxy session being destroyed
  */
 static void handle_session_destroy(struct proxy_session *session) {
-    printf("Client disconnected\n");
+    printf("Client %s disconnected\n", session->name);
 
     // Destroy all remaining Wayland objects so that their resources are freed
     wl_map_for_each(session->obj_data, destroy_object, session);

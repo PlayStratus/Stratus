@@ -13,6 +13,16 @@
 #include "proxy.h"
 
 /*
+ * The maximum number of simultaneous client/server sessions per proxy
+ */
+#define MAX_SESSIONS 4
+
+/*
+ * The maximum length of a proxy session name
+ */
+#define MAX_SESSION_NAME 16
+
+/*
  * Required Wayland protocol interfaces
  */
 extern const struct wl_interface *linux_dmabuf_v1_types_all[];
@@ -113,7 +123,7 @@ static void proxy_destroy_connection(struct proxy_conn *conn) {
  * Returns 0 on success and -1 on failure
  */
 static int proxy_create_session(struct proxy *proxy, int client_fd) {
-    int server_fd;
+    int idx, server_fd;
     struct proxy_session *session;
 
     // Initialize session
@@ -121,6 +131,20 @@ static int proxy_create_session(struct proxy *proxy, int client_fd) {
     if (session == NULL)
         goto err_zalloc;
     session->proxy = proxy;
+
+    // Generate session name
+    session->name = malloc(MAX_SESSION_NAME);
+    if (session->name < 0)
+        goto err_name;
+    if (snprintf(session->name, MAX_SESSION_NAME, "%s/%d", proxy->name,
+                 proxy->next_session_id) < 0)
+        goto err_sprintf;
+
+    // Get index of session in proxy->sessions array
+    for (idx = 0; idx < MAX_SESSIONS; idx++) {
+        if (proxy->sessions[idx] == NULL) break;
+    }
+    assert(idx != MAX_SESSIONS); // We assume <=4 simultaneous clients
 
     // Connect to client
     if (proxy_add_connection(session, client_fd, PROXY_SIDE_CLIENT) < 0)
@@ -149,12 +173,15 @@ static int proxy_create_session(struct proxy *proxy, int client_fd) {
     wl_map_insert_new(session->obj_data, 0, NULL);
     wl_map_insert_new(session->obj_data, 0, NULL);
 
+    // Run custom on_session_create handler if defined
     if (proxy->on_session_create != NULL) {
         if ((*proxy->on_session_create)(session) < 0)
             goto err_handler;
     }
 
-    proxy->session_count++;
+    // Add session to proxy
+    proxy->sessions[idx] = session;
+    proxy->next_session_id++;
 
     return 0;
 
@@ -171,6 +198,9 @@ err_server_conn:
 err_server_socket:
     proxy_destroy_connection(session->client);
 err_client:
+err_sprintf:
+    free(session->name);
+err_name:
     free(session);
 err_zalloc:
     return -1;
@@ -180,16 +210,25 @@ err_zalloc:
  * Destroy a proxy_session struct and free its resources
  */
 static void proxy_destroy_session(struct proxy_session *session) {
-    assert(session != NULL);
+    int i;
+
+    // Run custom on_session_destroy handler if defined
     if (session->proxy->on_session_destroy != NULL)
         (*session->proxy->on_session_destroy)(session);
+
+    // Remove from proxy->sessions array
+    for (i = 0; i < MAX_SESSIONS; i++) {
+        if (session->proxy->sessions[i] == session)
+            session->proxy->sessions[i] = NULL;
+    }
+
     proxy_destroy_connection(session->client);
     proxy_destroy_connection(session->server);
     wl_map_release(session->obj_types);
     free(session->obj_types);
     wl_map_release(session->obj_data);
     free(session->obj_data);
-    session->proxy->session_count--;
+    free(session->name);
     free(session);
 }
 
@@ -257,7 +296,7 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
 
     if (wayland_debug)
         wl_closure_print(closure, interface, src->side == PROXY_SIDE_CLIENT,
-                         false, NULL, NULL);
+                         false, NULL, src->session->name);
 
     // Handle wl_registry@global message
     if (!strcmp(interface->name, "wl_registry") &&
@@ -384,7 +423,12 @@ struct proxy *proxy_init(char *name) {
     if (proxy == NULL)
         goto err_zalloc;
     proxy->name = name;
-    proxy->session_count = 0;
+    proxy->next_session_id = 1;
+
+    // Initialize sessions
+    proxy->sessions = zalloc(MAX_SESSIONS * sizeof(struct proxy_session*));
+    if (proxy->sessions == NULL)
+        goto err_sessions;
 
     // Initialize proxy epoll instance
     proxy->epoll_fd = epoll_create1(0);
@@ -403,6 +447,8 @@ struct proxy *proxy_init(char *name) {
 err_proxy_epoll:
 err_proxy_socket:
 err_epoll_create:
+    free(proxy->sessions);
+err_sessions:
     free(proxy);
 err_zalloc:
     return NULL;
@@ -415,7 +461,7 @@ err_zalloc:
  */
 int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
-    int client_fd;
+    int i, client_fd;
 
     wayland_debug = (getenv("WAYLAND_DEBUG") != NULL);
 
@@ -429,8 +475,11 @@ int proxy_run(struct proxy *proxy) {
         if (ev.events & EPOLLHUP && ev.data.ptr != NULL) {
             // Client disconnected
             proxy_destroy_session(((struct proxy_conn*)(ev.data.ptr))->session);
-            if (proxy->session_count == 0)
-                return 0;
+            for (i = 0; i < MAX_SESSIONS; i++) {
+                if (proxy->sessions[i] != NULL) break;
+            }
+            if (i == MAX_SESSIONS)
+                return 0; // exit if no sessions remain
 
         } else if (ev.events & EPOLLIN && ev.data.ptr == NULL) {
             // Client connected
@@ -454,8 +503,16 @@ int proxy_run(struct proxy *proxy) {
  * Destroy a Wayland proxy and free its resources
  */
 void proxy_destroy(struct proxy *proxy) {
-    assert(proxy->session_count == 0);
+    int i;
+
+    // Destroy remaining sessions
+    for (i = 0; i < MAX_SESSIONS; i++) {
+        if (proxy->sessions[i] != NULL)
+            proxy_destroy_session(proxy->sessions[i]);
+    }
+
     wl_socket_destroy(proxy->socket);
     close(proxy->epoll_fd);
+    free(proxy->sessions);
     free(proxy);
 }
