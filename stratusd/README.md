@@ -7,9 +7,9 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install libpipewire libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
-    - RHEL, Fedora, etc: `# dnf install pipewire-devel ffmpeg-devel`
-    - Arch: `# pacman -S libpipewire ffmpeg`
+    - Debian, Ubuntu, etc: `# apt install libpipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
+    - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel`
+    - Arch: `# pacman -S libevdev libpipewire ffmpeg`
 
 2.  Generate CMake build files with `cmake -DCMAKE_BUILD_TYPE=Debug -B ./build`
 

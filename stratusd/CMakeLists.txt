@@ -9,6 +9,7 @@ add_subdirectory(libs/wayland)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
 find_package(PkgConfig REQUIRED)
+pkg_search_module(LIBEVDEV REQUIRED libevdev)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
     libavformat
@@ -17,14 +18,12 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 
 add_subdirectory(Capture)
 add_subdirectory(Encode)
+add_subdirectory(Input)
 add_subdirectory(SideCar)
 add_subdirectory(Title)
 add_subdirectory(Transport)
 
-# Add future dependencies like this.
-#add_subdirectory(libs/GoogleTest)
-
 add_executable(stratusd ${sourcefiles})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Capture Encode SideCar)
+target_link_libraries(stratusd PRIVATE Capture Encode Input SideCar)
