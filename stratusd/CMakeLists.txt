@@ -6,8 +6,6 @@ file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 
 # Load dependencies
 add_subdirectory(libs/wayland)
-add_subdirectory(libs/QuicheLib)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -22,6 +20,9 @@ add_subdirectory(Encode)
 add_subdirectory(SideCar)
 add_subdirectory(Title)
 add_subdirectory(Transport)
+
+# Add future dependencies like this.
+#add_subdirectory(libs/GoogleTest)
 
 add_executable(stratusd ${sourcefiles})
 
