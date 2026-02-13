@@ -5,14 +5,12 @@
 #include "Encode.h"
 
 /*
- * Contains capture data associated with a proxy instance
- *
- * This data will likely be absorbed into some sort of "game stream session"
- * struct in the future.
+ * Contains capture data associated with an instance of the Capture module
  */
-struct capture_data {
+struct capture_session {
     uint32_t width;
     uint32_t height;
+    struct proxy *proxy;
     encoder_context *encoder;
 };
 

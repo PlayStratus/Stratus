@@ -27,12 +27,12 @@ extern const struct wl_interface xdg_toplevel_interface;
 enum proxy_actions xdg_surface_get_toplevel(struct proxy_message *msg) {
     struct wl_closure *res;
     union wl_argument args[3];
-    struct capture_data *capture_data;
+    struct capture_session *session;
 
     // Send configure event requesting desired surface dimensions
-    capture_data = msg->conn->session->proxy->userdata;
-    args[0].i = capture_data->width;
-    args[1].i = capture_data->height;
+    session = msg->conn->session->proxy->userdata;
+    args[0].i = session->width;
+    args[1].i = session->height;
     args[2].a = malloc(sizeof(struct wl_array));
     if (args[2].a == NULL)
         goto err_malloc;
@@ -92,11 +92,11 @@ enum proxy_actions xdg_toplevel_set_fullscreen(struct proxy_message *msg) {
  * Enforces desired client dimensions.
  */
 enum proxy_actions wl_output_mode(struct proxy_message *msg) {
-    struct capture_data *capture_data;
+    struct capture_session *session;
 
-    capture_data = msg->conn->session->proxy->userdata;
-    msg->closure->args[1].i = capture_data->width;
-    msg->closure->args[2].i = capture_data->height;
+    session = msg->conn->session->proxy->userdata;
+    msg->closure->args[1].i = session->width;
+    msg->closure->args[2].i = session->height;
 
     return PROXY_ACTION_FWD;
 }
