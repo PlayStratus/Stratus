@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -7,6 +8,7 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 import { getGames } from "@/lib/actions/games"
+import wordmarkLogo from "@/assets/wordmark-logo.png"
 
 const games = await getGames()
 
@@ -45,9 +47,29 @@ const aboutUs = [
 
 export default function Home() {
   return (
-    <main className='min-h-screen container mx-auto'>
-      <div className='flex flex-col items-center justify-center px-4 py-20 text-center max-w-6xl mx-auto'>
-        <h1 className='text-6xl md:text-8xl font-extrabold mb-6'>Stratus</h1>
+    <main className='min-h-screen'>
+      <section className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+        >
+          <source src="/gradient.mp4" type="video/mp4" />
+        </video>
+
+        <div className="relative z-10 flex flex-col items-center justify-center px-4 py-20 text-center max-w-6xl mx-auto">
+          <div className="mb-6 w-[min(720px,92vw)]">
+          <Image
+            src={wordmarkLogo}
+            alt="Stratus"
+            priority
+            className="h-auto w-full drop-shadow-md"
+            sizes="(min-width: 768px) 720px, 92vw"
+          />
+        </div>
 
         <p className='text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl'>
           The Beaver's Game Streaming Service
@@ -75,9 +97,10 @@ export default function Home() {
             Log In
           </Link>
         </div>
-      </div>
+        </div>
+      </section>
 
-      <div className='px-4 py-16 w-full'>
+      <div className='container mx-auto px-4 py-16 w-full'>
         <h2 className='text-3xl md:text-4xl font-bold mb-4'>Featured Games</h2>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
@@ -100,7 +123,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className='px-4 py-16 mx-auto'>
+      <div className='container mx-auto px-4 py-16'>
         <h2 className='text-3xl md:text-4xl font-bold mb-4'>About Us</h2>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
