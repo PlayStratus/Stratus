@@ -119,49 +119,63 @@ static void handle_session_destroy(struct proxy_session *session) {
     wl_map_for_each(session->obj_data, destroy_object, session);
 }
 
-int capture_test() {
+/*
+ * Initialize a capture session
+ *
+ * Returns a pointer to the created capture session on success and NULL on
+ * failure.
+ */
+struct capture_session *capture_init(uint32_t width, uint32_t height,
+                                     encoder_context *encoder) {
     struct capture_session *session;
 
-    // Initialize capture session
+    assert(width > 0);
+    assert(height > 0);
+    assert(encoder != NULL);
+
     session = malloc(sizeof(struct capture_session));
     if (session == NULL) {
         fprintf(stderr, "Failed to allocate capture session\n");
-        goto err_malloc;
+        return NULL;
     }
-    session->width = 640; // TODO: set client dimensions dynamically
-    session->height = 480;
 
-    // Initialize proxy
+    session->width = width;
+    session->height = height;
+    session->encoder = encoder;
+
     session->proxy = proxy_init("stratus");
     if (session->proxy == NULL) {
         fprintf(stderr, "Failed to initialize proxy\n");
-        goto err_proxy_init;
+        free(session);
+        return NULL;
     }
     session->proxy->on_session_create   = &handle_session_create;
     session->proxy->on_message          = &handle_message;
     session->proxy->on_session_destroy  = &handle_session_destroy;
     session->proxy->userdata            = session;
 
-    // Initialize encoder
-    session->encoder = encoder_startup(session->width, session->height);
-    if (session->encoder == NULL) {
-        goto err_encoder_init;
-    }
+    return session;
+}
 
-    // Capture frames
+/*
+ * Run a capture session
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int capture_run(struct capture_session *session) {
     printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);
     if (proxy_run(session->proxy) < 0) {
         fprintf(stderr, "Proxy exited unsucessfully\n");
-        goto err_proxy_run;
+        return -1;
     }
-
-err_proxy_run:
-    encoder_teardown(session->encoder);
-err_encoder_init:
-    proxy_destroy(session->proxy);
-err_proxy_init:
-    free(session);
-err_malloc:
     return 0;
+}
+
+/*
+ * Destroy a capture session and free its resources
+ */
+void capture_destroy(struct capture_session *session) {
+    proxy_destroy(session->proxy);
+    free(session);
 }
