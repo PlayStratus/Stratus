@@ -36,10 +36,10 @@ export default async function Browse() {
                 className='md:basis-1/2 lg:basis-1/3 aspect-square'
               >
                 <Link href={"/browse/" + game.GameID}>
-                  <Card className='transition-all hover:shadow-lg hover:border-primary/50'>
+                  <Card className='transition-all hover:shadow-lg hover:border-primary/50 h-full flex flex-col'>
                     <CardContent className='p-2'>
-                      <div className='aspect-video bg-muted flex items-center justify-center'>
-                        <img src={game.s3[0]} alt="Game image" />
+                      <div className='aspect-video bg-muted flex items-center justify-center '>
+                        <img src={game.s3[0]} alt="Game image" className="w-full h-full object-cover"/>
                       </div>
 
                       {/* Game info */}
