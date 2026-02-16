@@ -7,6 +7,13 @@
 #include "gamepad.h"
 
 /*
+ * Contains data associated with an instance of the Input module
+ */
+struct input_session {
+    struct gamepad *gamepad;
+};
+
+/*
  * Run a very primitive gamepad interface, optimized for SuperTuxKart
  *
  * Supported keys:
@@ -57,18 +64,48 @@ void gamepad_stk_console(struct gamepad *gamepad) {
     }
 }
 
-int input_test() {
-    struct gamepad *gamepad;
+/*
+ * Initialize an input session.
+ *
+ * Returns a pointer to the created input session on success and NULL on
+ * failure.
+ */
+struct input_session *input_init() {
+    struct input_session *session;
 
-    gamepad = gamepad_init("stratus");
-    if (gamepad == NULL)
-        return 1;
+    session = malloc(sizeof(struct input_session));
+    if (session == NULL) {
+        fprintf(stderr, "Failed to allocate input session\n");
+        return NULL;
+    }
 
-    usleep(10000);  // Wait 10ms for device to be detected
+    session->gamepad = gamepad_init("stratus");
+    if (session->gamepad == NULL) {
+        fprintf(stderr, "Failed to initialize gamepad\n");
+        free(session);
+        return NULL;
+    }
 
-    gamepad_stk_console(gamepad);
+    usleep(10000);  // Wait 10ms for gamepad device to be detected
 
-    gamepad_destroy(gamepad);
+    return session;
+}
+
+/*
+ * Run an input session
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int input_run(struct input_session *session) {
+    gamepad_stk_console(session->gamepad);
 
     return 0;
+}
+
+/*
+ * Destroy an input session and free its resources
+ */
+void input_destroy(struct input_session *session) {
+    gamepad_destroy(session->gamepad);
+    free(session);
 }
