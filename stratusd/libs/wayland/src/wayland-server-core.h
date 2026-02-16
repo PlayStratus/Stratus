@@ -723,7 +723,7 @@ wl_display_add_socket(const char *name);
 // void
 // wl_protocol_logger_destroy(struct wl_protocol_logger *logger);
 
-// STRATUS: made wl_socket_destroy non-static
+// STRATUS: made wl_socket_destroy() non-static
 void
 wl_socket_destroy(struct wl_socket *s);
 

@@ -1,9 +1,9 @@
 /*
- * Video frame capture logic that is specific to shared host memory wl_buffers
+ * Logic for capturing video frames from shared host memory wl_buffers
  *
- * These functions are in charge of all wl_shm_pool objects, and the
- * shm_buf field in wl_buffer objects. Only the core buffer pixel formats
- * (argb8888 and xrgb8888) are supported for simplicity.
+ * Keeps track of wl_shm_pool objects and the shm-specific portion of their
+ * child wl_buffers. Only the core buffer pixel formats (argb8888 and
+ * xrgb8888) are supported for simplicity.
  */
 
 #include <assert.h>
