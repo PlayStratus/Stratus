@@ -13,10 +13,12 @@
 #include "proxy.h"
 
 /*
- * Key interfaces defined in libs/wayland/protocols/*.c
+ * Required Wayland protocol interfaces
  */
 extern const struct wl_interface *linux_dmabuf_v1_types_all[];
+extern const struct wl_interface *pointer_constraints_unstable_v1_types_all[];
 extern const struct wl_interface *presentation_time_types_all[];
+extern const struct wl_interface *relative_pointer_unstable_v1_types_all[];
 extern const struct wl_interface *tablet_v2_types_all[];
 extern const struct wl_interface *viewporter_types_all[];
 extern const struct wl_interface *wayland_types_all[];
@@ -24,11 +26,20 @@ extern const struct wl_interface *xdg_shell_types_all[];
 extern const struct wl_interface wl_display_interface;
 
 /*
+ * Whether to log all proxied Wayland messages
+ *
+ * Set in handle_session_create according to the WAYLAND_DEBUG variable.
+ */
+static bool wayland_debug = false;
+
+/*
  * The available Wayland protocols
  */
 const struct wl_interface **proxy_protocols[] = {
     linux_dmabuf_v1_types_all,
+    pointer_constraints_unstable_v1_types_all,
     presentation_time_types_all,
+    relative_pointer_unstable_v1_types_all,
     tablet_v2_types_all,
     viewporter_types_all,
     wayland_types_all,
@@ -244,6 +255,10 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
     if (closure == NULL)
         goto err_pre_closure;
 
+    if (wayland_debug)
+        wl_closure_print(closure, interface, src->side == PROXY_SIDE_CLIENT,
+                         false, NULL, NULL);
+
     // Handle wl_registry@global message
     if (!strcmp(interface->name, "wl_registry") &&
         !strcmp(message.name, "global") &&
@@ -303,8 +318,12 @@ static int proxy_handle_message(struct proxy_conn *src, int id, int size,
     assert(dst != NULL); // The opposite connection must already exist
     if (wl_closure_send(closure, dst->wl_conn) < 0)
         goto err_post_closure;
+    wl_closure_destroy(closure);
+    return 0;
 
 drop:
+    if (wayland_debug)
+        fprintf(stderr, "\t\t(previous message dropped)\n");
     wl_closure_destroy(closure);
     return 0;
 
@@ -397,6 +416,8 @@ err_zalloc:
 int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
     int client_fd;
+
+    wayland_debug = (getenv("WAYLAND_DEBUG") != NULL);
 
     while (true) {
         if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0) {
