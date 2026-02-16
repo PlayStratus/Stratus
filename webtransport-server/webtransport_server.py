@@ -36,40 +36,36 @@ class VideoHandler:
         self._protocol = protocol
         self._counters = defaultdict(int)
         self._datagram_stream_id: Optional[int] = None
-        
+
         self._loop_task = asyncio.create_task(self._loop())
 
     def h3_event_received(self, event: H3Event) -> None:
         if isinstance(event, DatagramReceived):
             logger.info("Datagram received: %s", event.data)
-            
+
             self._http._quic.send_datagram_frame("Datagram response".encode("ascii"))
 
         if isinstance(event, WebTransportStreamDataReceived):
-            if event.stream_ended:
-                if stream_is_unidirectional(event.stream_id):
-                    response_id = self._http.create_webtransport_stream(
-                        self._session_id, is_unidirectional=True
-                    )
-                    
-                    logger.info("Unidirectional [%s] received: %s", event.stream_id, event.data)
-                    
-                    self._http._quic.send_stream_data(
-                        response_id, b"Unidirectional response", end_stream=True
-                    )
-                else:
-                    response_id = event.stream_id
-                    
+            if stream_is_unidirectional(event.stream_id):
+                if event.data:
+                    logger.info("Uni [%s] received: %s", event.stream_id, event.data)
+
+                if event.stream_ended:
+                    self.stream_closed(event.stream_id)
+            else:
+                # Bidirectional control streams can stay open (e.g. resize updates),
+                # so process chunks as they arrive instead of waiting for FIN.
+                if event.data:
                     logger.info("Bidirectional [%s] received: %s", event.stream_id, event.data)
-                    
                     self._http._quic.send_stream_data(
-                        response_id, b"Bidirectional response", end_stream=True
+                        event.stream_id, b"Bidirectional response", end_stream=False
                     )
-                self.stream_closed(event.stream_id)
-                
+                if event.stream_ended:
+                    self.stream_closed(event.stream_id)
+
     def _get_frames_bytes(self) -> list[bytes]:
         frames = []
-        
+
         container = av.open("encode_output.h264", format="h264")
         stream = next((s for s in container.streams if s.type == "video"), None)
 
@@ -78,9 +74,9 @@ class VideoHandler:
                 continue
 
             encoded_bytes = bytes(packet)
-            frames.append(encoded_bytes) 
+            frames.append(encoded_bytes)
         return frames
-                
+
     async def _loop(self):
         frames = self._get_frames_bytes()
         total = len(frames)
@@ -121,6 +117,13 @@ class VideoHandler:
         idx = start_index
         while True:
             pkt = frames[idx]
+
+            if not pkt:
+                idx += 1
+                if idx >= total:
+                    idx = start_index
+                continue
+
             avcc, is_idr, _, _ = annexb_au_to_avcc(pkt)
 
             # Send FRAME message: type(1) + isKey(1) + len(4) + data
@@ -137,8 +140,8 @@ class VideoHandler:
                 send_msg(0x00, description)   # resend config at loop boundary
                 self._protocol.transmit()
 
-            await asyncio.sleep(1 / 30) 
-        
+            await asyncio.sleep(1 / 15)
+
     def stream_closed(self, stream_id: int) -> None:
         if self._datagram_stream_id == stream_id:
             self._datagram_stream_id = None
@@ -239,4 +242,3 @@ if __name__ == "__main__":
         loop.run_forever()
     except KeyboardInterrupt:
         pass
-    

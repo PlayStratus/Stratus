@@ -1,18 +1,16 @@
-"use client"
-
 import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 
 type Props = {
-  containerRef: React.RefObject<HTMLDivElement | null>
+  canvasRef: React.RefObject<HTMLCanvasElement | null>
 }
 
-export default function FullScreenButton({ containerRef }: Readonly<Props>) {
+export default function FullScreenButton({ canvasRef }: Readonly<Props>) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const enterFullscreen = async () => {
-    const el = containerRef.current as any
+    const el = canvasRef.current as any
     if (!el) return
 
     if (el.requestFullscreen) {
@@ -41,7 +39,7 @@ export default function FullScreenButton({ containerRef }: Readonly<Props>) {
   }, [])
 
   return (
-    <Button onClick={toggleFullscreen} className='absolute bottom-4 right-4'>
+    <Button onClick={toggleFullscreen} className='absolute top-4 right-4'>
       {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
     </Button>
   )
