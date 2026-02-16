@@ -8,7 +8,6 @@
 
 #include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <sys/mman.h>
 
 #include "shm-buffers-pub.h"
@@ -185,10 +184,10 @@ void wl_shm_buffer_free(struct wl_shm_buffer *buf) {
 /*
  * Handle a wl_surface@commit request when the attached buffer is shm-backed
  *
- * Currently prints color of center pixel (TODO).
+ * Pass buffer to encode module.
  */
-enum proxy_actions wl_shm_surface_commit(struct wl_surface *surf) {
-    uint8_t *pixel;
+enum proxy_actions wl_shm_surface_commit(struct capture_data *data,
+                                         struct wl_surface *surf) {
     struct wl_buffer *wl_buf;
     struct wl_shm_buffer *shm_buf;
 
@@ -197,12 +196,15 @@ enum proxy_actions wl_shm_surface_commit(struct wl_surface *surf) {
     shm_buf = wl_buf->shm_buf;
     assert(shm_buf != NULL);
 
-    // We'll eventually pass the shm frame to the encode module here (TODO),
-    // but for now we'll just print the color of the center pixel.
-    pixel = shm_buf->p + (shm_buf->stride * (wl_buf->height / 2)) +
-        (shm_buf->stride / 2);
-    printf("NEW SHM FRAME: center pixel is 0x%02x%02x%02x%02x\n", pixel[3],
-            pixel[2], pixel[1], pixel[0]);
+    if (data->encoder == NULL) {
+        // Initialize encoder
+        data->encoder = encoder_startup(surf->buf->width, surf->buf->height);
+        if (data->encoder == NULL)
+            return PROXY_ACTION_ERR;
+    }
+
+    // Encode frame
+    assert(encode_video_frame(data->encoder, shm_buf->p, shm_buf->stride) == 0);
 
     return PROXY_ACTION_FWD;
 }

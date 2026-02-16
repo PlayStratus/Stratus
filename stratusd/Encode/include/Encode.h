@@ -6,12 +6,10 @@
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 typedef struct {
     AVCodecContext *codec_ctx;
     struct SwsContext *sws_ctx;
-    AVFrame *argb_frame;
     AVFrame *yuv_frame;
     AVPacket *pkt;
     FILE *output_file;
@@ -22,7 +20,7 @@ typedef struct {
 
 int test_encode();
 encoder_context* encoder_startup(/*const char *output_file, */int width, int height);
-int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer);
+int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer, int stride);
 int encoder_teardown(encoder_context *state);
 
 

@@ -21,7 +21,7 @@ int test_encode(){
 
     for (int i = 0; i < num_frames; i++) {
         generate_argb_frame(frame_buffer, width, height, i);
-        if (encode_video_frame(encoder, frame_buffer) < 0) {
+        if (encode_video_frame(encoder, frame_buffer, width*4) < 0) {
             fprintf(stderr, "Failed to encode frame %d\n", i);
             break;
         }
@@ -41,10 +41,6 @@ void cleanup_encoder(encoder_context *state) {
     if (state->yuv_frame) {
         if (state->yuv_frame->data[0]) av_freep(&state->yuv_frame->data[0]);
         av_frame_free(&state->yuv_frame);
-    }
-    if (state->argb_frame) {
-        if (state->argb_frame->data[0]) av_freep(&state->argb_frame->data[0]);
-        av_frame_free(&state->argb_frame);
     }
     if (state->output_file) fclose(state->output_file);
     if (state->codec_ctx) avcodec_free_context(&state->codec_ctx);
@@ -103,23 +99,6 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
         return NULL;
     }
 
-    // Allocate ARGB frame
-    state->argb_frame = av_frame_alloc();
-    if (!state->argb_frame) {
-        fprintf(stderr, "Could not allocate ARGB frame\n");
-        cleanup_encoder(state);
-        return NULL;
-    }
-    state->argb_frame->format = AV_PIX_FMT_ARGB;
-    state->argb_frame->width = width;
-    state->argb_frame->height = height;
-    if (av_image_alloc(state->argb_frame->data, state->argb_frame->linesize,
-                       width, height, AV_PIX_FMT_ARGB, 32) < 0) {
-        fprintf(stderr, "Could not allocate ARGB frame buffer\n");
-        cleanup_encoder(state);
-        return NULL;
-    }
-
     // Allocate YUV frame
     state->yuv_frame = av_frame_alloc();
     if (!state->yuv_frame) {
@@ -138,7 +117,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     }
 
     // Initialize swscale context
-    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_ARGB,
+    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_BGR0,
                                     width, height, AV_PIX_FMT_YUV420P,
                                     SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->sws_ctx) {
@@ -159,27 +138,17 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     return state;
 }
 
-int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer) {
+int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
+                       int stride) {
+
     if (!state || !argb_buffer) {
         return -1;
     }
 
-    // Copy ARGB data into frame
-    if (state->argb_frame->linesize[0] == state->width * 4) {
-        memcpy(state->argb_frame->data[0], argb_buffer, state->width * state->height * 4);
-    } else {
-        // ffmpeg different from wl_buffer stride
-        for (int y = 0; y < state->height; y++) {
-            memcpy(state->argb_frame->data[0] + y * state->argb_frame->linesize[0],
-                   argb_buffer + y * state->width * 4,
-                   state->width * 4);
-        }
-    }
-
     // Convert ARGB to YUV420P
     sws_scale(state->sws_ctx,
-              (const uint8_t * const*)state->argb_frame->data,
-              state->argb_frame->linesize,
+              (const uint8_t * const*)&argb_buffer,
+              &stride,
               0, state->height,
               state->yuv_frame->data,
               state->yuv_frame->linesize);
@@ -207,8 +176,6 @@ int encoder_teardown(encoder_context *state) {
     sws_freeContext(state->sws_ctx);
     av_freep(&state->yuv_frame->data[0]);
     av_frame_free(&state->yuv_frame);
-    av_freep(&state->argb_frame->data[0]);
-    av_frame_free(&state->argb_frame);
     avcodec_free_context(&state->codec_ctx);
     fclose(state->output_file);
     free(state);

@@ -180,6 +180,7 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     struct wl_surface *surf;
     struct wl_buffer *buf;
     struct wl_closure *res;
+    struct capture_data *capture_data;
 
     map = msg->conn->session->obj_data;
     id = msg->closure->sender_id;
@@ -190,8 +191,9 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     if (buf != NULL) {
         if (buf->width > 64 && buf->height > 64) {
             // A >64x64 frame probably isn't the cursor, so let's process it.
+            capture_data = msg->conn->session->proxy->userdata;
             if (buf->shm_buf != NULL)
-                wl_shm_surface_commit(surf); // Handle shm frame
+                wl_shm_surface_commit(capture_data, surf); // Handle shm frame
         }
 
         // Release buffer

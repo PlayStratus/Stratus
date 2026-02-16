@@ -2,6 +2,7 @@
 #define CAPTURE_PRIV_H
 
 #include "proxy.h"
+#include "Encode.h"
 
 /*
  * Contains capture data associated with a proxy instance
@@ -12,6 +13,7 @@
 struct capture_data {
     uint32_t width;
     uint32_t height;
+    encoder_context *encoder;
 };
 
 /*
