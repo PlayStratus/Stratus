@@ -14,7 +14,7 @@ cluster.
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
 
     ```
-    # cp Input/udev.rules /etc/udev/rules.d/60-stratus.rules
+    # cp ../os/stratusd/udev.rules > /etc/udev/rules.d/60-stratus.rules
     # usermod -aG input <username>
     # reboot
     ```
