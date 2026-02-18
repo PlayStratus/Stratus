@@ -26,8 +26,10 @@ int sidecar_session_run(int width, int height, char *encode_output) {
 
     // Create session struct
     session = malloc(sizeof(struct session));
-    if (session == NULL)
+    if (session == NULL) {
+        perror("[Sidecar] malloc");
         goto err;
+    }
     memset(session, 0x00, sizeof(struct session));
 
     // Initialize modules

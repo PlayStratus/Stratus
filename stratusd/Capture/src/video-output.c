@@ -99,8 +99,10 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
     struct wl_surface *surf;
 
     surf = malloc(sizeof(struct wl_surface));
-    if (surf == NULL)
+    if (surf == NULL) {
+        perror("[Capture] malloc");
         return PROXY_ACTION_ERR;
+    }
 
     surf->id = msg->closure->args[0].n;
     surf->buf = NULL;
@@ -108,8 +110,10 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
 
     map = msg->conn->session->obj_data;
     assert(wl_map_lookup(map, surf->id) == NULL);
-    if (wl_map_insert_at(map, 0, surf->id, surf) < 0)
+    if (wl_map_insert_at(map, 0, surf->id, surf) < 0) {
+        perror("[Capture] wl_map_insert_at");
         return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }
@@ -196,8 +200,10 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
         res->opcode = 0; // wl_buffer event #0 is release event
         ret = wl_closure_send(res, msg->conn->session->client->wl_conn);
         wl_closure_destroy(res);
-        if (ret < 0)
+        if (ret < 0) {
+            perror("[Capture] wl_closure_send");
             return PROXY_ACTION_ERR;
+        }
 
         // Unattach buffer. This prevents us from sending duplicate release
         // events when the client commits without actually attaching a new
