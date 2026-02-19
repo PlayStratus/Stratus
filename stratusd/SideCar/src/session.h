@@ -12,7 +12,7 @@
 struct session {
     char id[UUID_LEN];
 
-    struct session_args args;   // Arguments passed to every module
+    struct session_args args; // Arguments passed to every module
 
     char game_id[UUID_LEN];
     int game_pid;

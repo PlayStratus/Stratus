@@ -26,12 +26,17 @@
  * Forcibly stop a stream session and free its resources
  */
 void session_teardown(struct session *session) {
-    if (session == NULL) return;
+    if (session == NULL)
+        return;
 
     // Kill module threads and make sure they're dead
     if (session->capture_thread != 0) {
         pthread_cancel(session->capture_thread);
         pthread_join(session->capture_thread, NULL);
+    }
+    if (session->capture_pw_thread != 0) {
+        pthread_cancel(session->capture_pw_thread);
+        pthread_join(session->capture_pw_thread, NULL);
     }
     if (session->input_thread != 0) {
         pthread_cancel(session->input_thread);
@@ -44,8 +49,10 @@ void session_teardown(struct session *session) {
     // be passed to AppImage child processes correctly.
     if (session->game_pid != 0) {
         if (waitpid(session->game_pid, NULL, WNOHANG) != session->game_pid)
-            fprintf(stderr, "[SideCar] Warning: game did not terminate "
-                    "(PID=%d)\n", session->game_pid);
+            fprintf(stderr,
+                    "[SideCar] Warning: game did not terminate "
+                    "(PID=%d)\n",
+                    session->game_pid);
     }
 
     free(session);
