@@ -1,0 +1,10 @@
+include .bazelrc
+include *.md
+include LICENSE
+include MANIFEST.in
+include WORKSPACE
+include configure
+recursive-include doc *
+recursive-include python *
+recursive-include riegeli *
+recursive-include third_party *
