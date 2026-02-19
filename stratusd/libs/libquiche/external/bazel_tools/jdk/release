@@ -1,0 +1,2 @@
+JAVA_VERSION="24"
+MODULES="java.base java.compiler java.instrument java.logging java.management java.security.sasl java.naming java.transaction.xa java.xml java.sql jdk.crypto.ec jdk.management jdk.unsupported"
