@@ -1,0 +1,6 @@
+#ifndef VERSION_H
+#define VERSION_H
+
+#define STRATUSD_VERSION "@GIT_DESCRIBE_VERSION@"
+
+#endif

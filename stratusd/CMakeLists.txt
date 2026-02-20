@@ -25,5 +25,20 @@ add_subdirectory(Transport)
 
 add_executable(stratusd ${sourcefiles})
 
+target_include_directories(stratusd PUBLIC ${CMAKE_BINARY_DIR})
+
 # Link modules here
 target_link_libraries(stratusd PRIVATE Capture Encode Input SideCar)
+
+# Get version from git
+execute_process(
+    COMMAND git describe --tags --long --always --dirty
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_DESCRIBE_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+configure_file(
+    ${CMAKE_SOURCE_DIR}/version.h.in
+    ${CMAKE_BINARY_DIR}/version.h
+    @ONLY
+)
