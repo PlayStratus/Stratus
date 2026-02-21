@@ -10,7 +10,10 @@ license=('MIT')
 
 depends=('ffmpeg' 'libpipewire' 'weston')
 makedepends=('cmake' 'git')
+
 provides=('stratusd')
+
+options=('!debug')
 
 source=(
   # TODO: This isn't quite best-practice, we should just download a release

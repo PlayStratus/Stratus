@@ -7,7 +7,7 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install libpipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
+    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
     - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel`
     - Arch: `# pacman -S libevdev libpipewire ffmpeg`
 

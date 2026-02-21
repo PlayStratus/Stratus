@@ -1,4 +1,5 @@
 pkg/
+repo/
 src/
 stratus/
 *.pkg.tar.zst
