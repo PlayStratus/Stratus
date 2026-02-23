@@ -14,6 +14,7 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavformat
     libavutil
     libswscale)
+find_package(OpenGL COMPONENTS GLES3 EGL REQUIRED)
 
 add_subdirectory(Capture)
 add_subdirectory(Encode)
@@ -25,6 +26,7 @@ add_subdirectory(Transport)
 #add_subdirectory(libs/GoogleTest)
 
 add_executable(stratusd ${sourcefiles})
+
 
 # Link modules here
 target_link_libraries(stratusd PRIVATE Capture Encode)

@@ -29,6 +29,7 @@
 #include "capture-priv.h"
 #include "resize-pub.h"
 #include "shm-buffers-pub.h"
+#include "dmabuf-buffers-pub.h"
 #include "video-output-pub.h"
 
 /*
@@ -37,6 +38,7 @@
 const struct message_handler *message_handlers[] = {
     resize_message_handlers,
     shm_buffers_message_handlers,
+    dmabuf_buffers_message_handlers,
     video_output_message_handlers,
 };
 
@@ -142,6 +144,7 @@ int capture_test() {
     data->width = 640; // TODO: set client dimensions dynamically
     data->height = 480;
     data->encoder = NULL; // Will be initialized on first frame
+    data->egl_capture = NULL;
 
     // Capture frames
     printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);

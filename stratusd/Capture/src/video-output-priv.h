@@ -24,6 +24,7 @@ struct wl_buffer {
     int32_t width;
     int32_t height;
     struct wl_shm_buffer *shm_buf; // NULL if buffer is not shm-backed
+    struct wl_dmabuf_buffer *dmabuf_buf;
     uint32_t dependents;
 };
 

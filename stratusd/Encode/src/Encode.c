@@ -117,7 +117,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     }
 
     // Initialize swscale context
-    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_BGR0,
+    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_RGBA,
                                     width, height, AV_PIX_FMT_YUV420P,
                                     SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->sws_ctx) {

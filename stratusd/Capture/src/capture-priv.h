@@ -14,6 +14,7 @@ struct capture_data {
     uint32_t width;
     uint32_t height;
     encoder_context *encoder;
+    struct egl_capture_context *egl_capture;
 };
 
 /*
