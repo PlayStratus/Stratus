@@ -41,6 +41,7 @@ jobs:
         run: |
           mkdir os/repo
           cp os/*/*.pkg.tar.zst os/repo
+          cp os/install.sh os/repo
           repo-add os/repo/stratus.db.tar.zst os/repo/*.pkg.tar.zst
 
       - name: Setup AWS CLI
