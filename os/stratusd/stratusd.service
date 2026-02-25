@@ -6,6 +6,7 @@ After=stratusd-weston.service
 
 [Service]
 Environment="WAYLAND_DISPLAY=weston"
+Environment="STRATUSD_OUTPUT_FILE=/var/lib/stratusd/encode_output.h264"
 ExecStart=/usr/bin/stratusd --daemon
 Restart=always
 

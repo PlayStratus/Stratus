@@ -1,61 +1,39 @@
-#include "SideCar.h"
-
 /*
- * Free the resources used by a session
+ * Stratusd SideCar implementation
+ *
+ * Manages high-level stream sessions in response to API events.
  */
-static void session_teardown(struct session *session) {
-    if (session == NULL) return;
 
-    if (session->capture != NULL)
-        capture_destroy(session->capture);
-    if (session->input != NULL)
-        input_destroy(session->input);
+#include <assert.h>
+#include <stdio.h>
+#include <unistd.h>
 
-    free(session);
-}
+#include "session.h"
+#include "sidecar-priv.h"
 
 /*
- * Create and run a new stream session
+ * Run the sidecar module
  *
  * Returns 0 on success and -1 on failure.
  */
-int sidecar_session_run(int width, int height, char *encode_output) {
-    struct session *session;
+int sidecar_main() {
+    struct sidecar_context ctx;
 
-    // Create session struct
-    session = malloc(sizeof(struct session));
-    if (session == NULL) {
-        perror("[Sidecar] malloc");
-        goto err;
-    }
-    memset(session, 0x00, sizeof(struct session));
+    ctx.active_session = NULL;
 
-    // Initialize modules
-    session->capture = capture_init(encode_output, width, height, NULL);
-    if (session->capture == NULL)
-        goto err;
-    session->input = input_init();
-    if (session->input == NULL)
-        goto err;
+    fprintf(stderr, "[Sidecar] Starting sidecar module...\n");
 
-    // Start modules in separate threads
-    pthread_create(&session->capture_thread, NULL, (void *)&capture_run,
-                   session->capture);
-    pthread_create(&session->input_thread, NULL, (void *)&input_run,
-                   session->input);
+    char *output_file = getenv("STRATUSD_OUTPUT_FILE");
+    if (output_file == NULL)
+        output_file = "encode_output.h264";
 
-    // Wait for game to disconnect from Wayland proxy
-    pthread_join(session->capture_thread, NULL);
+    ctx.active_session = session_start(640, 480, output_file);
+    if (ctx.active_session == NULL)
+        return -1;
 
-    // Kill remaining threads and make sure they're dead
-    pthread_cancel(session->input_thread);
-    pthread_join(session->input_thread, NULL);
+    session_wait(ctx.active_session);
 
-    // Teardown modules & session
-    session_teardown(session);
+    session_teardown(ctx.active_session);
+
     return 0;
-
-err:
-    session_teardown(session);
-    return -1;
 }

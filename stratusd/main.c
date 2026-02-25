@@ -1,9 +1,10 @@
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "SideCar.h"
 #include "version.h"
-
-#define MAX_ENCODE_OUTPUT_NAME 64
 
 int main(int argc, char *argv[]) {
     bool daemon = false;
@@ -18,16 +19,8 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (daemon) {
-        char output_file[MAX_ENCODE_OUTPUT_NAME];
-        for (int i = 0; true; i++) {
-            snprintf((char *)&output_file, MAX_ENCODE_OUTPUT_NAME,
-                     "/var/lib/stratusd/output-%d.h264", i);
-            fprintf(stderr, "Starting session #%d\n", i);
-            sidecar_session_run(640, 480, output_file);
-        }
-        return 0;
-    } else {
-        return sidecar_session_run(640, 480, "encode_output.h264");
-    }
+    sidecar_main();
+
+    while (daemon)
+        sleep(1);
 }
