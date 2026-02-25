@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 
-project(stratusd VERSION 0.1.0 LANGUAGES C)
+project(stratusd VERSION 0.1.0 LANGUAGES C CXX)
 
 file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 
@@ -26,4 +26,4 @@ add_subdirectory(Transport)
 add_executable(stratusd ${sourcefiles})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Capture Encode)
+target_link_libraries(stratusd PRIVATE Capture Encode Transport)
