@@ -18,7 +18,6 @@
 *.pdb
 
 # Compiled Dynamic libraries
-*.so
 *.dylib
 *.dll
 
@@ -57,3 +56,8 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 /stratusd/libs/wayland/protocols/*.c
+
+# Quiche External Shared Objects
+stratusd/libs/libquiche/external/bazel_tools/jdk/lib/*.so
+stratusd/libs/libquiche/external/bazel_tools/jdk/lib/server/*.so
+
