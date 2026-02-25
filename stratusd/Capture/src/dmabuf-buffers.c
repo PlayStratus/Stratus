@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include <assert.h>
 #include <stdbool.h>
 #include <sys/mman.h>
@@ -17,6 +19,11 @@ static PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = NULL;
 static PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = NULL;
 static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = NULL;
 
+// DRM formats/modifiers - defined in drm_fourcc.h?
+//#define DRM_FORMAT_ARGB8888 0x34325241
+//#define DRM_FORMAT_XRGB8888 0x34325258 - defined in drm_fourcc.h?
+//#define DRM_FORMAT_MOD_LINEAR 0x0000000000000000ULL
+
 /*
  * Contains data for a zwp_linux_buffer_params_v1 object
  * This is a temporary object used to build a dmabuf_backed wl_buffer
@@ -30,6 +37,14 @@ struct zwp_linux_buffer_params {
         uint32_t stride;
     } planes[4];
     uint64_t modifier;
+};
+
+/*
+ * Contains data for a zwp_linux_dmabuf_feedback_v1 object
+ */
+struct zwp_linux_dmabuf_feedback {
+    uint32_t id;
+    int num_tranche;
 };
 
 /*
@@ -59,18 +74,182 @@ struct egl_capture_context {
 };
 
 /*
- * Handle a zwp_linux_dmabuf_v1@format event
+ * Handle zwp_linux_dmabuf_v1@get_default_feedback request
  *
- * Drop messages advertising unsupported pixel formats
+ * Client is requesting feedback, allocate and track the feedback object
  */
-enum proxy_actions zwp_linux_dmabuf_format(struct proxy_message *msg) {
-    uint32_t format = msg->closure->args[0].u;
-    fprintf(stderr, "FORMAT MESSAGE RECEIVED: %d\n");
+enum proxy_actions zwp_linux_dmabuf_get_default_feedback(struct proxy_message *msg) {
+    struct wl_map *map;
+    struct zwp_linux_dmabuf_feedback *feedback;
 
-    // TODO drop unsupported formats
+    feedback = malloc(sizeof(struct zwp_linux_dmabuf_feedback));
+    if (feedback == NULL)
+        return PROXY_ACTION_ERR;
+
+    feedback->id = msg->closure->args[0].n;
+    feedback->num_tranche = 0;
+
+    map = msg->conn->session->obj_data;
+    assert(wl_map_lookup(map, feedback->id) == NULL);
+    if (wl_map_insert_at(map, 0, feedback->id, feedback) < 0) {
+        free(feedback);
+        return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }
+
+/*
+ * Handle zwp_linux_dmabuf_feedback_v1@format_table event
+ *
+ * Replace with our own table containing only LINEAR ARGB/XRGB
+ */
+enum proxy_actions zwp_linux_dmabuf_feedback_format_table(struct proxy_message *msg) {
+    struct wl_map *map;
+    struct zwp_linux_dmabuf_feedback *feedback;
+    int original_fd;
+    uint32_t original_size;
+
+    map = msg->conn->session->obj_data;
+    feedback = wl_map_lookup(map, msg->closure->sender_id);
+    assert(feedback != NULL);
+
+    original_fd = msg->closure->args[0].h;
+    original_size = msg->closure->args[1].u;
+
+    // Close the original fd
+    close(original_fd);
+
+    // Create our own format table
+    struct format_entry {
+        uint32_t format;
+        uint32_t pad;
+        uint64_t modifier;
+    } __attribute__((packed));
+
+    struct format_entry our_formats[] = {
+        { .format = DRM_FORMAT_ARGB8888, .pad = 0, .modifier = DRM_FORMAT_MOD_LINEAR },
+        { .format = DRM_FORMAT_XRGB8888, .pad = 0, .modifier = DRM_FORMAT_MOD_LINEAR },
+    };
+
+    size_t our_size = sizeof(our_formats);
+
+    int new_fd = memfd_create("filtered-formats", MFD_CLOEXEC);
+    if (new_fd < 0) {
+        fprintf(stderr, "Error creating fd for filtered format table\n");
+        return PROXY_ACTION_ERR;
+    }
+
+    if (ftruncate(new_fd, our_size) < 0) {
+        fprintf(stderr, "Error truncating filtered format table\n");
+        close(new_fd);
+        return PROXY_ACTION_ERR;
+    }
+
+    void *data = mmap(NULL, our_size, PROT_READ | PROT_WRITE, MAP_SHARED, new_fd, 0);
+    if (data == MAP_FAILED) {
+        fprintf(stderr, "Error mmapping filtered format table\n");
+        close(new_fd);
+        return PROXY_ACTION_ERR;
+    }
+
+    memcpy(data, our_formats, our_size);
+    munmap(data, our_size);
+
+    fprintf(stderr, "Created filtered format table: 2 formats, %zu bytes, fd=%d\n",
+            our_size, new_fd);
+
+    msg->closure->args[0].h = new_fd;
+    msg->closure->args[1].u = our_size;
+
+    return PROXY_ACTION_FWD;
+}
+
+/*
+ * Handle zwp_linux_dmabuf_feedback_v1@tranche_formats event
+ *
+ * Replace with indices [0, 1] pointing to our format table
+ */
+enum proxy_actions zwp_linux_dmabuf_feedback_tranche_formats(struct proxy_message *msg) {
+    struct wl_map *map;
+    struct zwp_linux_dmabuf_feedback *feedback;
+    struct wl_array *array;
+
+    map = msg->conn->session->obj_data;
+    feedback = wl_map_lookup(map, msg->closure->sender_id);
+    assert(feedback != NULL);
+
+    array = msg->closure->args[0].a;
+
+    fprintf(stderr, "Intercepting tranche_formats for feedback#%u (original %zu bytes)\n",
+            feedback->id, array->size);
+
+    // Only send tranche for the first tranche, drop the rest
+    if (feedback->num_tranche > 0) {
+        fprintf(stderr, "  Dropping additional tranche\n");
+        array->size = 0;
+        return PROXY_ACTION_FWD;
+    }
+
+    // Our format table has 2 entries
+    uint16_t our_indices[] = { 0, 1 };
+    size_t needed_size = sizeof(our_indices);
+
+    // Replace the array contents
+    if (array->alloc < needed_size) {
+        fprintf(stderr, "ERROR: Array buffer too small (%zu < %zu)\n",
+                array->alloc, needed_size);
+        return PROXY_ACTION_ERR;
+    }
+
+    memcpy(array->data, our_indices, needed_size);
+    array->size = needed_size;
+
+    feedback->num_tranche++;
+
+    return PROXY_ACTION_FWD;
+}
+
+
+/*
+ * Handle zwp_linux_dmabuf_feedback_v1@done event
+ *
+ * Reset state for potential reuse
+ */
+enum proxy_actions zwp_linux_dmabuf_feedback_done(struct proxy_message *msg) {
+    struct wl_map *map;
+    struct zwp_linux_dmabuf_feedback *feedback;
+
+    map = msg->conn->session->obj_data;
+    feedback = wl_map_lookup(map, msg->closure->sender_id);
+    assert(feedback != NULL);
+
+    feedback->num_tranche = 0;
+
+    return PROXY_ACTION_FWD;
+}
+
+/*
+ * Handle zwp_linux_dmabuf_feedback_v1@destroy request
+ *
+ * Clean up the feedback object
+ */
+enum proxy_actions zwp_linux_dmabuf_feedback_destroy(struct proxy_message *msg) {
+    uint32_t id;
+    struct wl_map *map;
+    struct zwp_linux_dmabuf_feedback *feedback;
+
+    id = msg->closure->sender_id;
+    map = msg->conn->session->obj_data;
+    feedback = wl_map_lookup(map, id);
+    assert(feedback != NULL);
+
+    wl_map_remove(map, feedback->id);
+    free(feedback);
+
+    return PROXY_ACTION_FWD;
+}
+
 
 /*
  * Handle a zwp_linux_dmabuf_v1@create_params request
@@ -374,6 +553,7 @@ int egl_capture_dmabuf_frame(struct egl_capture_context *ctx,
     EGLint img_attribs[128];
     int idx = 0;
 
+<<<<<<< HEAD
     img_attribs[idx++] = EGL_WIDTH;
     img_attribs[idx++] = dmabuf_buf->width;
     img_attribs[idx++] = EGL_HEIGHT;
@@ -518,8 +698,8 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
  * The Wayland message handlers for dma-backed wl_buffers
  */
 const struct message_handler dmabuf_buffers_message_handlers[] = {
-    { "zwp_linux_dmabuf_v1",        "format",        &zwp_linux_dmabuf_format          },
     { "zwp_linux_dmabuf_v1",        "create_params", &zwp_linux_dmabuf_create_params   },
+
     { "zwp_linux_buffer_params_v1", "add",           &zwp_linux_buffer_params_add      },
     { "zwp_linux_buffer_params_v1", "create_immed",  &zwp_linux_buffer_params_create_immed },
     { "zwp_linux_buffer_params_v1", "destroy",       &zwp_linux_buffer_params_destroy  },
@@ -531,6 +711,7 @@ const struct message_handler dmabuf_buffers_message_handlers[] = {
     { "zwp_linux_dmabuf_feedback_v1",  "done",                   &zwp_linux_dmabuf_feedback_done },
     { "zwp_linux_dmabuf_feedback_v1",  "destroy",                &zwp_linux_dmabuf_feedback_destroy },
     */
+
 
     { NULL,                         NULL,            NULL                              },
 };
