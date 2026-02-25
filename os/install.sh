@@ -60,7 +60,7 @@ fi
 
 # Install packages
 pacstrap -K /mnt base linux linux-firmware networkmanager openssh stratusd \
-    sudo $UCODE vim
+    stratus-launcher sudo $UCODE vim
 
 # Initialize basic config files
 genfstab -U /mnt >> /mnt/etc/fstab
