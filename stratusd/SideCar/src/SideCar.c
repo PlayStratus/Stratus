@@ -23,15 +23,24 @@ int sidecar_main() {
 
     fprintf(stderr, "[Sidecar] Starting sidecar module...\n");
 
+    // For testing purposes, the game UUID can be set via an environment
+    // variable and doesn't strictly need to be a UUID (it just needs to be less
+    // than UUID_LEN characters). The default here is "sleep".
+    char *game_id = getenv("STRATUSD_GAME_UUID");
+    if (game_id == NULL)
+        game_id = "sleep";
+
     char *output_file = getenv("STRATUSD_OUTPUT_FILE");
     if (output_file == NULL)
         output_file = "encode_output.h264";
 
-    ctx.active_session = session_start(640, 480, output_file);
+    ctx.active_session = session_start(game_id, 640, 480, output_file);
     if (ctx.active_session == NULL)
         return -1;
 
-    session_wait(ctx.active_session);
+    while (session_poll(ctx.active_session) == 0) {
+        sleep(1);
+    }
 
     session_teardown(ctx.active_session);
 

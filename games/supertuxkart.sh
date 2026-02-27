@@ -60,4 +60,5 @@ ln -sr "$APPDIR/io.playstratus.supertuxkart.png" "$APPDIR/.DirIcon"
 ln -sr "$BIN_DIR/supertuxkart" "$APPDIR/AppRun"
 
 # Build appimage
-ARCH=x86_64 appimagetool "$APPDIR" "${1:-supertuxkart.AppImage}"
+DEFAULT_DEST="$(dirname "$0")/build/supertuxkart"
+ARCH=x86_64 appimagetool "$APPDIR" "${1:-$DEFAULT_DEST}"
