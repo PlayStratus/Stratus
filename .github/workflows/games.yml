@@ -26,8 +26,7 @@ jobs:
 
       - name: Build games
         run: |
-          ./games/build-freedoom.sh games/build/bf03175a-9501-457a-91a7-c50881d030fc
-          ./games/build-supertuxkart.sh games/build/c3770c11-ecaf-4852-96b0-37269736a6fc
+          ./games/supertuxkart.sh games/build/c3770c11-ecaf-4852-96b0-37269736a6fc
 
       - name: Setup AWS CLI
         if: github.ref == 'refs/heads/main'
