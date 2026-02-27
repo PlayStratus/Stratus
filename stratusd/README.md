@@ -7,9 +7,9 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libglvnd-dev libegl-dev libgles-dev`
-    - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel mesa-libGL mesa-libEGL mesa-libGLES libdrm libdrm-devel libglvnd libglvnd-devel libglvnd-egl libglvnd-gles`
-    - Arch: `# pacman -S libevdev libpipewire ffmpeg mesa libdrm libglvnd`
+    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libcjson-dev libevdev-dev libswscale-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libglvnd-dev libegl-dev libgles-dev`
+    - RHEL, Fedora, etc: `# dnf install cjson-devel libevdev-devel pipewire-devel ffmpeg-devel mesa-libGL mesa-libEGL mesa-libGLES libdrm libdrm-devel libglvnd libglvnd-devel libglvnd-egl libglvnd-gles`
+    - Arch: `# pacman -S cjson libevdev libpipewire ffmpeg mesa libdrm libglvnd`
 
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
 

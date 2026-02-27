@@ -12,6 +12,8 @@
  * Contains data for a single stream session
  */
 struct session {
+    char id[UUID_LEN];
+
     pthread_t capture_thread;
     struct capture_session *capture;    // internal data for Capture module
 
@@ -25,8 +27,8 @@ struct session {
     int game_pid;
 };
 
-struct session *session_start(char *game_uuid, int width, int height,
-                              char *encode_output);
+struct session *session_start(char *session_id, char *game_uuid, int width,
+                              int height, char *encode_output);
 
 int session_poll(struct session *session);
 
