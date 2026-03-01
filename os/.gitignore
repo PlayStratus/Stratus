@@ -1,5 +1,11 @@
+# Package build artifacts
 pkg/
-repo/
 src/
-stratus/
 *.pkg.tar.zst
+
+# Package sources
+stratus/
+fastfetch-*.tar.gz
+
+# Package repository
+repo/
