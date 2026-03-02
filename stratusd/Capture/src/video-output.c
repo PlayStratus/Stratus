@@ -192,10 +192,12 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
             // A >64x64 frame probably isn't the cursor, so let's process it.
             capture_data = msg->conn->session->proxy->userdata;
 
-            // TODO ask asher if this is necessary
             assert(buf->shm_buf == NULL || buf->dmabuf_buf == NULL);
+            /* Commented out until viewport changes force correct resolution
+             * mostly we will use dmabuf anyway
             if (buf->shm_buf != NULL)
                 wl_shm_surface_commit(capture_data, surf); // Handle shm frame
+            */
             if (buf->dmabuf_buf != NULL)
                 wl_dmabuf_surface_commit(capture_data, surf); // Handle dmabuf frame
 

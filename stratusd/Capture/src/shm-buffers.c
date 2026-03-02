@@ -158,9 +158,10 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     assert(msg->closure->args[5].u == 0 || msg->closure->args[5].u == 1);
 
     assert(wl_map_lookup(map, wl_buf->id) == NULL);
-    if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0)
-        // TODO ask asher if we need to free wl_buf and shm_buf here
+    if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0) {
+        free(wl_buf);
         return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }
