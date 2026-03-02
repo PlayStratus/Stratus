@@ -27,5 +27,4 @@ add_subdirectory(Transport)
 add_executable(stratusd ${sourcefiles})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Capture Encode)
-#target_link_libraries(Clocked imgui)
+target_link_libraries(stratusd PRIVATE Capture Encode SideCar)

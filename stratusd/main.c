@@ -1,17 +1,12 @@
-#include <stdio.h>
-#include <string.h>
-
-#include "Capture.h"
-#include "Encode.h"
+#include "SideCar.h"
 
 int main(int argc, char *argv[]) {
-    if (argc >= 2 && !strcmp(argv[1], "capture")) {
-        capture_test();
-    } else if (argc >= 2 && !strcmp(argv[1], "encode")) {
-        test_encode();
-    } else {
-        printf("Usage: %s [capture|encode]\n", argv[0]);
+    if (argc >= 2) {
+        printf("Usage: %s\n", argv[0]);
+        return -1;
     }
+
+    sidecar_session_run(640, 480);
 
     return 0;
 }

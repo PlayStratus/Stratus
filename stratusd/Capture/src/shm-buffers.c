@@ -186,7 +186,7 @@ void wl_shm_buffer_free(struct wl_shm_buffer *buf) {
  *
  * Pass buffer to encode module.
  */
-enum proxy_actions wl_shm_surface_commit(struct capture_data *data,
+enum proxy_actions wl_shm_surface_commit(struct capture_session *session,
                                          struct wl_surface *surf) {
     struct wl_buffer *wl_buf;
     struct wl_shm_buffer *shm_buf;
@@ -196,15 +196,9 @@ enum proxy_actions wl_shm_surface_commit(struct capture_data *data,
     shm_buf = wl_buf->shm_buf;
     assert(shm_buf != NULL);
 
-    if (data->encoder == NULL) {
-        // Initialize encoder
-        data->encoder = encoder_startup(surf->buf->width, surf->buf->height);
-        if (data->encoder == NULL)
-            return PROXY_ACTION_ERR;
-    }
-
     // Encode frame
-    assert(encode_video_frame(data->encoder, shm_buf->p, shm_buf->stride) == 0);
+    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride) ==
+           0);
 
     return PROXY_ACTION_FWD;
 }

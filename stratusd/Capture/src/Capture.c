@@ -119,43 +119,63 @@ static void handle_session_destroy(struct proxy_session *session) {
     wl_map_for_each(session->obj_data, destroy_object, session);
 }
 
-int capture_test() {
-    struct proxy *proxy;
-    struct capture_data *data;
+/*
+ * Initialize a capture session
+ *
+ * Returns a pointer to the created capture session on success and NULL on
+ * failure.
+ */
+struct capture_session *capture_init(uint32_t width, uint32_t height,
+                                     encoder_context *encoder) {
+    struct capture_session *session;
 
-    // Initialize proxy
-    proxy = proxy_init("stratus");
-    if (proxy == NULL) {
+    assert(width > 0);
+    assert(height > 0);
+    assert(encoder != NULL);
+
+    session = malloc(sizeof(struct capture_session));
+    if (session == NULL) {
+        fprintf(stderr, "Failed to allocate capture session\n");
+        return NULL;
+    }
+
+    session->width = width;
+    session->height = height;
+    session->encoder = encoder;
+
+    session->proxy = proxy_init("stratus");
+    if (session->proxy == NULL) {
         fprintf(stderr, "Failed to initialize proxy\n");
-        goto err_proxy_init;
+        free(session);
+        return NULL;
     }
-    proxy->on_session_create    = &handle_session_create;
-    proxy->on_message           = &handle_message;
-    proxy->on_session_destroy   = &handle_session_destroy;
+    session->proxy->on_session_create   = &handle_session_create;
+    session->proxy->on_message          = &handle_message;
+    session->proxy->on_session_destroy  = &handle_session_destroy;
+    session->proxy->userdata            = session;
 
-    // Initialize capture data
-    proxy->userdata = data = malloc(sizeof(struct capture_data));
-    if (data == NULL) {
-        fprintf(stderr, "Failed to allocate capture data\n");
-        goto err_malloc;
-    }
-    data->width = 640; // TODO: set client dimensions dynamically
-    data->height = 480;
-    data->encoder = NULL; // Will be initialized on first frame
+    return session;
+}
 
-    // Capture frames
-    printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
-    if (proxy_run(proxy) < 0) {
+/*
+ * Run a capture session
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int capture_run(struct capture_session *session) {
+    printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
+           session->proxy->name);
+    if (proxy_run(session->proxy) < 0) {
         fprintf(stderr, "Proxy exited unsucessfully\n");
-        goto err_proxy_run;
+        return -1;
     }
-
-err_proxy_run:
-    if (data->encoder != NULL)
-        encoder_teardown(data->encoder);
-    free(data);
-err_malloc:
-    proxy_destroy(proxy);
-err_proxy_init:
     return 0;
+}
+
+/*
+ * Destroy a capture session and free its resources
+ */
+void capture_destroy(struct capture_session *session) {
+    proxy_destroy(session->proxy);
+    free(session);
 }
