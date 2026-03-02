@@ -6,7 +6,5 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    sidecar_session_run(640, 480);
-
-    return 0;
+    return sidecar_session_run(640, 480);
 }

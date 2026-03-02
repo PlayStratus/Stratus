@@ -10,6 +10,8 @@ static void session_teardown(struct session *session) {
         capture_destroy(session->capture);
     if (session->encode != NULL)
         encoder_teardown(session->encode);
+    if (session->input != NULL)
+        input_destroy(session->input);
 
     free(session);
 }
@@ -36,9 +38,22 @@ int sidecar_session_run(int width, int height) {
     session->capture = capture_init(width, height, session->encode);
     if (session->capture == NULL)
         goto err;
+    session->input = input_init();
+    if (session->input == NULL)
+        goto err;
 
-    // Run modules
-    capture_run(session->capture);
+    // Start modules in separate threads
+    pthread_create(&session->capture_thread, NULL, (void *)&capture_run,
+                   session->capture);
+    pthread_create(&session->input_thread, NULL, (void *)&input_run,
+                   session->input);
+
+    // Wait for game to disconnect from Wayland proxy
+    pthread_join(session->capture_thread, NULL);
+
+    // Kill remaining threads and make sure they're dead
+    pthread_cancel(session->input_thread);
+    pthread_join(session->input_thread, NULL);
 
     // Teardown modules & session
     session_teardown(session);
