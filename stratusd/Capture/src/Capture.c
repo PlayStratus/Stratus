@@ -29,7 +29,7 @@
 #include "capture-priv.h"
 #include "resize-pub.h"
 #include "shm-buffers-pub.h"
-#include "dmabuf-buffers-pub.h"
+#include "dma-buffers-pub.h"
 #include "video-output-pub.h"
 
 /*
@@ -38,7 +38,7 @@
 const struct message_handler *message_handlers[] = {
     resize_message_handlers,
     shm_buffers_message_handlers,
-    dmabuf_buffers_message_handlers,
+    dma_buffers_message_handlers,
     video_output_message_handlers,
 };
 

@@ -145,7 +145,7 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     wl_buf->width = msg->closure->args[2].i;
     wl_buf->height = msg->closure->args[3].i;
     wl_buf->shm_buf = shm_buf;
-    wl_buf->dmabuf_buf = NULL;
+    wl_buf->dma_buf = NULL;
     wl_buf->dependents = 0;
     shm_buf->stride = msg->closure->args[4].i;
     pool = wl_map_lookup(map, msg->closure->sender_id);
