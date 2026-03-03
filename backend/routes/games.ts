@@ -1,6 +1,6 @@
 import express from "express"
 
-import { ControllerGetAll, ControllerGetByID } from "./gamesController.ts"
+import { ControllerGetAll, ControllerGetByID } from "./gamesController.js"
 
 const router = express.Router()
 

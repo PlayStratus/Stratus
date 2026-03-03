@@ -1,45 +1,51 @@
-import {GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb"
-import type { Request, Response } from 'express';
+import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb"
+import type { Request, Response } from "express"
 
-import { dynamoDb } from "../server.ts"
+import { dynamoDb } from "../server.js"
 
 type GameItem = {
-  GameID: string;              // Partition key
-  developer: string;           // Developer name
-  genres: string[];         // Genres (String array)
-  lDescript: string;           // Long description
-  s3: string[];             // S3 links (String array)
-  sDescript: string;           // Short description
-  title: string;               // Game title
-};
+  GameID: string // Partition key
+  developer: string // Developer name
+  genres: string[] // Genres (String array)
+  lDescript: string // Long description
+  s3: string[] // S3 links (String array)
+  sDescript: string // Short description
+  title: string // Game title
+}
 
-export const ControllerGetAll = async (req: Request, res: Response): Promise<void> => {
+export const ControllerGetAll = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
   try {
     const params = {
-    TableName: 'Games',
-    };
-    const games = await dynamoDb.send(new ScanCommand(params));
-    res.status(200).json(games.Items);
+      TableName: "Games",
+    }
+    const games = await dynamoDb.send(new ScanCommand(params))
+    res.status(200).json(games.Items)
   } catch (err) {
-    console.error('Error fetching games:', err);
-    res.status(500).json({ error: 'Failed to fetch games' });
+    console.error("Error fetching games:", err)
+    res.status(500).json({ error: "Failed to fetch games" })
   }
-};
+}
 
-export const ControllerGetByID = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+export const ControllerGetByID = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const { id } = req.params
   if (!id) {
-    res.status(400).json({ error: 'Game ID is required' });
-    return;
+    res.status(400).json({ error: "Game ID is required" })
+    return
   }
   try {
     const params = {
-    TableName: 'Games',
-    Key: {GameID :id} ,
-    };
-    const game = await dynamoDb.send(new GetCommand(params));
-    res.status(200).json(game.Item);
+      TableName: "Games",
+      Key: { GameID: id },
+    }
+    const game = await dynamoDb.send(new GetCommand(params))
+    res.status(200).json(game.Item)
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch game' });
+    res.status(500).json({ error: "Failed to fetch game" })
   }
-};
+}

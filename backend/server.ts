@@ -4,8 +4,8 @@ import cookieParser from "cookie-parser"
 import "dotenv/config"
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
-import usersRoutes from "./routes/users.ts"
-import gamesRoutes from "./routes/games.ts"
+import usersRoutes from "./routes/users.js"
+import gamesRoutes from "./routes/games.js"
 
 const app = express()
 const PORT = process.env.PORT || 4000

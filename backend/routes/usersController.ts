@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
 import type { Request, Response } from "express"
 
-import { dynamoDb } from "../server.ts"
+import { dynamoDb } from "../server.js"
 
 interface User {
   UserID: string // Partition key
@@ -65,7 +65,7 @@ export const ControllerGetUser = async (req: Request, res: Response) => {
 
 export const ControllerCreateUser = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<any> => {
   try {
     const { username } = req.body as any
@@ -121,7 +121,7 @@ export const ControllerCreateUser = async (
 
 export const ControllerGetUserByToken = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<any> => {
   try {
     // get auth token from header
@@ -162,7 +162,7 @@ export const ControllerGetUserByToken = async (
 
 export const ControllerRefreshToken = async (
   req: Request,
-  res: Response
+  res: Response,
 ): Promise<any> => {
   try {
     const refreshToken = req.cookies["refresh_token"]
@@ -184,7 +184,7 @@ export const ControllerRefreshToken = async (
       getEnv("AUTH_SECRET"),
       {
         expiresIn: "7d",
-      }
+      },
     )
 
     res.cookie("auth_token", newAuthToken, {
@@ -210,7 +210,7 @@ const createUser = async (user: Partial<User>): Promise<User> => {
   const allUsersResult = await dynamoDb.send(new ScanCommand(allUsersParams))
 
   const existingUsername = allUsersResult.Items?.find(
-    (item) => item.Username?.toLowerCase() === Username!.toLowerCase()
+    (item) => item.Username?.toLowerCase() === Username!.toLowerCase(),
   )
   if (existingUsername) {
     throw new Error("Username already exists")

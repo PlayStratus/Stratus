@@ -1,18 +1,19 @@
 {
   "compilerOptions": {
-    "module": "ESNext", 
-    "target": "ESNext", 
-    "moduleResolution": "node", 
-    "esModuleInterop": true, 
-    "allowSyntheticDefaultImports": true, 
-    "strict": true, 
-    "outDir": "./dist", 
-    "baseUrl": "./",
-    "paths": {
-      "*": ["node_modules/*"]
-    },
-    "allowImportingTsExtensions": true, 
-    "noEmit": true, 
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+
+    "outDir": "./dist",
+    "rootDir": ".",
+
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+
+    "sourceMap": true
   },
-  
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
