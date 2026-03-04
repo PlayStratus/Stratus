@@ -3,11 +3,13 @@
 This directory contains custom packages for running a stratusd node on Arch
 Linux.
 
-To setup a streaming node, run the following commands:
+To setup a streaming node, boot into a live Arch Linux environment on the
+machine and run the following command:
 
 ```
-$ makepkg --dir stratusd --install
-$ sudo loginctl enable-linger stratusd
-$ sudo -u stratusd XDG_RUNTIME_DIR=/run/user/$(id -u stratusd) systemctl --user enable stratusd
-$ sudo reboot now
+# curl -sL os.playstratus.io/install.sh | bash
 ```
+
+When the script completes, make a note of the account password that was printed,
+then reboot the machine to complete the installation. Additional configuration
+may still be needed.
