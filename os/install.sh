@@ -39,14 +39,16 @@ mount "$root_partition" /mnt
 mkdir /mnt/boot
 mount "$boot_partition" /mnt/boot
 
-# Add stratus repository
+# Add stratus repository (with higher priority than core repository)
 STRATUS_REPO=$(cat << EOF
-[stratus]
-SigLevel = Optional TrustAll
-Server = https://os.playstratus.io
+[stratus] \\
+SigLevel = Optional TrustAll \\
+Server = https://os.playstratus.io \\
+\\
+\\
 EOF
 )
-echo "$STRATUS_REPO" >> /etc/pacman.conf
+sed --in-place "s|^\[core\]|$STRATUS_REPO[core]|" /etc/pacman.conf
 
 # Detect CPU vendor
 if lscpu | grep --quiet Intel; then
@@ -59,13 +61,13 @@ else
 fi
 
 # Install packages
-pacstrap -K /mnt base linux linux-firmware networkmanager openssh stratusd \
-    stratus-launcher sudo $UCODE vim
+pacstrap -K /mnt base fastfetch linux linux-firmware networkmanager openssh \
+    stratusd stratus-launcher sudo $UCODE vim
 
 # Initialize basic config files
 genfstab -U /mnt >> /mnt/etc/fstab
 echo "$hostname" > /mnt/etc/hostname
-echo "$STRATUS_REPO" >> /mnt/etc/pacman.conf
+sed --in-place "s|^\[core\]|$STRATUS_REPO[core]|" /mnt/etc/pacman.conf
 
 # Enable system services
 arch-chroot /mnt systemctl enable NetworkManager
@@ -101,6 +103,15 @@ arch-chroot /mnt chsh -s /usr/bin/bash stratusd
 arch-chroot /mnt usermod -aG wheel stratusd
 echo '%wheel ALL=(ALL:ALL) ALL' > /mnt/etc/sudoers.d/stratusd
 
+# Configure OS info
+cat << EOF > /mnt/usr/lib/os-release
+NAME="Stratus OS"
+PRETTY_NAME="Stratus OS"
+ID=stratus
+ID_LIKE=arch
+BUILD_ID=rolling
+HOME_URL="https://www.playstratus.io"
+EOF
 
 # Print post-installation info
 echo '================================================================'
