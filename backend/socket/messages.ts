@@ -1,9 +1,10 @@
 import { WebSocket } from "ws"
+import { updateHeartbeat } from "./node"
 
-export function handleMessage(ws: WebSocket, message: any) {
+export function handleMessage(ws: WebSocket, message: any) {        //most functions here are currently placeholder to build out
   switch (message.type) {
     case "heartbeat":
-      heartbeat(ws)
+      updateHeartbeat(ws, message.payload)
       break
 
     case "start_confirmed":
@@ -23,10 +24,6 @@ export function handleMessage(ws: WebSocket, message: any) {
   }
 }
 
-
-function heartbeat(ws: WebSocket) {
-  console.log("heartbeat" )
-}
 
 function start_confirmed(ws: WebSocket) {
   console.log("start")
