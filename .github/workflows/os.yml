@@ -5,12 +5,14 @@ on:
     branches: main
     paths:
       - .github/workflows/os.yml
+      - games/stratus-launcher.sh
       - os/**
       - stratusd/**
 
   pull_request:
     paths:
       - .github/workflows/os.yml
+      - games/stratus-launcher.sh
       - os/**
       - stratusd/**
 
@@ -36,6 +38,7 @@ jobs:
       - name: Build stratus Arch packages
         run: |
           su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/stratusd'
+          su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/stratus-launcher'
 
       - name: Construct stratus Arch repository
         run: |

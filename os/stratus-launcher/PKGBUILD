@@ -1,0 +1,31 @@
+# Maintainer: Stratus
+
+pkgname=stratus-launcher
+pkgver=0.0.r159.g0fd9a41
+pkgrel=1
+pkgdesc='The stratus game launcher'
+arch=('x86_64')
+url='https://github.com/playstratus/stratus'
+license=('MIT')
+
+depends=('bubblewrap' 'fuse' 'wine' 'wine-mono')
+makedepends=('git')
+
+provides=('stratus-launcher')
+
+options=('!debug')
+
+source=(
+  # TODO: This isn't quite best-practice, we should just download a release
+  # tarball from GitHub instead once Stratus is published.
+  "stratus::git+file://$(git rev-parse --show-toplevel)"
+)
+sha256sums=('SKIP')
+
+pkgver() {
+  git describe --tags --long --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+package() {
+  install -Dm755 "$srcdir/stratus/games/stratus-launcher.sh" "$pkgdir/usr/bin/stratus-launcher"
+}
