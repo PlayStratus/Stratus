@@ -198,6 +198,7 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
             if (buf->shm_buf != NULL)
                 wl_shm_surface_commit(capture_data, surf); // Handle shm frame
             */
+
             if (buf->dma_buf != NULL)
                 wl_dmabuf_surface_commit(capture_data, surf); // Handle dmabuf frame
 

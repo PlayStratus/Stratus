@@ -8,7 +8,9 @@ int test_encode(){
     int height = 480;
     int num_frames = 120;
 
-    encoder_context *encoder = encoder_startup(/*"output.h264", */width, height);
+    enum AVPixelFormat pix_fmt = AV_PIX_FMT_ARGB;
+
+    encoder_context *encoder = encoder_startup(/*"output.h264", */width, height, pix_fmt);
     if (!encoder) {
         return 1;
     }
@@ -47,7 +49,10 @@ void cleanup_encoder(encoder_context *state) {
     free(state);
 }
 
-encoder_context* encoder_startup(/*const char *output_file, */int width, int height) {
+encoder_context* encoder_startup(/*const char *output_file, */
+    int width,
+    int height,
+    enum AVPixelFormat input_pix_fmt) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
         fprintf(stderr, "Failed to allocate encoder context\n");
@@ -117,7 +122,7 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
     }
 
     // Initialize swscale context
-    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_RGBA,
+    state->sws_ctx = sws_getContext(width, height, input_pix_fmt,
                                     width, height, AV_PIX_FMT_YUV420P,
                                     SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->sws_ctx) {
@@ -136,6 +141,30 @@ encoder_context* encoder_startup(/*const char *output_file, */int width, int hei
 
     printf("Encoder initialized: %dx%d\n", width, height);
     return state;
+}
+
+int dma_encode_video_frame(
+        encoder_context *state,
+        struct egl_capture_context *egl_capture,
+        struct wl_dma_buffer *dma_buf,
+        int stride) {
+
+    size_t pixel_size = dma_buf->width * dma_buf->height * 4; // RGBA specific
+    uint8_t *pixel_data = malloc(pixel_size);
+
+    if (pixel_data == NULL) {
+        fprintf(stderr, "Failed to allocate pixel buffer\n");
+        return -1;
+    }
+
+    if (egl_capture_dmabuf_frame(egl_capture, dma_buf, pixel_data) < 0){
+        fprintf(stderr, "Error during egl capture!\n");
+        return -1;
+    }
+
+    assert(encode_video_frame(state, pixel_data, stride) == 0);
+
+    free(pixel_data);
 }
 
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
@@ -160,6 +189,7 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
     state->frame_count++;
     return 0;
 }
+
 
 int encoder_teardown(encoder_context *state) {
     if (!state) {
