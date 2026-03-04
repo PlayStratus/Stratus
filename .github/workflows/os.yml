@@ -1,0 +1,56 @@
+name: Stratus OS CI/CD
+
+on:
+  push:
+    branches: main
+    paths:
+      - .github/workflows/os.yml
+      - os/**
+      - stratusd/**
+
+  pull_request:
+    paths:
+      - .github/workflows/os.yml
+      - os/**
+      - stratusd/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: docker.io/library/archlinux:base-devel
+    steps:
+      - name: Sync pacman repositories and install dependencies
+        run: pacman -Syu aws-cli git --noconfirm
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create unprivileged user
+        run: |
+          useradd -m arch
+          echo 'arch ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+          chown arch:arch -R .
+
+      - name: Build stratus Arch packages
+        run: |
+          su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/stratusd'
+
+      - name: Construct stratus Arch repository
+        run: |
+          mkdir os/repo
+          cp os/*/*.pkg.tar.zst os/repo
+          repo-add os/repo/stratus.db.tar.zst os/repo/*.pkg.tar.zst
+
+      - name: Setup AWS CLI
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload stratus Arch repository to S3 bucket
+        if: github.ref == 'refs/heads/main'
+        run: aws s3 sync os/repo 's3://${{ vars.AWS_OS_BUCKET }}' --delete

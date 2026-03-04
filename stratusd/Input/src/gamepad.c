@@ -8,6 +8,7 @@
  */
 
 #include <libevdev/libevdev-uinput.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -72,8 +73,10 @@ struct gamepad *gamepad_init(char *name) {
 
     // Create gamepad struct
     gamepad = malloc(sizeof(struct gamepad));
-    if (gamepad == NULL)
+    if (gamepad == NULL) {
+        perror("[Input] malloc");
         goto err_malloc;
+    }
     memset(gamepad, 0x00, sizeof(struct gamepad));
 
     // Initialize libevdev device
@@ -83,20 +86,26 @@ struct gamepad *gamepad_init(char *name) {
     // Configure supported uinput events
     for (i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
         if (libevdev_enable_event_code(dev, EV_KEY, gamepad_button_codes[i],
-                                       NULL) < 0)
+                                       NULL) < 0) {
+            perror("[Input] libevdev_enable_event_code");
             goto err_event_code;
+        }
     }
     for (i = 0; i < GAMEPAD_AXIS_COUNT; i++) {
         if (libevdev_enable_event_code(dev, EV_ABS, gamepad_axis_codes[i],
-                                       &absinfo) < 0)
+                                       &absinfo) < 0) {
+            perror("[Input] libevdev_enable_event_code");
             goto err_event_code;
+        }
     }
 
     // Register gamepad device
     libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED,
                                        &gamepad->uidev);
-    if (gamepad->uidev == NULL)
+    if (gamepad->uidev == NULL) {
+        perror("[Input] libevdev_uinput_create_from_device");
         goto err_create;
+    }
 
     libevdev_free(dev);
     return gamepad;
@@ -150,7 +159,12 @@ int gamepad_update(struct gamepad *gamepad, struct gamepad_state *new_state) {
         err += libevdev_uinput_write_event(gamepad->uidev, EV_SYN, SYN_REPORT,
                                            0);
 
-    return err == 0 ? 0 : -1;
+    if (err != 0) {
+        perror("[Input] libevdev_uinput_write_event");
+        return -1;
+    }
+
+    return 0;
 }
 
 /*

@@ -19,7 +19,7 @@ typedef struct {
 } encoder_context;
 
 int test_encode();
-encoder_context* encoder_startup(/*const char *output_file, */int width, int height);
+encoder_context* encoder_startup(const char *output_file, int width, int height);
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer, int stride);
 int encoder_teardown(encoder_context *state);
 

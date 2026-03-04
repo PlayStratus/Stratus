@@ -35,11 +35,11 @@ void gamepad_stk_console(struct gamepad *gamepad) {
     struct gamepad_state state;
 
     if (!isatty(0)) {
-        fprintf(stderr, "Not running SuperTuxKart controller console because stdin isn't a tty\n");
+        fprintf(stderr, "[Input] Not running SuperTuxKart controller console because stdin isn't a tty\n");
         return;
     }
 
-    printf("Running SuperTuxKart controller console...\n");
+    fprintf(stderr, "[Input] Running SuperTuxKart controller console...\n");
 
     system("/bin/stty cbreak");
     while ((c = getchar()) != 'q') {
@@ -75,13 +75,12 @@ struct input_session *input_init() {
 
     session = malloc(sizeof(struct input_session));
     if (session == NULL) {
-        fprintf(stderr, "Failed to allocate input session\n");
+        perror("[Input] malloc");
         return NULL;
     }
 
     session->gamepad = gamepad_init("stratus");
     if (session->gamepad == NULL) {
-        fprintf(stderr, "Failed to initialize gamepad\n");
         free(session);
         return NULL;
     }

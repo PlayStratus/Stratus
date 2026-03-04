@@ -1,0 +1,13 @@
+[Unit]
+Description=The stratus game streaming daemon
+After=network.target
+Requires=stratusd-weston.service
+After=stratusd-weston.service
+
+[Service]
+Environment="WAYLAND_DISPLAY=weston"
+ExecStart=/usr/bin/stratusd --daemon
+Restart=always
+
+[Install]
+WantedBy=default.target

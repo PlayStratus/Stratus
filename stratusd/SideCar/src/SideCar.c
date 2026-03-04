@@ -21,18 +21,20 @@ static void session_teardown(struct session *session) {
  *
  * Returns 0 on success and -1 on failure.
  */
-int sidecar_session_run(int width, int height) {
+int sidecar_session_run(int width, int height, char *encode_output) {
     struct session *session;
 
     // Create session struct
     session = malloc(sizeof(struct session));
-    if (session == NULL)
+    if (session == NULL) {
+        perror("[Sidecar] malloc");
         goto err;
+    }
     memset(session, 0x00, sizeof(struct session));
 
     // Initialize modules
     // Order is important here! Some modules must be initialized before others.
-    session->encode = encoder_startup(width, height);
+    session->encode = encoder_startup(encode_output, width, height);
     if (session->encode == NULL)
         goto err;
     session->capture = capture_init(width, height, session->encode);

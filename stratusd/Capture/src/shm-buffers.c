@@ -57,8 +57,10 @@ enum proxy_actions wl_shm_create_pool(struct proxy_message *msg) {
     struct wl_shm_pool *pool;
 
     pool = malloc(sizeof(struct wl_shm_pool));
-    if (pool == NULL)
+    if (pool == NULL) {
+        perror("[Capture] malloc");
         return PROXY_ACTION_ERR;
+    }
 
     pool->id = msg->closure->args[0].n;
     pool->size = msg->closure->args[2].i;
@@ -66,14 +68,17 @@ enum proxy_actions wl_shm_create_pool(struct proxy_message *msg) {
     fd = msg->closure->args[1].h;
     pool->p = mmap(NULL, pool->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (pool->p == MAP_FAILED) {
+        perror("[Capture] mmap");
         free(pool);
         return PROXY_ACTION_ERR;
     }
 
     map = msg->conn->session->obj_data;
     assert(wl_map_lookup(map, pool->id) == NULL);
-    if (wl_map_insert_at(map, 0, pool->id, pool) < 0)
+    if (wl_map_insert_at(map, 0, pool->id, pool) < 0) {
+        perror("[Capture] wl_map_insert_at");
         return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }
@@ -132,10 +137,13 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     struct wl_shm_buffer *shm_buf;
 
     wl_buf = malloc(sizeof(struct wl_buffer));
-    if (wl_buf == NULL)
+    if (wl_buf == NULL) {
+        perror("[Capture] malloc");
         return PROXY_ACTION_ERR;
+    }
     shm_buf = malloc(sizeof(struct wl_shm_buffer));
     if (shm_buf == NULL) {
+        perror("[Capture] malloc");
         free(wl_buf);
         return PROXY_ACTION_ERR;
     }
@@ -157,8 +165,10 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     assert(msg->closure->args[5].u == 0 || msg->closure->args[5].u == 1);
 
     assert(wl_map_lookup(map, wl_buf->id) == NULL);
-    if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0)
+    if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0) {
+        perror("[Capture] wl_map_insert_at");
         return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }

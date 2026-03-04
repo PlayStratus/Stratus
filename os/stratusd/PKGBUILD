@@ -1,0 +1,48 @@
+# Maintainer: Stratus
+
+pkgname=stratusd
+pkgver=0.0
+pkgrel=1
+pkgdesc="The stratus game streaming daemon"
+arch=('x86_64')
+url="https://github.com/playstratus/stratus"
+license=('MIT')
+
+depends=('ffmpeg' 'libpipewire' 'weston')
+makedepends=('cmake' 'git')
+
+provides=('stratusd')
+
+options=('!debug')
+
+source=(
+  # TODO: This isn't quite best-practice, we should just download a release
+  # tarball from GitHub instead once Stratus is published.
+  "stratus::git+file://$(git rev-parse --show-toplevel)"
+
+  'stratusd.tmpfiles'
+  'stratusd.service'
+  'stratusd-weston.service'
+  'stratusd.sysusers'
+  'udev.rules'
+)
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+
+pkgver() {
+  cd stratus
+  git describe --tags --long --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cmake -B stratus/stratusd/build -S stratus/stratusd
+  cmake --build stratus/stratusd/build
+}
+
+package() {
+  install -Dm755 "$srcdir/stratus/stratusd/build/stratusd" "$pkgdir/usr/bin/stratusd"
+  install -Dm644 "$srcdir/stratusd.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/stratusd.conf"
+  install -Dm644 "$srcdir/stratusd.service" "$pkgdir/usr/lib/systemd/user/stratusd.service"
+  install -Dm644 "$srcdir/stratusd-weston.service" "$pkgdir/usr/lib/systemd/user/stratusd-weston.service"
+  install -Dm644 "$srcdir/stratusd.sysusers" "$pkgdir/usr/lib/sysusers.d/stratusd.conf"
+  install -Dm644 "$srcdir/udev.rules" "$pkgdir/usr/lib/udev/rules.d/60-stratus.rules"
+}

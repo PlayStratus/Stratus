@@ -1,14 +1,14 @@
 #include "Encode.h"
 #include "EncodeUtils.h"
 
-const char *output_file = "encode_output.h264";
-
 int test_encode(){
     int width = 640;
     int height = 480;
     int num_frames = 120;
 
-    encoder_context *encoder = encoder_startup(/*"output.h264", */width, height);
+    const char *output_file = "encode_output.h264";
+
+    encoder_context *encoder = encoder_startup(output_file, width, height);
     if (!encoder) {
         return 1;
     }
@@ -47,7 +47,7 @@ void cleanup_encoder(encoder_context *state) {
     free(state);
 }
 
-encoder_context* encoder_startup(/*const char *output_file, */int width, int height) {
+encoder_context* encoder_startup(const char *output_file, int width, int height) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
         fprintf(stderr, "Failed to allocate encoder context\n");

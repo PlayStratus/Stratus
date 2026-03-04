@@ -44,7 +44,7 @@ const struct message_handler *message_handlers[] = {
  * Handle a new proxy session
  */
 static int handle_session_create(struct proxy_session *session) {
-    printf("Client %s connected\n", session->name);
+    fprintf(stderr, "[Capture] Client %s connected\n", session->name);
 
     return 0;
 }
@@ -60,8 +60,9 @@ static enum proxy_actions handle_message(struct proxy_message *msg) {
     for (i = 0; i < count; i++) {
         for (j = 0; message_handlers[i][j].handler != NULL; j++) {
             if (!strcmp(msg->interface->name, message_handlers[i][j].obj_name) &&
-                !strcmp(msg->closure->message->name, message_handlers[i][j].msg_name))
+                !strcmp(msg->closure->message->name, message_handlers[i][j].msg_name)) {
                 return (*message_handlers[i][j].handler)(msg);
+            }
         }
     }
 
@@ -113,7 +114,7 @@ static enum wl_iterator_result destroy_object(void *element, void *data,
  * Handle a proxy session being destroyed
  */
 static void handle_session_destroy(struct proxy_session *session) {
-    printf("Client %s disconnected\n", session->name);
+    fprintf(stderr, "[Capture] Client %s disconnected\n", session->name);
 
     // Destroy all remaining Wayland objects so that their resources are freed
     wl_map_for_each(session->obj_data, destroy_object, session);
@@ -135,7 +136,7 @@ struct capture_session *capture_init(uint32_t width, uint32_t height,
 
     session = malloc(sizeof(struct capture_session));
     if (session == NULL) {
-        fprintf(stderr, "Failed to allocate capture session\n");
+        perror("[Capture] malloc");
         return NULL;
     }
 
@@ -145,7 +146,6 @@ struct capture_session *capture_init(uint32_t width, uint32_t height,
 
     session->proxy = proxy_init("stratus");
     if (session->proxy == NULL) {
-        fprintf(stderr, "Failed to initialize proxy\n");
         free(session);
         return NULL;
     }
@@ -163,12 +163,10 @@ struct capture_session *capture_init(uint32_t width, uint32_t height,
  * Returns 0 on success and -1 on failure.
  */
 int capture_run(struct capture_session *session) {
-    printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
+    fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);
-    if (proxy_run(session->proxy) < 0) {
-        fprintf(stderr, "Proxy exited unsucessfully\n");
+    if (proxy_run(session->proxy) < 0)
         return -1;
-    }
     return 0;
 }
 

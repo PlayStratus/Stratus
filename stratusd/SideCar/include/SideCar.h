@@ -20,6 +20,6 @@ struct session {
     struct input_session *input;        // internal data for Input module
 };
 
-int sidecar_session_run(int width, int height);
+int sidecar_session_run(int width, int height, char *encode_output);
 
 #endif

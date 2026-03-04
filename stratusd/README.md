@@ -7,14 +7,14 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install libpipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
+    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
     - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel`
     - Arch: `# pacman -S libevdev libpipewire ffmpeg`
 
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
 
     ```
-    # cp Input/udev.rules /etc/udev/rules.d/60-stratus.rules
+    # cp ../os/stratusd/udev.rules > /etc/udev/rules.d/60-stratus.rules
     # usermod -aG input <username>
     # reboot
     ```

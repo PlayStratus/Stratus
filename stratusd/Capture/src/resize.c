@@ -34,11 +34,15 @@ enum proxy_actions xdg_surface_get_toplevel(struct proxy_message *msg) {
     args[0].i = session->width;
     args[1].i = session->height;
     args[2].a = malloc(sizeof(struct wl_array));
-    if (args[2].a == NULL)
+    if (args[2].a == NULL) {
+        perror("[Capture] malloc");
         goto err_malloc;
+    }
     wl_array_init(args[2].a);
-    if (wl_array_add(args[2].a, 6 * sizeof(uint32_t)) == NULL)
+    if (wl_array_add(args[2].a, 6 * sizeof(uint32_t)) == NULL) {
+        perror("[Capture] wl_array_add");
         goto err_add;
+    }
     ((uint32_t*)args[2].a->data)[0] = 2; // set fullscreen state
     ((uint32_t*)args[2].a->data)[1] = 4; // set activated state
     ((uint32_t*)args[2].a->data)[2] = 5; // set tiled_left state
@@ -48,8 +52,10 @@ enum proxy_actions xdg_surface_get_toplevel(struct proxy_message *msg) {
     res = wl_closure_init(&xdg_toplevel_interface.events[0], 0, NULL, args);
     res->sender_id = msg->closure->args[0].n;
     res->opcode = 0; // xdg_toplevel event #0 is configure event
-    if (wl_closure_send(res, msg->conn->session->client->wl_conn) < 0)
+    if (wl_closure_send(res, msg->conn->session->client->wl_conn) < 0) {
+        perror("[Capture] wl_closure_send");
         goto err_send;
+    }
     wl_array_release(args[2].a);
     free(args[2].a);
     wl_closure_destroy(res);
