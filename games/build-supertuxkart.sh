@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-# Usage: ./supertuxkart.sh [<app-image-path>]
+# Usage: ./build-supertuxkart.sh [<app-image-path>]
 
 # This script creates a AppImage for SuperTuxKart that uses stratus-launcher.
 # Even though SuperTuxKart runs natively on Linux, we use the Windows version to
