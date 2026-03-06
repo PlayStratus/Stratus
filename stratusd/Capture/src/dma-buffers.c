@@ -10,10 +10,6 @@
 #include "dma-buffers-priv.h"
 #include "EGLUtils.h"
 
-// TODO move egl_capture into dma_encode function
-// flag specifying pixel format for encode
-
-
 /*
  * Handle a zwp_linux_dmabuf_v1@create_params request
  *
@@ -223,23 +219,23 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
     dma_buf = wl_buf->dma_buf;
     assert(dma_buf != NULL);
 
-    // Initialize EGL capture context if not already done
-    if (data->egl_capture == NULL) {
 
-        data->egl_capture = egl_capture_init();
+    // Initialize encoder if not already done
+    if (data->encoder == NULL) {
+        data->encoder = encoder_startup(wl_buf->width, wl_buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_ARGB);
+        if (data->encoder == NULL)
+            return PROXY_ACTION_ERR;
+    }
+    // `
+    // Initialize EGL capture context if not already done
+    if (data->encoder->egl_ctx == NULL) {
+        data->encoder->egl_ctx = egl_capture_init();
         if (data->egl_capture == NULL)
             return PROXY_ACTION_ERR;
     }
 
-    // Initialize encoder if not already done
-    if (data->encoder == NULL) {
-        data->encoder = encoder_startup(wl_buf->width, wl_buf->height, AV_PIX_FMT_RGBA);
-        if (data->encoder == NULL)
-            return PROXY_ACTION_ERR;
-    }
-
     int stride = dma_buf->width * 4;
-    if (dma_encode_video_frame(data->encoder, data->egl_capture, dma_buf, stride) < 0)
+    if (dma_encode_video_frame(data->encoder, dma_buf, stride) < 0)
         return PROXY_ACTION_ERR;
 
     return PROXY_ACTION_FWD;

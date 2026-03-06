@@ -201,13 +201,13 @@ enum proxy_actions wl_shm_surface_commit(struct capture_data *data,
 
     if (data->encoder == NULL) {
         // Initialize encoder
-        data->encoder = encoder_startup(surf->buf->width, surf->buf->height, AV_PIX_FMT_BGR0);
+        data->encoder = encoder_startup(surf->buf->width, surf->buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_ARGB);
         if (data->encoder == NULL)
             return PROXY_ACTION_ERR;
     }
 
     // Encode frame
-    assert(encode_video_frame(data->encoder, shm_buf->p, shm_buf->stride) == 0);
+    assert(encode_video_frame(data->encoder, shm_buf->p, shm_buf->stride, 0) == 0);
 
     return PROXY_ACTION_FWD;
 }
