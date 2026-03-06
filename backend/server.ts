@@ -14,10 +14,6 @@ const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-west-2",
 })
 
-if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-  throw new Error("Missing AWS credentials env vars")
-}
-
 export const dynamoDb = DynamoDBDocumentClient.from(client)
 
 app.use(
