@@ -7,6 +7,7 @@ target_link_libraries(wayland-scanner PRIVATE expat)
 
 set(protocols
   linux-dmabuf-v1 presentation-time tablet-v2 viewporter wayland xdg-shell
+  pointer-constraints-unstable-v1 relative-pointer-unstable-v1
 )
 foreach(protocol ${protocols})
   add_custom_command(

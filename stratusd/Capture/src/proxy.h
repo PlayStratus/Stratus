@@ -36,6 +36,7 @@ struct proxy_conn {
  * Contains data for one of a proxy's client/server sessions
  */
 struct proxy_session {
+    char *name;
     struct proxy_conn *client;
     struct proxy_conn *server;
     struct wl_map *obj_types;   // for internal use by proxy
@@ -77,10 +78,12 @@ struct proxy {
     proxy_on_session_create_handler *on_session_create;
     proxy_on_session_destroy_handler *on_session_destroy;
     proxy_on_message_handler *on_message;
+    void *userdata; // for external use by caller
 
     int epoll_fd;
     struct wl_socket *socket;
-    int session_count;
+    int next_session_id;
+    struct proxy_session **sessions;
 };
 
 struct proxy *proxy_init(char *name);

@@ -1,0 +1,44 @@
+name: Games CI/CD
+
+on:
+  push:
+    branches: main
+    paths:
+      - .github/workflows/games.yml
+      - games/**
+
+  pull_request:
+    paths:
+      - .github/workflows/games.yml
+      - games/**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install appimagetool
+        run: |
+          wget https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage -O /usr/local/bin/appimagetool
+          chmod +x /usr/local/bin/appimagetool
+
+      - name: Build games
+        run: |
+          mkdir games/build/
+          ./games/supertuxkart.sh games/build/c3770c11-ecaf-4852-96b0-37269736a6fc
+
+      - name: Setup AWS CLI
+        if: github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload games to S3 bucket
+        if: github.ref == 'refs/heads/main'
+        run: aws s3 sync games/build 's3://${{ vars.AWS_GAMES_BUCKET }}'
+        # Note: we don't pass --delete, so manually-uploaded games will not be
+        # removed from the bucket

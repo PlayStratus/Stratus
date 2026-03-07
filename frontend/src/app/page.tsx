@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { buttonVariants } from "@/components/ui/button"
 import {
   Card,
@@ -7,6 +8,7 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 import { getGames } from "@/lib/actions/games"
+import wordmarkLogo from "@/assets/wordmark-logo.png"
 
 const games = await getGames()
 
@@ -45,39 +47,98 @@ const aboutUs = [
 
 export default function Home() {
   return (
-    <main className='min-h-screen container mx-auto'>
-      <div className='flex flex-col items-center justify-center px-4 py-20 text-center max-w-6xl mx-auto'>
-        <h1 className='text-6xl md:text-8xl font-extrabold mb-6'>Stratus</h1>
+    <main className='min-h-screen'>
+      <section className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-60"
+        >
+          <source src="/gradient.mp4" type="video/mp4" />
+        </video>
 
-        <p className='text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl'>
-          The Beaver's Game Streaming Service
-        </p>
+        <div className="relative z-10 flex flex-col items-center justify-center px-4 py-20 text-center max-w-6xl mx-auto">
+          <div className="mb-6 w-[min(720px,92vw)]">
+            <Image
+              src={wordmarkLogo}
+              alt="Stratus"
+              priority
+              className="h-auto w-full drop-shadow-md"
+              sizes="(min-width: 768px) 720px, 92vw"
+            />
+          </div>
 
-        <div className='flex flex-col sm:flex-row gap-4'>
-          <Link
-            href='/signin'
-            className={buttonVariants({
-              size: "lg",
-              className: "text-lg px-10 py-6",
-            })}
-          >
-            Get Started
-          </Link>
+          <p className='text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl'>
+            The Beaver's Game Streaming Service
+          </p>
 
-          <Link
-            href='/signin'
-            className={buttonVariants({
-              variant: "outline",
-              size: "lg",
-              className: "text-lg px-10 py-6",
-            })}
-          >
-            Log In
-          </Link>
+          <div className='flex flex-col sm:flex-row gap-4'>
+            <Link
+              href='/signin'
+              className={buttonVariants({
+                size: "lg",
+                className: "text-lg px-10 py-6",
+              })}
+            >
+              Get Started
+            </Link>
+
+            <Link
+              href='/signin'
+              className={buttonVariants({
+                variant: "outline",
+                size: "lg",
+                className: "text-lg px-10 py-6",
+              })}
+            >
+              Log In
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <div className='px-4 py-16 w-full'>
+        <div className="pointer-events-none absolute bottom-8 left-1/2 z-10 -translate-x-1/2 select-none">
+          <div className="flex flex-col items-center gap-2 text-sm tracking-wide text-foreground/70">
+            <span className="motion-reduce:animate-none animate-pulse">
+              Scroll for more
+            </span>
+            <div className="flex flex-col items-center leading-none">
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-4 w-4 motion-reduce:animate-none animate-bounce"
+              >
+                <path
+                  d="M6 9l6 6 6-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-4 w-4 -mt-2 motion-reduce:animate-none animate-bounce [animation-delay:150ms]"
+              >
+                <path
+                  d="M6 9l6 6 6-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className='container mx-auto px-4 py-16 w-full'>
         <h2 className='text-3xl md:text-4xl font-bold mb-4'>Featured Games</h2>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
@@ -100,8 +161,13 @@ export default function Home() {
         </div>
       </div>
 
-      <div className='px-4 py-16 mx-auto'>
-        <h2 className='text-3xl md:text-4xl font-bold mb-4'>About Us</h2>
+      <div className='container mx-auto px-4 py-16'>
+        <div className='flex items-baseline gap-4 mb-4'>
+          <h2 className='text-3xl md:text-4xl font-bold'>About Us</h2>
+          <Link href='/about' className='text-primary hover:underline hover:text-primary/80 transition-colors font-medium'>
+            See more
+          </Link>
+        </div>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
           {aboutUs.map((info, index) => (

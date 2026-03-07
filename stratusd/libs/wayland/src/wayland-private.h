@@ -292,12 +292,4 @@ wl_closure_init(const struct wl_message *message, uint32_t size,
 
 int
 wl_closure_send(struct wl_closure *closure, struct wl_connection *connection);
-
-// STRATUS: created wl_connection_pending_fds() and wl_connection_read_fd()
-// functions
-uint32_t
-wl_connection_pending_fds(struct wl_connection *connection);
-
-int
-wl_connection_read_fds(struct wl_connection *connection, int n, int *fds);
 #endif

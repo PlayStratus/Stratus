@@ -1628,19 +1628,3 @@ wl_closure_destroy(struct wl_closure *closure)
 	wl_closure_close_fds(closure);
 	free(closure);
 }
-
-// STRATUS: created wl_connection_pending_fds() and wl_connection_read_fd()
-// functions
-uint32_t
-wl_connection_pending_fds(struct wl_connection *connection)
-{
-	return ring_buffer_size(&connection->fds_in) / sizeof(int);
-}
-
-int
-wl_connection_read_fds(struct wl_connection *connection, int n, int *fds) {
-        if (connection->fds_in.tail + n * sizeof(int) > connection->fds_in.head)
-		return -1;
-	ring_buffer_copy(&connection->fds_in, fds, n * sizeof(int));
-	return 0;
-}

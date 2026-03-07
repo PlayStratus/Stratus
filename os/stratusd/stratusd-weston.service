@@ -1,0 +1,10 @@
+[Unit]
+Description=A Weston session for the stratus game streaming daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/weston --backend headless --socket=weston
+Restart=always
+
+[Install]
+WantedBy=default.target
