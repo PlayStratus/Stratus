@@ -222,7 +222,7 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
 
     // Initialize encoder if not already done
     if (data->encoder == NULL) {
-        data->encoder = encoder_startup(wl_buf->width, wl_buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_ARGB);
+        data->encoder = encoder_startup(wl_buf->width, wl_buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_RGBA);
         if (data->encoder == NULL)
             return PROXY_ACTION_ERR;
     }
@@ -230,7 +230,7 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
     // Initialize EGL capture context if not already done
     if (data->encoder->egl_ctx == NULL) {
         data->encoder->egl_ctx = egl_capture_init();
-        if (data->egl_capture == NULL)
+        if (data->encoder->egl_ctx == NULL)
             return PROXY_ACTION_ERR;
     }
 

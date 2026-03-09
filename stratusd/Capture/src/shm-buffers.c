@@ -201,7 +201,7 @@ enum proxy_actions wl_shm_surface_commit(struct capture_data *data,
 
     if (data->encoder == NULL) {
         // Initialize encoder
-        data->encoder = encoder_startup(surf->buf->width, surf->buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_ARGB);
+        data->encoder = encoder_startup(surf->buf->width, surf->buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_RGBA);
         if (data->encoder == NULL)
             return PROXY_ACTION_ERR;
     }
