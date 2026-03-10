@@ -29,6 +29,7 @@
 #include "capture-priv.h"
 #include "resize-pub.h"
 #include "shm-buffers-pub.h"
+#include "dma-buffers-pub.h"
 #include "video-output-pub.h"
 
 /*
@@ -37,6 +38,7 @@
 const struct message_handler *message_handlers[] = {
     resize_message_handlers,
     shm_buffers_message_handlers,
+    dma_buffers_message_handlers,
     video_output_message_handlers,
 };
 
@@ -126,13 +128,14 @@ static void handle_session_destroy(struct proxy_session *session) {
  * Returns a pointer to the created capture session on success and NULL on
  * failure.
  */
-struct capture_session *capture_init(uint32_t width, uint32_t height,
-                                     encoder_context *encoder) {
+struct capture_session *capture_init(char *encode_output, uint32_t width,
+                                     uint32_t height, encoder_context *encoder)
+{
     struct capture_session *session;
 
     assert(width > 0);
     assert(height > 0);
-    assert(encoder != NULL);
+    assert(encoder == NULL); // See TODO below in capture_run
 
     session = malloc(sizeof(struct capture_session));
     if (session == NULL) {
@@ -140,6 +143,7 @@ struct capture_session *capture_init(uint32_t width, uint32_t height,
         return NULL;
     }
 
+    session->encode_output = encode_output;
     session->width = width;
     session->height = height;
     session->encoder = encoder;
@@ -163,6 +167,20 @@ struct capture_session *capture_init(uint32_t width, uint32_t height,
  * Returns 0 on success and -1 on failure.
  */
 int capture_run(struct capture_session *session) {
+    // TODO: EGL doesn't like being initialized in one thread and then run in
+    // a different thread. It's possible to change this, but eventually the
+    // Encode module will be running completely in its own thread anyway. So for
+    // now we will just initialize it in the Capture thread, since that's where
+    // its called from.
+    session->encoder = encoder_startup(session->encode_output, session->width,
+                                       session->height, AV_PIX_FMT_BGR0,
+                                       AV_PIX_FMT_RGBA);
+    if (session->encoder == NULL)
+        return -1;
+    session->encoder->egl_ctx = egl_capture_init();
+    if (session->encoder->egl_ctx == NULL)
+        return -1;
+
     fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);
     if (proxy_run(session->proxy) < 0)
@@ -174,6 +192,8 @@ int capture_run(struct capture_session *session) {
  * Destroy a capture session and free its resources
  */
 void capture_destroy(struct capture_session *session) {
+    if (session->encoder != NULL)
+        encoder_teardown(session->encoder);
     proxy_destroy(session->proxy);
     free(session);
 }

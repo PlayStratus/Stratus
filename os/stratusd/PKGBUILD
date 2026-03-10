@@ -8,7 +8,7 @@ arch=('x86_64')
 url="https://github.com/playstratus/stratus"
 license=('MIT')
 
-depends=('ffmpeg' 'libpipewire' 'weston')
+depends=('ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'weston')
 makedepends=('cmake' 'git')
 
 provides=('stratusd')

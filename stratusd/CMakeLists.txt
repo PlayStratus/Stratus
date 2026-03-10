@@ -15,6 +15,7 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavformat
     libavutil
     libswscale)
+find_package(OpenGL COMPONENTS GLES3 EGL REQUIRED)
 
 add_subdirectory(Capture)
 add_subdirectory(Encode)

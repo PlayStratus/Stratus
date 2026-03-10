@@ -12,6 +12,7 @@
 
 #include "capture-priv.h"
 #include "shm-buffers-priv.h"
+#include "dma-buffers-priv.h"
 #include "video-output-pub.h"
 #include "video-output-priv.h"
 
@@ -52,9 +53,13 @@ static void wl_buffer_free(struct wl_buffer *buf) {
     assert(buf->id == 0); // The wl_buffer must be destroyed
     assert(buf->dependents == 0); // The wl_buffer must not be attached
 
-    // Free wl_shm_buffer if defined
+    // Free backed buffer if defined
     if (buf->shm_buf != NULL)
         wl_shm_buffer_free(buf->shm_buf);
+
+    if (buf->dma_buf != NULL)
+        wl_dma_buffer_free(buf->dma_buf);
+
 
     free(buf);
 }
@@ -190,8 +195,16 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
         if (buf->width > 64 && buf->height > 64) {
             // A >64x64 frame probably isn't the cursor, so let's process it.
             session = msg->conn->session->proxy->userdata;
+
+            assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
+            /* Commented out until viewport changes force correct resolution
+             * mostly we will use dmabuf anyway
             if (buf->shm_buf != NULL)
                 wl_shm_surface_commit(session, surf); // Handle shm frame
+            */
+
+            if (buf->dma_buf != NULL)
+                wl_dmabuf_surface_commit(session, surf); // Handle dmabuf frame
         }
 
         // Release buffer

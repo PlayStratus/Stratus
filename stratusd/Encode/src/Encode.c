@@ -7,8 +7,10 @@ int test_encode(){
     int num_frames = 120;
 
     const char *output_file = "encode_output.h264";
+    enum AVPixelFormat shm_pix_fmt = AV_PIX_FMT_ARGB;
+    enum AVPixelFormat dma_pix_fmt = AV_PIX_FMT_ARGB;
 
-    encoder_context *encoder = encoder_startup(output_file, width, height);
+    encoder_context *encoder = encoder_startup(output_file, width, height, shm_pix_fmt, dma_pix_fmt);
     if (!encoder) {
         return 1;
     }
@@ -21,7 +23,7 @@ int test_encode(){
 
     for (int i = 0; i < num_frames; i++) {
         generate_argb_frame(frame_buffer, width, height, i);
-        if (encode_video_frame(encoder, frame_buffer, width*4) < 0) {
+        if (encode_video_frame(encoder, frame_buffer, width*4, 0) < 0) {
             fprintf(stderr, "Failed to encode frame %d\n", i);
             break;
         }
@@ -37,7 +39,8 @@ int test_encode(){
 void cleanup_encoder(encoder_context *state) {
     if (!state) return;
     if (state->pkt) av_packet_free(&state->pkt);
-    if (state->sws_ctx) sws_freeContext(state->sws_ctx);
+    if (state->shm_sws_ctx) sws_freeContext(state->shm_sws_ctx);
+    if (state->dma_sws_ctx) sws_freeContext(state->dma_sws_ctx);
     if (state->yuv_frame) {
         if (state->yuv_frame->data[0]) av_freep(&state->yuv_frame->data[0]);
         av_frame_free(&state->yuv_frame);
@@ -47,7 +50,12 @@ void cleanup_encoder(encoder_context *state) {
     free(state);
 }
 
-encoder_context* encoder_startup(const char *output_file, int width, int height) {
+encoder_context* encoder_startup(
+    const char *output_file,
+    int width,
+    int height,
+    enum AVPixelFormat shm_pix_fmt,
+    enum AVPixelFormat dma_pix_fmt) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
         fprintf(stderr, "Failed to allocate encoder context\n");
@@ -116,11 +124,20 @@ encoder_context* encoder_startup(const char *output_file, int width, int height)
         return NULL;
     }
 
-    // Initialize swscale context
-    state->sws_ctx = sws_getContext(width, height, AV_PIX_FMT_BGR0,
+    // Initialize shm swscale context
+    state->shm_sws_ctx = sws_getContext(width, height, shm_pix_fmt,
                                     width, height, AV_PIX_FMT_YUV420P,
                                     SWS_BILINEAR, NULL, NULL, NULL);
-    if (!state->sws_ctx) {
+    if (!state->shm_sws_ctx) {
+        fprintf(stderr, "Could not initialize shm swscale context\n");
+        cleanup_encoder(state);
+        return NULL;
+    }
+
+    state->dma_sws_ctx = sws_getContext(width, height, dma_pix_fmt,
+                                    width, height, AV_PIX_FMT_YUV420P,
+                                    SWS_BILINEAR, NULL, NULL, NULL);
+    if (!state->dma_sws_ctx) {
         fprintf(stderr, "Could not initialize swscale context\n");
         cleanup_encoder(state);
         return NULL;
@@ -138,15 +155,56 @@ encoder_context* encoder_startup(const char *output_file, int width, int height)
     return state;
 }
 
+int dma_encode_video_frame(
+        encoder_context *state,
+        struct wl_dma_buffer *dma_buf,
+        int stride) {
+
+    size_t pixel_size = dma_buf->width * dma_buf->height * 4; // RGBA specific
+    uint8_t *pixel_data = malloc(pixel_size);
+
+    if (pixel_data == NULL) {
+        fprintf(stderr, "Failed to allocate pixel buffer\n");
+        return -1;
+    }
+
+    if (egl_capture_dmabuf_frame(state->egl_ctx, dma_buf, pixel_data) < 0){
+        fprintf(stderr, "Error during egl capture!\n");
+        return -1;
+    }
+
+    assert(encode_video_frame(state, pixel_data, stride, 1) == 0);
+
+    free(pixel_data);
+}
+
+/* buf_type is the type of buffer that backs the underlying wl_buffer capturing the frame
+ * 0 -> shm
+ * 1 -> dma
+ */
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
-                       int stride) {
+                       int stride, int buf_type) {
 
     if (!state || !argb_buffer) {
         return -1;
     }
 
+    struct SwsContext *sws_ctx = NULL;
+
+    switch (buf_type) {
+        case 0:
+            sws_ctx = state->shm_sws_ctx;
+            break;
+        case 1:
+            sws_ctx = state->dma_sws_ctx;
+            break;
+        default:
+            fprintf(stderr, "Unknown buf_type: %d\n", buf_type);
+            return -1;
+    }
+
     // Convert ARGB to YUV420P
-    sws_scale(state->sws_ctx,
+    sws_scale(sws_ctx,
               (const uint8_t * const*)&argb_buffer,
               &stride,
               0, state->height,
@@ -161,6 +219,7 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
     return 0;
 }
 
+
 int encoder_teardown(encoder_context *state) {
     if (!state) {
         return -1;
@@ -173,7 +232,8 @@ int encoder_teardown(encoder_context *state) {
     printf("Encoded %d frames total\n", state->frame_count);
 
     av_packet_free(&state->pkt);
-    sws_freeContext(state->sws_ctx);
+    sws_freeContext(state->shm_sws_ctx);
+    sws_freeContext(state->dma_sws_ctx);
     av_freep(&state->yuv_frame->data[0]);
     av_frame_free(&state->yuv_frame);
     avcodec_free_context(&state->codec_ctx);

@@ -8,8 +8,6 @@ static void session_teardown(struct session *session) {
 
     if (session->capture != NULL)
         capture_destroy(session->capture);
-    if (session->encode != NULL)
-        encoder_teardown(session->encode);
     if (session->input != NULL)
         input_destroy(session->input);
 
@@ -33,11 +31,7 @@ int sidecar_session_run(int width, int height, char *encode_output) {
     memset(session, 0x00, sizeof(struct session));
 
     // Initialize modules
-    // Order is important here! Some modules must be initialized before others.
-    session->encode = encoder_startup(encode_output, width, height);
-    if (session->encode == NULL)
-        goto err;
-    session->capture = capture_init(width, height, session->encode);
+    session->capture = capture_init(encode_output, width, height, NULL);
     if (session->capture == NULL)
         goto err;
     session->input = input_init();
