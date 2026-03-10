@@ -1,17 +1,16 @@
 #include "Encode.h"
 #include "EncodeUtils.h"
 
-const char *output_file = "encode_output.h264";
-
 int test_encode(){
     int width = 640;
     int height = 480;
     int num_frames = 120;
 
+    const char *output_file = "encode_output.h264";
     enum AVPixelFormat shm_pix_fmt = AV_PIX_FMT_ARGB;
     enum AVPixelFormat dma_pix_fmt = AV_PIX_FMT_ARGB;
 
-    encoder_context *encoder = encoder_startup(/*"output.h264", */width, height, shm_pix_fmt, dma_pix_fmt);
+    encoder_context *encoder = encoder_startup(output_file, width, height, shm_pix_fmt, dma_pix_fmt);
     if (!encoder) {
         return 1;
     }
@@ -51,7 +50,8 @@ void cleanup_encoder(encoder_context *state) {
     free(state);
 }
 
-encoder_context* encoder_startup(/*const char *output_file, */
+encoder_context* encoder_startup(
+    const char *output_file,
     int width,
     int height,
     enum AVPixelFormat shm_pix_fmt,

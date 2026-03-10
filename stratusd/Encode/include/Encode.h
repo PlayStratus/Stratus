@@ -24,7 +24,8 @@ typedef struct {
 } encoder_context;
 
 int test_encode();
-encoder_context* encoder_startup(/*const char *output_file, */
+encoder_context* encoder_startup(
+        const char *output_file,
         int width,
         int height,
         enum AVPixelFormat shm_pix_fmt,

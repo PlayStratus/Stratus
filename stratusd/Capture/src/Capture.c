@@ -46,7 +46,7 @@ const struct message_handler *message_handlers[] = {
  * Handle a new proxy session
  */
 static int handle_session_create(struct proxy_session *session) {
-    printf("Client %s connected\n", session->name);
+    fprintf(stderr, "[Capture] Client %s connected\n", session->name);
 
     return 0;
 }
@@ -62,8 +62,9 @@ static enum proxy_actions handle_message(struct proxy_message *msg) {
     for (i = 0; i < count; i++) {
         for (j = 0; message_handlers[i][j].handler != NULL; j++) {
             if (!strcmp(msg->interface->name, message_handlers[i][j].obj_name) &&
-                !strcmp(msg->closure->message->name, message_handlers[i][j].msg_name))
+                !strcmp(msg->closure->message->name, message_handlers[i][j].msg_name)) {
                 return (*message_handlers[i][j].handler)(msg);
+            }
         }
     }
 
@@ -115,49 +116,84 @@ static enum wl_iterator_result destroy_object(void *element, void *data,
  * Handle a proxy session being destroyed
  */
 static void handle_session_destroy(struct proxy_session *session) {
-    printf("Client %s disconnected\n", session->name);
+    fprintf(stderr, "[Capture] Client %s disconnected\n", session->name);
 
     // Destroy all remaining Wayland objects so that their resources are freed
     wl_map_for_each(session->obj_data, destroy_object, session);
 }
 
-int capture_test() {
-    struct proxy *proxy;
-    struct capture_data *data;
+/*
+ * Initialize a capture session
+ *
+ * Returns a pointer to the created capture session on success and NULL on
+ * failure.
+ */
+struct capture_session *capture_init(char *encode_output, uint32_t width,
+                                     uint32_t height, encoder_context *encoder)
+{
+    struct capture_session *session;
 
-    // Initialize proxy
-    proxy = proxy_init("stratus");
-    if (proxy == NULL) {
-        fprintf(stderr, "Failed to initialize proxy\n");
-        goto err_proxy_init;
-    }
-    proxy->on_session_create    = &handle_session_create;
-    proxy->on_message           = &handle_message;
-    proxy->on_session_destroy   = &handle_session_destroy;
+    assert(width > 0);
+    assert(height > 0);
+    assert(encoder == NULL); // See TODO below in capture_run
 
-    // Initialize capture data
-    proxy->userdata = data = malloc(sizeof(struct capture_data));
-    if (data == NULL) {
-        fprintf(stderr, "Failed to allocate capture data\n");
-        goto err_malloc;
-    }
-    data->width = 640; // TODO: set client dimensions dynamically
-    data->height = 480;
-    data->encoder = NULL; // Will be initialized on first frame
-
-    // Capture frames
-    printf("Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n", proxy->name);
-    if (proxy_run(proxy) < 0) {
-        fprintf(stderr, "Proxy exited unsucessfully\n");
-        goto err_proxy_run;
+    session = malloc(sizeof(struct capture_session));
+    if (session == NULL) {
+        perror("[Capture] malloc");
+        return NULL;
     }
 
-err_proxy_run:
-    if (data->encoder != NULL)
-        encoder_teardown(data->encoder);
-    free(data);
-err_malloc:
-    proxy_destroy(proxy);
-err_proxy_init:
+    session->encode_output = encode_output;
+    session->width = width;
+    session->height = height;
+    session->encoder = encoder;
+
+    session->proxy = proxy_init("stratus");
+    if (session->proxy == NULL) {
+        free(session);
+        return NULL;
+    }
+    session->proxy->on_session_create   = &handle_session_create;
+    session->proxy->on_message          = &handle_message;
+    session->proxy->on_session_destroy  = &handle_session_destroy;
+    session->proxy->userdata            = session;
+
+    return session;
+}
+
+/*
+ * Run a capture session
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int capture_run(struct capture_session *session) {
+    // TODO: EGL doesn't like being initialized in one thread and then run in
+    // a different thread. It's possible to change this, but eventually the
+    // Encode module will be running completely in its own thread anyway. So for
+    // now we will just initialize it in the Capture thread, since that's where
+    // its called from.
+    session->encoder = encoder_startup(session->encode_output, session->width,
+                                       session->height, AV_PIX_FMT_BGR0,
+                                       AV_PIX_FMT_RGBA);
+    if (session->encoder == NULL)
+        return -1;
+    session->encoder->egl_ctx = egl_capture_init();
+    if (session->encoder->egl_ctx == NULL)
+        return -1;
+
+    fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
+           session->proxy->name);
+    if (proxy_run(session->proxy) < 0)
+        return -1;
     return 0;
+}
+
+/*
+ * Destroy a capture session and free its resources
+ */
+void capture_destroy(struct capture_session *session) {
+    if (session->encoder != NULL)
+        encoder_teardown(session->encoder);
+    proxy_destroy(session->proxy);
+    free(session);
 }

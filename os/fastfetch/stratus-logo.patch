@@ -1,0 +1,63 @@
+From 66c26a8d377f0934c35d070f87a0bdbfba163abc Mon Sep 17 00:00:00 2001
+From: Asher Morgan <59518073+ashermorgan@users.noreply.github.com>
+Date: Sat, 28 Feb 2026 15:29:18 -0800
+Subject: [PATCH] Add logo for Stratus OS
+
+Adapted from output of https://www.asciiart.eu/image-to-ascii.
+---
+ src/logo/ascii/stratus.txt | 20 ++++++++++++++++++++
+ src/logo/builtin.c         | 10 ++++++++++
+ 2 files changed, 30 insertions(+)
+ create mode 100644 src/logo/ascii/stratus.txt
+
+diff --git a/src/logo/ascii/stratus.txt b/src/logo/ascii/stratus.txt
+new file mode 100644
+index 00000000..eda1100e
+--- /dev/null
++++ b/src/logo/ascii/stratus.txt
+@@ -0,0 +1,20 @@
++                                       $1#
++                                     $1###
++                                   $1#####
++                                 $1######
++                             $1#########
++                         $1############
++                  $1###################
++           $1########################$2=
++       $1##########################$2===
++     $1##########################$2====
++   $1########################   $2=====
++  $1##############            $2=======
++ $1########                $2=========
++$1#######$2==========================
++$1#####$2===========================
++$1###$2===========================
++$1##$3........$2================$3...
++       $3.........     .......
++          $3................
++             $3...........
+\ No newline at end of file
+diff --git a/src/logo/builtin.c b/src/logo/builtin.c
+index 7e1dc330..d1cc7934 100644
+--- a/src/logo/builtin.c
++++ b/src/logo/builtin.c
+@@ -4791,6 +4791,16 @@ static const FFlogo S[] = {
+         .colorKeys = FF_COLOR_FG_RED,
+         .colorTitle = FF_COLOR_FG_RED,
+     },
++    // Stratus OS
++    {
++        .names = {"stratus", "Stratus OS"},
++        .lines = FASTFETCH_DATATEXT_LOGO_STRATUS,
++        .colors = {
++            FF_COLOR_FG_BLUE,
++            FF_COLOR_FG_LIGHT_BLUE,
++            FF_COLOR_FG_LIGHT_WHITE,
++        },
++    },
+     // Sulin
+     {
+         .names = {"Sulin"},
+-- 
+2.53.0
+

@@ -208,7 +208,7 @@ void wl_dma_buffer_free(struct wl_dma_buffer *buf) {
  *
  * Import dmabuf via EGL and pass to encoder.
  */
-enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
+enum proxy_actions wl_dmabuf_surface_commit(struct capture_session *session,
                                             struct wl_surface *surf) {
     struct wl_buffer *wl_buf;
     struct wl_dma_buffer *dma_buf;
@@ -219,23 +219,8 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_data *data,
     dma_buf = wl_buf->dma_buf;
     assert(dma_buf != NULL);
 
-
-    // Initialize encoder if not already done
-    if (data->encoder == NULL) {
-        data->encoder = encoder_startup(wl_buf->width, wl_buf->height, AV_PIX_FMT_BGR0, AV_PIX_FMT_RGBA);
-        if (data->encoder == NULL)
-            return PROXY_ACTION_ERR;
-    }
-    // `
-    // Initialize EGL capture context if not already done
-    if (data->encoder->egl_ctx == NULL) {
-        data->encoder->egl_ctx = egl_capture_init();
-        if (data->encoder->egl_ctx == NULL)
-            return PROXY_ACTION_ERR;
-    }
-
     int stride = dma_buf->width * 4;
-    if (dma_encode_video_frame(data->encoder, dma_buf, stride) < 0)
+    if (dma_encode_video_frame(session->encoder, dma_buf, stride) < 0)
         return PROXY_ACTION_ERR;
 
     return PROXY_ACTION_FWD;

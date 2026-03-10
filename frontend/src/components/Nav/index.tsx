@@ -25,30 +25,40 @@ export default async function Nav() {
           <Link href='/browse'>
             <Button variant='link'>Browse</Button>
           </Link>
+
+          <Link href='/about'>
+            <Button variant='link'>About</Button>
+          </Link>
         </div>
 
         <div className='flex-1 max-w-xl mx-4'>
-           <SearchBar games={games ?? []} />
+          <SearchBar games={games ?? []} />
         </div>
 
         <div className='flex items-center'>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>{username}</Button>
-            </DropdownMenuTrigger>
+          {username ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>{username}</Button>
+              </DropdownMenuTrigger>
 
-            <DropdownMenuContent align='end'>
-              <DropdownMenuItem asChild>
-                <Link href='/settings'>Settings</Link>
-              </DropdownMenuItem>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem asChild>
+                  <Link href='/settings'>Settings</Link>
+                </DropdownMenuItem>
 
-              <DropdownMenuItem>
-                <form action={handleLogout}>
-                  <button type='submit'>Log Out</button>
-                </form>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem>
+                  <form action={handleLogout}>
+                    <button type='submit'>Log Out</button>
+                  </form>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href='/signin'>
+              <Button>Log In</Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>
@@ -82,7 +92,7 @@ async function getUserData() {
   const authToken = cookieStore.get("auth_token")
 
   if (!authToken) {
-    redirect("/signin")
+    return null
   }
 
   try {
@@ -96,8 +106,8 @@ async function getUserData() {
 
     const data = await response.json()
 
-    return data.user.Username
+    return data.user?.Username || null
   } catch (error) {
-    return redirect("/signin")
+    return null
   }
 }
