@@ -77,6 +77,8 @@ enum proxy_actions wl_shm_create_pool(struct proxy_message *msg) {
     assert(wl_map_lookup(map, pool->id) == NULL);
     if (wl_map_insert_at(map, 0, pool->id, pool) < 0) {
         perror("[Capture] wl_map_insert_at");
+        assert(munmap(pool->p, pool->size) == 0); // munmap should not fail
+        free(pool);
         return PROXY_ACTION_ERR;
     }
 
@@ -168,6 +170,7 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     assert(wl_map_lookup(map, wl_buf->id) == NULL);
     if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0) {
         perror("[Capture] wl_map_insert_at");
+        free(shm_buf);
         free(wl_buf);
         return PROXY_ACTION_ERR;
     }

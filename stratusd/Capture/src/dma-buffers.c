@@ -72,8 +72,10 @@ enum proxy_actions zwp_linux_buffer_params_add(struct proxy_message *msg) {
     assert(plane_idx < 4);
 
     params->planes[plane_idx].fd = dup(fd); // needs dup() since fd expires after message
-    if (params->planes[plane_idx].fd < 0)
+    if (params->planes[plane_idx].fd < 0) {
+        perror("[Capture] dup");
         return PROXY_ACTION_ERR;
+    }
 
     params->planes[plane_idx].offset = offset;
     params->planes[plane_idx].stride = stride;
