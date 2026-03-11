@@ -88,13 +88,15 @@ encoder_context* encoder_startup(
     state->codec_ctx->height = height;
     state->codec_ctx->time_base = (AVRational){1, 30}; // 30 fps
     state->codec_ctx->framerate = (AVRational){30, 1};
-    state->codec_ctx->gop_size = 30;
+    state->codec_ctx->gop_size = 0;
     state->codec_ctx->max_b_frames = 0;
     state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
     // H.264 specific options
-    av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(state->codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(state->codec_ctx->priv_data, "tune", "zerolatency", 0);
+    av_opt_set(state->codec_ctx->priv_data, "crf", "0", 0);
+
 
     if (avcodec_open2(state->codec_ctx, codec, NULL) < 0) {
         fprintf(stderr, "Could not open codec\n");

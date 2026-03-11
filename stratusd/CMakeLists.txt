@@ -36,7 +36,7 @@ target_include_directories(stratusd PUBLIC ${CMAKE_BINARY_DIR})
 
 # Link modules here
 target_link_libraries(stratusd PRIVATE "-Wl,--exclude-libs,ALL" Capture
-    CapturePw Encode Input SideCar)
+    CapturePw Encode Input SideCar Transport)
 
 # Get version from git
 execute_process(
