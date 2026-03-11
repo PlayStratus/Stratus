@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
 import type { Request, Response } from "express"
 
+import { startGameSession} from "../socket/send.ts"
+
 import { dynamoDb } from "../server.ts"
 
 interface User {
@@ -224,4 +226,19 @@ const createUser = async (user: Partial<User>): Promise<User> => {
 
   await dynamoDb.send(new PutCommand(params)) //send to aws
   return params.Item as User
+}
+
+export const ControllerCreateSession = async (req: Request, res: Response) => {
+  const { game_id, user_id, user_name } = req.body
+
+  if (!game_id || !user_id || !user_name) {
+    return res.status(400).json({ error: "game_id, user_id, and user_name are required" })
+  }
+
+  const session_token = await startGameSession(game_id, user_id, user_name)
+  if (!session_token) {   
+    return res.status(503).json({ error: "No node available for this game" })
+  }
+
+  return res.status(201).json({ session_token })
 }

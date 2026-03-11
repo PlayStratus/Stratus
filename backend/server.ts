@@ -8,11 +8,15 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import usersRoutes from "./routes/users.ts"
 import gamesRoutes from "./routes/games.ts"
 import { WebSocketServer } from "ws"
+import { handleMessage } from "./socket/messages.ts"    //to .js git rebase
+import http from 'http'
+
 
 const app = express()
 const PORT = process.env.PORT || 4000
+const PORT2 = process.env.PORT2 || 4001
 const isLambda: boolean = !!process.env.LAMBDA_TASK_ROOT;
-const http = require('http');
+
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-west-2",
@@ -54,22 +58,34 @@ Socket, guide https://karlhadwen.medium.com/node-js-websocket-tutorial-real-time
 let socket: WebSocketServer | null = null
 
 if (!isLambda) {
-  const server = http.createServer(express);
+  const server = http.createServer(app);
   socket = new WebSocketServer({server});
 
-  socket.on("connection", (ws) => {           //testing values
+  socket.on("connection", (ws) => {           
     console.log("New WebSocket connection")
 
     ws.on("message", (message) => {
-      console.log("Received:", message.toString())
-
-      ws.send(`Server received: ${message}`)
+      try {
+        const parsed = JSON.parse(message.toString())                   //parse message
+        handleMessage(ws, parsed)                                       //pass to handle function
+      } catch {
+        console.error("Invalid JSON received:", message.toString())
+      }
     })
 
     ws.on("close", () => {
-      console.log("Client disconnected")
+      handleMessage(ws, { type: "node_disconnect", payload: {} })       //need further build out
+    })
+
+    ws.on("error", (err) => {                                           //need further build out
+      console.error("WebSocket error:", err)
+      handleMessage(ws, { type: "node_disconnect", payload: {} })
     })
   })
+
+  server.listen(PORT2, () => {
+    console.log(`Server running at http://localhost:${PORT2}`)
+  });
 }
 
 

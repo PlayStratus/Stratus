@@ -8,17 +8,15 @@ interface SessionInfo {
 
 const sessions = new Map<string, SessionInfo>()
 
-export function loadNode(ses: string, inNode: WebSocket) {              //load node into session
-  if (!sessions.has(ses)) {                                             //check if a connection already exists
-    sessions.set(ses, {                                                 //add to session
-        sessionId : ses,
-        node : inNode,                                                  //this just shows last connection, not necissarily last heartbeat sent
-        status : "Live",
-    })
+export function loadSession(ses: string, inNode: WebSocket) {              //load node into session
+  if (sessions.has(ses)) {
+    console.warn("Session already exists, updating node:", ses)
   }
-  else{
-    console.error("Error: Session Already Exists");
-  }
+  sessions.set(ses, {
+    sessionId: ses,
+    node: inNode,
+    status: "Live",
+  })
 }
 
 export function deleteSession(ses: string) {                          //remove node, here incase there is an issue with a node that we have to take down

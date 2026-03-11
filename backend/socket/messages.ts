@@ -1,10 +1,11 @@
 import { WebSocket } from "ws"
-import { updateHeartbeat } from "./node"
+import { updateHeartbeat, getAllNodes } from "./node.ts"
 
 export function handleMessage(ws: WebSocket, message: any) {        //most functions here are currently placeholder to build out
   switch (message.type) {
     case "heartbeat":
       updateHeartbeat(ws, message.payload)
+      console.log(getAllNodes());
       break
 
     case "start_confirmed":
