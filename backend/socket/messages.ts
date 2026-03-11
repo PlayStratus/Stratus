@@ -1,6 +1,6 @@
 import { WebSocket } from "ws"
-import { updateHeartbeat, getAllNodes } from "./node.ts"
-import { resolveStart } from "./send.ts"
+import { updateHeartbeat, getAllNodes } from "./node.js"
+import { resolveStart } from "./send.js"
 
 export function handleMessage(ws: WebSocket, message: any) {        //most functions here are currently placeholder to build out
   switch (message.type) {

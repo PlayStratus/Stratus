@@ -13,9 +13,7 @@ import http from 'http'
 
 const app = express()
 const PORT = process.env.PORT || 4000
-const PORT2 = process.env.PORT2 || 4001
-const isLambda: boolean = !!process.env.LAMBDA_TASK_ROOT;
-
+const PORT2 =  4001
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-west-2",
@@ -35,20 +33,16 @@ app.use(cookieParser())
 app.use("/users", usersRoutes)
 app.use("/games", gamesRoutes)
 
-// For local development: start the server
-// For Lambda: export the handler
-if (!isLambda) {
-  app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`)
-  })
-}
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`)
+})
 /*
 Socket, guide https://karlhadwen.medium.com/node-js-websocket-tutorial-real-time-chat-room-using-multiple-clients-44a8e26a953e
 */
 
 let socket: WebSocketServer | null = null
 
-if (!isLambda) {
+
   const server = http.createServer(app);
   socket = new WebSocketServer({server});
 
@@ -77,8 +71,5 @@ if (!isLambda) {
   server.listen(PORT2, () => {
     console.log(`Server running at http://localhost:${PORT2}`)
   });
-}
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`)
-})
+

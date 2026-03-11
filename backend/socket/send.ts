@@ -1,6 +1,6 @@
 import { WebSocket } from "ws"
 import { v4 as uuidv4 } from "uuid"
-import { findNodeByGame } from "./node.ts"
+import { findNodeByGame } from "./node.js"
 
 const pendingStarts = new Map<string, (confirm: ConfirmStart | null) => void>()
 
