@@ -35,7 +35,7 @@
 /*
  * The maximum number of simultaneous client/server sessions per proxy
  */
-#define MAX_SESSIONS 4
+#define MAX_SESSIONS 8
 
 /*
  * The maximum length of a proxy session name
