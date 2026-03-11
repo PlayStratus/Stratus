@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import { v4 as uuidv4 } from "uuid"
 import type { Request, Response } from "express"
 
-import { startGameSession} from "../socket/send.ts"
+import { startGameSession, resolveStart} from "../socket/send.ts"
 
 import { dynamoDb } from "../server.ts"
 
@@ -229,16 +229,19 @@ const createUser = async (user: Partial<User>): Promise<User> => {
 }
 
 export const ControllerCreateSession = async (req: Request, res: Response) => {
-  const { game_id, user_id, user_name } = req.body
+  const { game_id, user_id, user_name, height, width } = req.body
 
-  if (!game_id || !user_id || !user_name) {
-    return res.status(400).json({ error: "game_id, user_id, and user_name are required" })
+  if (!game_id || !user_id || !user_name || !height || !width) {
+    return res.status(400).json({ error: "Missing requented data are required" })
   }
 
-  const session_token = await startGameSession(game_id, user_id, user_name)
-  if (!session_token) {   
-    return res.status(503).json({ error: "No node available for this game" })
+  const result = await startGameSession(game_id, user_id, user_name, width, height)
+  if (!result) {
+    return res.status(503).json({ error: "No node available or session timed out" })
   }
 
-  return res.status(201).json({ session_token })
+  return res.status(201).json({
+    session_id: result.payload.session_id,
+    TLSFingerprint: result.payload.TLSFingerprint,
+  })
 }

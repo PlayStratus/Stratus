@@ -1,5 +1,6 @@
 import { WebSocket } from "ws"
 import { updateHeartbeat, getAllNodes } from "./node.ts"
+import { resolveStart } from "./send.ts"
 
 export function handleMessage(ws: WebSocket, message: any) {        //most functions here are currently placeholder to build out
   switch (message.type) {
@@ -9,7 +10,7 @@ export function handleMessage(ws: WebSocket, message: any) {        //most funct
       break
 
     case "start_confirmed":
-      start_confirmed(message)
+      start_confirmed(ws, message)
       break
 
     case "stop_session":
@@ -26,8 +27,10 @@ export function handleMessage(ws: WebSocket, message: any) {        //most funct
 }
 
 
-function start_confirmed(ws: WebSocket) {
-  console.log("start")
+function start_confirmed(ws: WebSocket, message: any) {
+  const { session_id, TLSFingerprint } = message.payload
+  console.log(`Session started. session: ${session_id} | TLS: ${TLSFingerprint}`)
+  resolveStart(message);
 }
 
 function stop_session(ws: WebSocket) {
