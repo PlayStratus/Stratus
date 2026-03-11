@@ -12,6 +12,7 @@
 
 #include "capture-priv.h"
 #include "shm-buffers-priv.h"
+#include "dma-buffers-priv.h"
 #include "video-output-pub.h"
 #include "video-output-priv.h"
 
@@ -52,9 +53,13 @@ static void wl_buffer_free(struct wl_buffer *buf) {
     assert(buf->id == 0); // The wl_buffer must be destroyed
     assert(buf->dependents == 0); // The wl_buffer must not be attached
 
-    // Free wl_shm_buffer if defined
+    // Free backed buffer if defined
     if (buf->shm_buf != NULL)
         wl_shm_buffer_free(buf->shm_buf);
+
+    if (buf->dma_buf != NULL)
+        wl_dma_buffer_free(buf->dma_buf);
+
 
     free(buf);
 }
@@ -99,8 +104,10 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
     struct wl_surface *surf;
 
     surf = malloc(sizeof(struct wl_surface));
-    if (surf == NULL)
+    if (surf == NULL) {
+        perror("[Capture] malloc");
         return PROXY_ACTION_ERR;
+    }
 
     surf->id = msg->closure->args[0].n;
     surf->buf = NULL;
@@ -108,8 +115,10 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
 
     map = msg->conn->session->obj_data;
     assert(wl_map_lookup(map, surf->id) == NULL);
-    if (wl_map_insert_at(map, 0, surf->id, surf) < 0)
+    if (wl_map_insert_at(map, 0, surf->id, surf) < 0) {
+        perror("[Capture] wl_map_insert_at");
         return PROXY_ACTION_ERR;
+    }
 
     return PROXY_ACTION_FWD;
 }
@@ -174,7 +183,7 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     struct wl_surface *surf;
     struct wl_buffer *buf;
     struct wl_closure *res;
-    struct capture_data *capture_data;
+    struct capture_session *session;
 
     map = msg->conn->session->obj_data;
     id = msg->closure->sender_id;
@@ -185,9 +194,17 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     if (buf != NULL) {
         if (buf->width > 64 && buf->height > 64) {
             // A >64x64 frame probably isn't the cursor, so let's process it.
-            capture_data = msg->conn->session->proxy->userdata;
+            session = msg->conn->session->proxy->userdata;
+
+            assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
+            /* Commented out until viewport changes force correct resolution
+             * mostly we will use dmabuf anyway
             if (buf->shm_buf != NULL)
-                wl_shm_surface_commit(capture_data, surf); // Handle shm frame
+                wl_shm_surface_commit(session, surf); // Handle shm frame
+            */
+
+            if (buf->dma_buf != NULL)
+                wl_dmabuf_surface_commit(session, surf); // Handle dmabuf frame
         }
 
         // Release buffer
@@ -196,8 +213,10 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
         res->opcode = 0; // wl_buffer event #0 is release event
         ret = wl_closure_send(res, msg->conn->session->client->wl_conn);
         wl_closure_destroy(res);
-        if (ret < 0)
+        if (ret < 0) {
+            perror("[Capture] wl_closure_send");
             return PROXY_ACTION_ERR;
+        }
 
         // Unattach buffer. This prevents us from sending duplicate release
         // events when the client commits without actually attaching a new

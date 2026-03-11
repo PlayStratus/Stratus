@@ -1,0 +1,6 @@
+# https://editorconfig.org
+
+root = false
+
+[PKGBUILD]
+indent_size = 2
