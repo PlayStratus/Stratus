@@ -26,7 +26,7 @@
 #include "quiche/web_transport/web_transport.h"
 
 DEFINE_QUICHE_COMMAND_LINE_FLAG(
-    int32_t, WebTransportPort, 6767, "The port the WebTransport server will listen on.");
+    int32_t, WebTransportPort, 4433, "The port the WebTransport server will listen on.");
 
 namespace quic {
 namespace {
@@ -38,7 +38,7 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(
     return absl::InvalidArgumentError("Unable to parse the :path");
   }
 
-  if (url.path() == "/webtransport/echo") {
+  if (url.path() == "/") {
     return std::make_unique<EchoWebTransportSessionVisitor>(session);
   }
   if (url.path() == "/webtransport/devious-baton") {

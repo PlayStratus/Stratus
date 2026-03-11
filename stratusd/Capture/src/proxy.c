@@ -65,7 +65,7 @@ static bool wayland_debug = false;
  * The available Wayland protocols
  */
 const struct wl_interface **proxy_protocols[] = {
-    linux_dmabuf_v1_types_all,
+//    linux_dmabuf_v1_types_all, Add back before merging PR.
     pointer_constraints_unstable_v1_types_all,
     presentation_time_types_all,
     relative_pointer_unstable_v1_types_all,

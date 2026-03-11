@@ -61,3 +61,12 @@ CMakeUserPresets.json
 stratusd/libs/libquiche/external/bazel_tools/jdk/lib/*.so
 stratusd/libs/libquiche/external/bazel_tools/jdk/lib/server/*.so
 
+
+# Build Directory
+build
+
+# VsCode
+.vscode
+
+# Development Certs
+StratusDevCert.*

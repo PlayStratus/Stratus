@@ -6,12 +6,13 @@
 static void session_teardown(struct session *session) {
     if (session == NULL) return;
 
+    if (session->transport != NULL)
+       transport_destroy(session->transport);
     if (session->capture != NULL)
         capture_destroy(session->capture);
     if (session->encode != NULL)
         encoder_teardown(session->encode);
-    if (session->input != NULL)
-        input_destroy(session->input);
+
 
     free(session);
 }
@@ -34,28 +35,26 @@ int sidecar_session_run(int width, int height, char *encode_output) {
 
     // Initialize modules
     // Order is important here! Some modules must be initialized before others.
+    session->transport = transport_init(4433);
+    if (session->transport == NULL)
+        goto err;
     session->encode = encoder_startup(encode_output, width, height);
     if (session->encode == NULL)
         goto err;
     session->capture = capture_init(width, height, session->encode);
     if (session->capture == NULL)
         goto err;
-    session->input = input_init();
-    if (session->input == NULL)
-        goto err;
 
     // Start modules in separate threads
+    pthread_create(&session->transport_thread, NULL, (void *)&transport_thread,
+                   session->transport);
+
     pthread_create(&session->capture_thread, NULL, (void *)&capture_run,
                    session->capture);
-    pthread_create(&session->input_thread, NULL, (void *)&input_run,
-                   session->input);
 
     // Wait for game to disconnect from Wayland proxy
     pthread_join(session->capture_thread, NULL);
 
-    // Kill remaining threads and make sure they're dead
-    pthread_cancel(session->input_thread);
-    pthread_join(session->input_thread, NULL);
 
     // Teardown modules & session
     session_teardown(session);

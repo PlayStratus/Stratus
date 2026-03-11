@@ -6,8 +6,23 @@
 extern "C" {
 #endif
 
+struct transport_session
+{
+    int port;
+    void* QuicAddr;
+    void* QuicServer;
+    void* WebTransportBackend;
+};
 
-void TransportTest();
+enum VideoMessageType
+{
+    Codec_Decsription,
+    Codec_Payload
+};
+
+struct transport_session* transport_init(int port);
+void transport_thread(struct transport_session* session);
+void transport_destroy(struct transport_session* session);
 
 #ifdef __cplusplus
 }
