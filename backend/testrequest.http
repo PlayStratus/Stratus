@@ -5,7 +5,9 @@ Content-Type: application/json
 {
   "game_id": "test1",
   "user_id": "test1",
-  "user_name": "test1"
+  "user_name": "test1",
+  "width": "123",
+  "height": "123"
 }
 
 ###

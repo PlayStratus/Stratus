@@ -33,8 +33,9 @@ export function updateHeartbeat(ws: WebSocket, payload: any) {          //update
 }
 
 export function findNodeByGame(gameId: string): WebSocket | null {
+  console.log()
   for (const [ws, node] of nodes.entries()) {
-    if (node.node_payload.games.includes(gameId) && node.node_payload.sessions.lenght() == 0) {
+    if (node.node_payload.games.includes(gameId) && node.node_payload.sessions.length == 0) {
       return ws
     }
   }

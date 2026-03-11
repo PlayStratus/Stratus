@@ -10,7 +10,7 @@ interface ConfirmStart {
   timestamp: string
   payload: {
     session_id: string
-    TLSFingerprint: string
+    tls_fingerprint: string
   }
 }
 
@@ -23,7 +23,7 @@ export function startGameSession(gameId: string, userId: string, userName: strin
   let session_id = uuidv4()
   let request_id = uuidv4()
   const startMessage = {                                                                    //build message
-    type: "start",
+    type: "start_session",
     request_id,
     timestamp: new Date().toISOString(),
     payload: {
