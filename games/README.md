@@ -14,7 +14,7 @@ that sets up a non-persistent environment for each game instance.
 2.  Copy or link the `stratus-launcher` script to a directory in `$PATH`: e.g.
     `ln -srf ./stratus-launcher.sh ~/bin/stratus-launcher`
 
-3.  Build and run a game: `./supertuxkart.sh && ./supertuxkart.AppImage`
+3.  Build and run a game: `./build-supertuxkart.sh && ./build/supertuxkart`
 
 
 [appimagetool-releases]: https://github.com/AppImage/appimagetool/releases
