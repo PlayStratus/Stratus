@@ -23,4 +23,6 @@ cluster.
 
 4.  Build project with `cmake --build ./build`
 
-5.  Run binary located at `./build/src/stratusd`
+5.  Run binary located at `./build/src/stratusd` (note that stratusd will run
+    the game located at `$STRATUSD_GAME_DIR/$STRATUSD_GAME_UUID`, which defaults
+    to `../games/build/sleep`)

@@ -57,3 +57,8 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 /stratusd/libs/wayland/protocols/*.c
+
+# Game build directory
+!/games/build/
+/games/build/*
+!/games/build/sleep

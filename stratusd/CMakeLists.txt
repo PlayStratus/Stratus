@@ -21,7 +21,6 @@ add_subdirectory(Capture)
 add_subdirectory(Encode)
 add_subdirectory(Input)
 add_subdirectory(SideCar)
-add_subdirectory(Title)
 add_subdirectory(Transport)
 
 add_executable(stratusd ${sourcefiles})

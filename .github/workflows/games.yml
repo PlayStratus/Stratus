@@ -26,7 +26,6 @@ jobs:
 
       - name: Build games
         run: |
-          mkdir games/build/
           ./games/supertuxkart.sh games/build/c3770c11-ecaf-4852-96b0-37269736a6fc
 
       - name: Setup AWS CLI

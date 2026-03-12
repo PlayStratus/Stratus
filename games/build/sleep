@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# This is a script that may be used as a game for testing purposes
+
+echo 'Starting "sleep" game. Run "killall sleep" to stop me.'
+sleep 1d
