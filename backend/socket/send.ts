@@ -14,7 +14,7 @@ interface ConfirmStart {
   }
 }
 
-export function startGameSession(gameId: string, userId: string, userName: string, width: string, height: string): Promise<ConfirmStart | null> {        //pass in value from request
+export function startGameSession(gameId: string, userId: string, userName: string, width: number, height: number): Promise<ConfirmStart | null> {        //pass in value from request
   const ws = findNodeByGame(gameId)                                                         //find game
   if (!ws) {                                                                                //no game found return null
     console.error("No node available for game:", gameId)
@@ -29,8 +29,8 @@ export function startGameSession(gameId: string, userId: string, userName: strin
     payload: {
       session_id,
       game_id: gameId,
-      width: width,
-      height: height,
+      width,
+      height,
       user_id: userId,
       user_name: userName,
     },
