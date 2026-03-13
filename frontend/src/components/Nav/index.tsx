@@ -69,15 +69,18 @@ async function handleLogout() {
   "use server"
 
   try {
-    await fetch(getBackendPath("/users/logout"), {
+    const cookieStore = await cookies()
+
+    await fetch(getBackendPath("/auth/logout"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Cookie: cookieStore.toString(),
       },
       credentials: "include",
     })
 
-    const cookieStore = await cookies()
+    cookieStore.delete("auth_token")
     cookieStore.delete("access_token")
     cookieStore.delete("refresh_token")
   } catch (error) {
@@ -96,13 +99,18 @@ async function getUserData() {
   }
 
   try {
-    const response = await fetch(getBackendPath("/users"), {
+    const response = await fetch(getBackendPath("/auth"), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${authToken.value}`,
+        Cookie: cookieStore.toString(),
       },
+      credentials: "include",
       cache: "no-store",
     })
+
+    if (!response.ok) {
+      return null
+    }
 
     const data = await response.json()
 
