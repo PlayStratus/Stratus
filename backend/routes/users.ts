@@ -5,6 +5,7 @@ import {
   ControllerCreateUser,
   ControllerGetUserByToken,
   ControllerRefreshToken,
+  ControllerCreateSession
 } from "./usersController.js"
 
 const router = express.Router()
@@ -12,6 +13,7 @@ const router = express.Router()
 
 router.post("/signin", ControllerGetUser)
 router.post("/create", ControllerCreateUser)
+router.post("/session", ControllerCreateSession)
 router.get("/refresh", ControllerRefreshToken)
 router.get("/", ControllerGetUserByToken)
 
