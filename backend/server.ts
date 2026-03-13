@@ -13,7 +13,6 @@ import http from 'http'
 
 const app = express()
 const PORT = process.env.PORT || 4000
-const PORT2 =  4001
 
 const client = new DynamoDBClient({
   region: process.env.AWS_REGION || "us-west-2",
@@ -33,9 +32,6 @@ app.use(cookieParser())
 app.use("/users", usersRoutes)
 app.use("/games", gamesRoutes)
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`)
-})
 /*
 Socket, guide https://karlhadwen.medium.com/node-js-websocket-tutorial-real-time-chat-room-using-multiple-clients-44a8e26a953e
 */
@@ -68,8 +64,8 @@ let socket: WebSocketServer | null = null
     })
   })
 
-  server.listen(PORT2, () => {
-    console.log(`Server running at http://localhost:${PORT2}`)
+  server.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`)
   });
 
 
