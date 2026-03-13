@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --exec \"node --loader ts-node/esm\" server.ts",
+    "dev": "tsx watch server.ts",
     "build": "tsc",
     "start": "node dist/server.js"
   },
@@ -23,9 +23,9 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/ws": "^8.18.1",
     "esbuild": "^0.25.12",
-    "nodemon": "^3.1.11",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }
 }
