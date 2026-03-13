@@ -57,6 +57,7 @@ encoder_context* encoder_startup(const char *output_file, int width, int height)
     state->width = width;
     state->height = height;
     state->frame_count = 0;
+    state->initframe = 0;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {
@@ -81,6 +82,7 @@ encoder_context* encoder_startup(const char *output_file, int width, int height)
     state->codec_ctx->gop_size = 30;
     state->codec_ctx->max_b_frames = 0;
     state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    state->codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     // H.264 specific options
     av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);

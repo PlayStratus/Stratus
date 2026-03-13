@@ -16,6 +16,7 @@ typedef struct {
     int frame_count;
     int width;
     int height;
+    int initframe;
 } encoder_context;
 
 int test_encode();

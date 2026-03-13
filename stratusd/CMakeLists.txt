@@ -17,13 +17,15 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavformat
     libavutil
     libswscale)
-
+    
+add_subdirectory(Common)
 add_subdirectory(Capture)
 add_subdirectory(Encode)
 add_subdirectory(Input)
 add_subdirectory(SideCar)
 add_subdirectory(Title)
 add_subdirectory(Transport)
+
 
 add_executable(stratusd ${sourcefiles})
 

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Encode.h"
+#include "Transport.h"
 
 void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num);
 int avcodec_send_and_receive(encoder_context *state, int flush);

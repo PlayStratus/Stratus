@@ -7,7 +7,7 @@ static void session_teardown(struct session *session) {
     if (session == NULL) return;
 
     if (session->transport != NULL)
-       transport_destroy(session->transport);
+       transport_destroy(session->transport, &session->transport_thread);
     if (session->capture != NULL)
         capture_destroy(session->capture);
     if (session->encode != NULL)
