@@ -3,6 +3,7 @@ import { OAuth2Client } from "google-auth-library"
 import jwt from "jsonwebtoken"
 import type { Request, Response } from "express"
 
+import { clearCookieOptions, setAuthCookie } from "../lib/authCookies.js"
 import { dynamoDb } from "../server.js"
 
 interface User {
@@ -17,20 +18,6 @@ interface Token {
 }
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
-const isProduction = process.env.NODE_ENV === "production"
-
-const authCookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? ("none" as const) : ("lax" as const),
-  maxAge: 24 * 60 * 60 * 1000,
-}
-
-const clearCookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: isProduction ? ("none" as const) : ("lax" as const),
-}
 
 const getEnv = (key: string): string => {
   const value = process.env[key]
@@ -103,12 +90,12 @@ const createUser = async (user: Partial<User>): Promise<User> => {
   return newUser as User
 }
 
-const setAuthCookie = (res: Response, tokenPayload: Token) => {
+const setSignedAuthCookie = (res: Response, tokenPayload: Token) => {
   const authToken = jwt.sign(tokenPayload, getEnv("AUTH_SECRET"), {
     expiresIn: "7d",
   })
 
-  res.cookie("auth_token", authToken, authCookieOptions)
+  setAuthCookie(res, authToken)
 }
 
 export const ControllerGoogleAuth = async (
@@ -145,7 +132,7 @@ export const ControllerGoogleAuth = async (
     }
 
     const existingUser = await getUserById(googleUser.googleSub)
-    setAuthCookie(res, {
+    setSignedAuthCookie(res, {
       userId: googleUser.googleSub,
       email: googleUser.email,
     })
@@ -181,7 +168,7 @@ export const ControllerCreateUser = async (
       Email: decodedToken.email ?? "",
     })
 
-    setAuthCookie(res, {
+    setSignedAuthCookie(res, {
       userId: decodedToken.userId,
       email: decodedToken.email,
     })
