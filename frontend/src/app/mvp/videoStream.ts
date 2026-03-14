@@ -22,6 +22,12 @@ export function useVideoStream(
     (description: Uint8Array) => {
       // If we already have a decoder, optionally reconfigure if description changed.
       // (Simplest: only configure once; recreate on stream restart if needed.)
+
+      if (videoDecoderRef.current)
+      {
+        return videoDecoderRef.current
+      }
+      
       if (!videoDecoderRef.current) {
         if (typeof VideoDecoder === "undefined") {
           addLogEvent("VideoDecoder API not available in this browser", "error")
@@ -75,7 +81,6 @@ export function useVideoStream(
       if (description && videoDecoderRef.current.state === "unconfigured") {
         videoDecoderRef.current.configure({
           codec: "avc1.42C01E",
-          description,
           optimizeForLatency: true,
         })
         addLogEvent(
@@ -136,15 +141,19 @@ export function useVideoStream(
             const msgType = buffer[0]
             const payloadLen = readU32BE(buffer, 1)
 
+            //console.log(msgType)
+            //console.log(payloadLen)
+            
+
             if (buffer.length < 5 + payloadLen) break
 
             const payload = buffer.subarray(5, 5 + payloadLen)
             buffer = buffer.subarray(5 + payloadLen)
 
+            //console.log(payload)
             if (msgType === 0x00) {
-              // CONFIG (avcC)
-              const description = payload // already a Uint8Array view
-              decoder = ensureVideoDecoder(description)
+              // CONFIG (avcC) 
+              decoder = ensureVideoDecoder(payload)
               if (!decoder) {
                 addLogEvent("No decoder; dropping config", "error")
                 continue
@@ -153,9 +162,29 @@ export function useVideoStream(
               haveConfig = true
               waitingForKeyAfterConfig = true
 
-              addLogEvent(
-                `Received config (avcC) ${description.byteLength} bytes on stream #${number}`,
-              )
+              if (payloadLen < 1) continue
+              const isKey = 1
+              const frameData = payload.subarray(0)
+
+              // Enforce keyframe requirement after configure/flush/restart
+              if (waitingForKeyAfterConfig) {
+                if (!isKey) {
+                  // drop until first IDR
+                  continue
+                }
+                waitingForKeyAfterConfig = false
+              }
+
+              const chunk = new EncodedVideoChunk({
+                type: isKey ? "key" : "delta",
+                timestamp: ts,
+                data: frameData,
+              })
+              ts += frameDurationUs
+
+              decoder.decode(chunk)
+
+
               continue
             }
 
@@ -173,8 +202,8 @@ export function useVideoStream(
               }
 
               if (payloadLen < 1) continue
-              const isKey = payload[0] === 1
-              const frameData = payload.subarray(1)
+              const isKey = 0
+              const frameData = payload.subarray(0)
 
               // Enforce keyframe requirement after configure/flush/restart
               if (waitingForKeyAfterConfig) {

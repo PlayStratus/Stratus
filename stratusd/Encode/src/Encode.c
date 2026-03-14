@@ -79,10 +79,9 @@ encoder_context* encoder_startup(const char *output_file, int width, int height)
     state->codec_ctx->height = height;
     state->codec_ctx->time_base = (AVRational){1, 30}; // 30 fps
     state->codec_ctx->framerate = (AVRational){30, 1};
-    state->codec_ctx->gop_size = 30;
+    state->codec_ctx->gop_size = 0;
     state->codec_ctx->max_b_frames = 0;
     state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    state->codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
     // H.264 specific options
     av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);

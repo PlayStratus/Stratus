@@ -6,7 +6,7 @@
 
 void Test(absl::string_view test)
 {
-  std::cerr << "[Transport] TEST" << std::endl;
+  //std::cerr << "[Transport] TEST" << std::endl;
 }
 
 
@@ -83,12 +83,12 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
     if (VideoStream && VideoStream->CanWrite())
     {
       // Huuge Mem leak will fix.
-      int NetMessageType = MessageType;
-      int NetLength = Length;
+      uint8_t NetMessageType = MessageType;
+      int NetLength = htonl(Length);
 
       quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, Test);
       quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, Test);
-      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, sizeof(int), Test);
+      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, Test);
 
       quiche::StreamWriteOptions CurrentWriteOptions;
       VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
