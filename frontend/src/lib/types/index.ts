@@ -7,4 +7,3 @@ export type GameType = {
   sDescript: string;           // Short description
   title: string;               // Game title
 };
-

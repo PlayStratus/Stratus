@@ -3,7 +3,6 @@ import { OAuth2Client } from "google-auth-library"
 import jwt from "jsonwebtoken"
 import type { Request, Response } from "express"
 
-import { clearCookieOptions, setAuthCookie } from "../lib/authCookies.js"
 import { dynamoDb } from "../server.js"
 
 interface User {
@@ -40,13 +39,13 @@ const getUserById = async (id: string): Promise<User | undefined> => {
   return (result.Item as User) || undefined
 }
 
-const getTokenFromCookie = (req: Request): string => {
-  const authToken = req.cookies["auth_token"]
-  if (!authToken) {
-    throw new Error("Authentication token missing")
+const getTokenFromAuthorizationHeader = (req: Request): string => {
+  const authHeader = req.headers.authorization
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new Error("Authorization header missing or malformed")
   }
 
-  return authToken
+  return authHeader.slice("Bearer ".length)
 }
 
 const verifyAuthToken = (token: string): Token => {
@@ -90,12 +89,10 @@ const createUser = async (user: Partial<User>): Promise<User> => {
   return newUser as User
 }
 
-const setSignedAuthCookie = (res: Response, tokenPayload: Token) => {
-  const authToken = jwt.sign(tokenPayload, getEnv("AUTH_SECRET"), {
+const createAuthToken = (tokenPayload: Token): string => {
+  return jwt.sign(tokenPayload, getEnv("AUTH_SECRET"), {
     expiresIn: "7d",
   })
-
-  setAuthCookie(res, authToken)
 }
 
 export const ControllerGoogleAuth = async (
@@ -132,16 +129,22 @@ export const ControllerGoogleAuth = async (
     }
 
     const existingUser = await getUserById(googleUser.googleSub)
-    setSignedAuthCookie(res, {
+    const authToken = createAuthToken({
       userId: googleUser.googleSub,
       email: googleUser.email,
     })
 
     if (!existingUser) {
-      return res.status(403).json({ error: "User not found" })
+      return res.status(403).json({
+        error: "User not found",
+        token: authToken,
+      })
     }
 
-    return res.status(200).json({ user: existingUser })
+    return res.status(200).json({
+      token: authToken,
+      user: existingUser,
+    })
   } catch (error) {
     console.error(error)
     return res.status(401).json({ error: "Google auth failed" })
@@ -159,18 +162,13 @@ export const ControllerCreateUser = async (
       throw new Error("Username is required")
     }
 
-    const token = getTokenFromCookie(req)
+    const token = getTokenFromAuthorizationHeader(req)
     const decodedToken = verifyAuthToken(token)
 
     const createdUser = await createUser({
       UserID: decodedToken.userId,
       Username: username,
       Email: decodedToken.email ?? "",
-    })
-
-    setSignedAuthCookie(res, {
-      userId: decodedToken.userId,
-      email: decodedToken.email,
     })
 
     return res.status(201).json({ user: createdUser })
@@ -184,7 +182,7 @@ export const ControllerGetUserByToken = async (
   res: Response,
 ): Promise<any> => {
   try {
-    const token = getTokenFromCookie(req)
+    const token = getTokenFromAuthorizationHeader(req)
     const decodedToken = verifyAuthToken(token)
     const user = await getUserById(decodedToken.userId)
 
@@ -202,9 +200,5 @@ export const ControllerLogout = async (
   _req: Request,
   res: Response,
 ): Promise<void> => {
-  res.clearCookie("auth_token", clearCookieOptions)
-  res.clearCookie("access_token", clearCookieOptions)
-  res.clearCookie("refresh_token", clearCookieOptions)
-
   res.status(200).json({ ok: true })
 }
