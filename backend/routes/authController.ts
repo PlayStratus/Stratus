@@ -5,15 +5,16 @@ import type { Request, Response } from "express"
 
 import { dynamoDb } from "../server.js"
 
+import type { Token } from "../lib/authToken.js"
+import {
+  getTokenFromAuthorizationHeader,
+  verifyAuthToken,
+} from "../lib/authToken.js"
+
 interface User {
   UserID: string
   Username: string
   Email: string
-}
-
-interface Token {
-  userId: string
-  email?: string
 }
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -26,7 +27,7 @@ const getEnv = (key: string): string => {
   return value
 }
 
-const getUserById = async (id: string): Promise<User | undefined> => {
+export const getUserById = async (id: string): Promise<User | undefined> => {
   const result = await dynamoDb.send(
     new GetCommand({
       TableName: "Users",
@@ -37,23 +38,6 @@ const getUserById = async (id: string): Promise<User | undefined> => {
   )
 
   return (result.Item as User) || undefined
-}
-
-const getTokenFromAuthorizationHeader = (req: Request): string => {
-  const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new Error("Authorization header missing or malformed")
-  }
-
-  return authHeader.slice("Bearer ".length)
-}
-
-const verifyAuthToken = (token: string): Token => {
-  try {
-    return jwt.verify(token, getEnv("AUTH_SECRET")) as Token
-  } catch {
-    throw new Error("Invalid or expired token")
-  }
 }
 
 const createUser = async (user: Partial<User>): Promise<User> => {

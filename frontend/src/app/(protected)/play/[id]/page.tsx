@@ -1,3 +1,5 @@
+import { getBackendPath } from "@/lib/backend/getBackendPath"
+
 import Client from "./Client"
 
 type Props = {
@@ -7,12 +9,17 @@ type Props = {
 export default async function PlayPage({ params }: Readonly<Props>) {
   const { id } = await params
 
-  // TODO: Verify with the backend that the game id exists
+  const response = await fetch(getBackendPath(`/games/${id}`))
+
+  if (!response.ok) {
+    return <div className='flex-1'>Game not found</div>
+  }
+
+  const game = await response.json()
 
   return (
-    <div className='flex-1'>
-      <div className='mx-auto'>Game ID: {id}</div>
+    <div className='flex-1 flex'>
+      <Client title={game.title} />
     </div>
   )
-  // return <Client />
 }
