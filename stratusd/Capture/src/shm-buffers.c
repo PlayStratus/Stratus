@@ -153,6 +153,7 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     wl_buf->width = msg->closure->args[2].i;
     wl_buf->height = msg->closure->args[3].i;
     wl_buf->shm_buf = shm_buf;
+    wl_buf->dma_buf = NULL;
     wl_buf->dependents = 0;
     shm_buf->stride = msg->closure->args[4].i;
     pool = wl_map_lookup(map, msg->closure->sender_id);
@@ -167,6 +168,7 @@ enum proxy_actions wl_shm_pool_create_buffer(struct proxy_message *msg) {
     assert(wl_map_lookup(map, wl_buf->id) == NULL);
     if (wl_map_insert_at(map, 0, wl_buf->id, wl_buf) < 0) {
         perror("[Capture] wl_map_insert_at");
+        free(wl_buf);
         return PROXY_ACTION_ERR;
     }
 
@@ -207,8 +209,8 @@ enum proxy_actions wl_shm_surface_commit(struct capture_session *session,
     assert(shm_buf != NULL);
 
     // Encode frame
-    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride) ==
-           0);
+    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride, 0)
+           == 0);
 
     return PROXY_ACTION_FWD;
 }

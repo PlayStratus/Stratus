@@ -12,17 +12,20 @@ async function verifyAuth() {
   }
 
   try {
-    const response = await fetch(getBackendPath("/users/refresh"), {
+    const response = await fetch(getBackendPath("/auth"), {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${authToken.value}`,
+        Cookie: cookieStore.toString(),
       },
+      credentials: "include",
       cache: "no-store",
     })
 
-    const data = await response.json()
+    if (!response.ok) {
+      redirect("/signin")
+    }
 
-    return data
+    return response.json()
   } catch (error) {
     return redirect("/signin")
   }

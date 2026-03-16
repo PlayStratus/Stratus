@@ -7,9 +7,9 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev`
-    - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel`
-    - Arch: `# pacman -S libevdev libpipewire ffmpeg`
+    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libevdev-dev libswscale-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libglvnd-dev libegl-dev libgles-dev`
+    - RHEL, Fedora, etc: `# dnf install libevdev-devel pipewire-devel ffmpeg-devel mesa-libGL mesa-libEGL mesa-libGLES libdrm libdrm-devel libglvnd libglvnd-devel libglvnd-egl libglvnd-gles`
+    - Arch: `# pacman -S libevdev libpipewire ffmpeg mesa libdrm libglvnd`
 
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
 
@@ -23,4 +23,6 @@ cluster.
 
 4.  Build project with `cmake --build ./build`
 
-5.  Run binary located at `./build/src/stratusd`
+5.  Run binary located at `./build/src/stratusd` (note that stratusd will run
+    the game located at `$STRATUSD_GAME_DIR/$STRATUSD_GAME_UUID`, which defaults
+    to `../games/build/sleep`)

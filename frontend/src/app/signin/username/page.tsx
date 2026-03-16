@@ -1,8 +1,3 @@
-import {
-  getGoogleUser,
-  verifyAccessToken,
-  refreshAccessToken,
-} from "@/lib/auth"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -34,20 +29,21 @@ async function handleSetUsername(formData: FormData) {
   // outside of the try/catch so they aren't swallowed and treated as errors.
   let response: Response | undefined
   try {
-    response = await fetch(getBackendPath("/users/create"), {
+    response = await fetch(getBackendPath("/auth/create"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${auth_token}`,
+        Cookie: cookieStore.toString(),
       },
+      credentials: "include",
       body: JSON.stringify({ username }),
     })
   } catch (error) {
     console.error("Network error creating user:", error)
     redirect(
       `/signin?error=${encodeURIComponent(
-        "Failed to set username. Please try again."
-      )}`
+        "Failed to set username. Please try again.",
+      )}`,
     )
   }
 
@@ -61,8 +57,8 @@ async function handleSetUsername(formData: FormData) {
 
     redirect(
       `/signin?error=${encodeURIComponent(
-        "Failed to set username. Please try again."
-      )}`
+        "Failed to set username. Please try again.",
+      )}`,
     )
   }
 

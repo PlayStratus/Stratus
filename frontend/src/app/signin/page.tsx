@@ -1,3 +1,4 @@
+import { GoogleOAuthProvider } from "@react-oauth/google"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -7,7 +8,7 @@ type Props = {
   searchParams: Promise<{ error?: string }>
 }
 
-export default async function SignInPage({ searchParams }: Props) {
+async function SignInPageContent({ searchParams }: Props) {
   const params = await searchParams
   const error = params.error ? decodeURIComponent(params.error) : null
 
@@ -30,7 +31,9 @@ export default async function SignInPage({ searchParams }: Props) {
           <div className='mb-4 p-3 border rounded-lg text-sm'>
             Sign in with your oregonstate.edu email address.
           </div>
+
           <SignInButton />
+
           {error && (
             <div className='mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm'>
               {error}
@@ -41,3 +44,15 @@ export default async function SignInPage({ searchParams }: Props) {
     </main>
   )
 }
+
+export default function SignInPage({ searchParams }: Props) {
+  return (
+    <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
+      <SignInPageContent searchParams={searchParams} />
+    </GoogleOAuthProvider>
+  )
+}
+
+/*
+
+*/

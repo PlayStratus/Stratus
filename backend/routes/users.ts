@@ -5,13 +5,15 @@ import {
   ControllerCreateUser,
   ControllerGetUserByToken,
   ControllerRefreshToken,
-} from "./usersController.ts"
+  ControllerCreateSession
+} from "./usersController.js"
 
 const router = express.Router()
 //plan to add implement put for updating username.
 
 router.post("/signin", ControllerGetUser)
 router.post("/create", ControllerCreateUser)
+router.post("/session", ControllerCreateSession)
 router.get("/refresh", ControllerRefreshToken)
 router.get("/", ControllerGetUserByToken)
 

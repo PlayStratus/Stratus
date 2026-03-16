@@ -8,11 +8,12 @@ arch=('x86_64')
 url="https://github.com/playstratus/stratus"
 license=('MIT')
 
-depends=('ffmpeg' 'libpipewire' 'weston')
+depends=('ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'weston')
 makedepends=('cmake' 'git')
 
 provides=('stratusd')
 
+backup=('etc/stratusd.conf')
 options=('!debug')
 
 source=(
@@ -20,13 +21,14 @@ source=(
   # tarball from GitHub instead once Stratus is published.
   "stratus::git+file://$(git rev-parse --show-toplevel)"
 
+  'stratusd.conf'
   'stratusd.tmpfiles'
   'stratusd.service'
   'stratusd-weston.service'
   'stratusd.sysusers'
   'udev.rules'
 )
-sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
+sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP' 'SKIP')
 
 pkgver() {
   cd stratus
@@ -39,6 +41,7 @@ build() {
 }
 
 package() {
+  install -Dm644 "$srcdir/stratusd.conf" "$pkgdir/etc/stratusd.conf"
   install -Dm755 "$srcdir/stratus/stratusd/build/stratusd" "$pkgdir/usr/bin/stratusd"
   install -Dm644 "$srcdir/stratusd.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/stratusd.conf"
   install -Dm644 "$srcdir/stratusd.service" "$pkgdir/usr/lib/systemd/user/stratusd.service"

@@ -57,6 +57,11 @@ _deps
 CMakeUserPresets.json
 /stratusd/libs/wayland/protocols/*.c
 
+# Game build directory
+!/games/build/
+/games/build/*
+!/games/build/sleep
+
 # Quiche External Shared Objects
 stratusd/libs/libquiche/external/bazel_tools/jdk/lib/*.so
 stratusd/libs/libquiche/external/bazel_tools/jdk/lib/server/*.so

@@ -1,1 +1,2 @@
 d /var/lib/stratusd 0750 stratusd stratusd
+d /var/lib/stratusd/games 0750 stratusd stratusd
