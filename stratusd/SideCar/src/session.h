@@ -6,12 +6,17 @@
 #include "Capture.h"
 // #include "Encode.h"
 #include "Input.h"
+#include "Transport.h"
 #include "sidecar-priv.h"
 
 /*
  * Contains data for a single stream session
  */
+
 struct session {
+    pthread_t transport_thread;
+    struct transport_session *transport; 
+
     pthread_t capture_thread;
     struct capture_session *capture;    // internal data for Capture module
 

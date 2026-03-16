@@ -65,7 +65,6 @@ encoder_context* encoder_startup(
     state->width = width;
     state->height = height;
     state->frame_count = 0;
-    state->initframe = 0;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {
@@ -82,7 +81,6 @@ encoder_context* encoder_startup(
     }
 
     // Configure encoder
-    state->codec_ctx->bit_rate = 2000000;  // 2 Mbps
     state->codec_ctx->width = width;
     state->codec_ctx->height = height;
     state->codec_ctx->time_base = (AVRational){1, 30}; // 30 fps
@@ -91,9 +89,11 @@ encoder_context* encoder_startup(
     state->codec_ctx->max_b_frames = 0;
     state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
+    
     // H.264 specific options
-    av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(state->codec_ctx->priv_data, "preset", "slow", 0);
     av_opt_set(state->codec_ctx->priv_data, "tune", "zerolatency", 0);
+    av_opt_set(state->codec_ctx->priv_data, "crf", "0", 0);
 
     if (avcodec_open2(state->codec_ctx, codec, NULL) < 0) {
         fprintf(stderr, "Could not open codec\n");
@@ -174,7 +174,7 @@ int dma_encode_video_frame(
         return -1;
     }
 
-    assert(encode_video_frame(state, pixel_data, stride, 1) == 0);
+    encode_video_frame(state, pixel_data, stride, 1);
 
     free(pixel_data);
 }

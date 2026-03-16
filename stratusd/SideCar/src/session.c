@@ -37,6 +37,9 @@ void session_teardown(struct session *session) {
         capture_destroy(session->capture);
     if (session->input != NULL)
         input_destroy(session->input);
+    if (session->transport != NULL)
+        transport_destroy(session->transport, &session->transport_thread);
+
 
     // Check to make sure game has exited (either gracefully in response to user
     // input, or abruptly due to the Wayland proxy socket being closed).
@@ -121,6 +124,9 @@ struct session *session_start(char *game_id, int width, int height,
 
     // Initialize modules
     // Order is important here! Some modules must be initialized before others.
+    session->transport = transport_init(4433);
+    if (session->transport == NULL)
+        goto err;
     session->capture = capture_init(encode_output, width, height, NULL);
     if (session->capture == NULL)
         goto err;
@@ -129,6 +135,9 @@ struct session *session_start(char *game_id, int width, int height,
         goto err;
 
     // Start modules in separate threads
+    pthread_create(&session->transport_thread, NULL, (void *)&transport_thread,
+                   session->transport);
+                   
     pthread_create(&session->capture_thread, NULL, (void *)&capture_run,
                    session->capture);
     pthread_create(&session->input_thread, NULL, (void *)&input_run,
