@@ -190,21 +190,23 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     surf = wl_map_lookup(map, id);
     assert(surf != NULL);
     buf = surf->buf;
+    session = msg->conn->session->proxy->userdata;
 
     if (buf != NULL) {
-        if (buf->width > 64 && buf->height > 64) {
-            // A >64x64 frame probably isn't the cursor, so let's process it.
-            session = msg->conn->session->proxy->userdata;
-
+        if (buf->width == session->width && buf->height == session->height) {
             assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
-            /* Commented out until viewport changes force correct resolution
-             * mostly we will use dmabuf anyway
+
             if (buf->shm_buf != NULL)
                 wl_shm_surface_commit(session, surf); // Handle shm frame
-            */
-
             if (buf->dma_buf != NULL)
                 wl_dmabuf_surface_commit(session, surf); // Handle dmabuf frame
+        } else if (buf->width > 64 && buf->height > 64) {
+            // A >64x64 frame probably isn't the cursor, so we might be supposed
+            // to process it
+
+            fprintf(stderr, "[Capture] Warning: expected %dx%d frame but "
+                    "received %dx%d frame\n", session->width, session->height,
+                    buf->width, buf->height);
         }
 
         // Release buffer
