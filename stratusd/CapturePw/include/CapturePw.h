@@ -1,6 +1,8 @@
 #ifndef CAPTURE_PW_H
 #define CAPTURE_PW_H
 
+#include "AudioEncode.h"
+
 struct capture_pw_session; // internal to CapturePw module
 
 struct capture_pw_session *capture_pw_init();
