@@ -147,6 +147,7 @@ int sidecar_on_stop_session(struct sidecar_context *ctx, char *session_id) {
 int sidecar_main() {
     struct sidecar_context ctx;
     time_t last_heartbeat;
+    char *test_api_msg;
 
     fprintf(stderr, "[Sidecar] Starting sidecar module...\n");
 
@@ -161,21 +162,10 @@ int sidecar_main() {
     ctx.api_client->on_stop_session =
         (api_stop_session_msg_handler*)&sidecar_on_stop_session;
 
-    // // TODO: used for testing, remove once fully integrated with the backend
-    // api_recv(ctx.api_client, "{\
-    //     \"type\": \"start_session\",\
-    //     \"timestamp\": \"2026-02-27 18:00:00\",\
-    //     \"request_id\": \"b50e8400-e29b-41d4-a716-446655440000\",\
-    //     \"payload\": {\
-    //         \"session_id\": \"550e8400-e29b-41d4-a716-446655440001\",\
-    //         \"game_id\": \"sleep\",\
-    //         \"width\": 640,\
-    //         \"height\": 480,\
-    //         \"session_token\": \"b020ea96-83c0-46a8-aac0-0954abd1c8ac\",\
-    //         \"user_id\": \"7341faed-f80e-457e-a71e-789214869c04\",\
-    //         \"user_name\": \"Alice\"\
-    //     }\
-    // }");
+    // Send test API message to Api client
+    test_api_msg = getenv("STRATUSD_API_MSG");
+    if (test_api_msg != NULL)
+        api_recv(ctx.api_client, test_api_msg);
 
     // Main event loop
     last_heartbeat = 0;
