@@ -42,9 +42,13 @@ The Audio Encoder thread locks the ring buffer, reads a frame from the buffer, a
 
 ### [Audio Encoder](/stratusd/Encode/src/EncodeAudio.c)
 
-> Copied layout of Encoder
+> Copied layout of Encoder. Currently it just consumes the audio frame data and writes to a raw PCM file. 
 
+#### Generates output file
+- Gets the `output_audio.pcm` file generated and ready to append the audio frame data
 
+#### Write audio frame
+- Writes/appends the audio frame data to the `output_audio.pcm` file
 
 ## Future Work
 - In the [Audio Encoder](/stratusd/Encode/src/EncodeAudio.c), encode with the Opus codec. This codec at least is on my browser's Audio WebCodec, and when I researched (asked ChatGPT) about which audio codec is best for streaming, Opus was the most recommended one. 
