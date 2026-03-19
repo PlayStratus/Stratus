@@ -26,14 +26,17 @@ cluster.
 5.  Set applicable options via environment variables (you may find it useful to
     add these to a `.env` file that you source before running stratusd):
 
+    - `STRATUSD_API_MSG`: An inital API message to be "received" by the SideCar
+      for testing purposes (e.g.
+      `'{ "type": "start_session", "timestamp": "2026-02-27 18:00:00", "request_id": "b50e8400-e29b-41d4-a716-446655440000", "payload": { "session_id": "550e8400-e29b-41d4-a716-446655440001", "game_id": "sleep", "width": 640, "height": 480, "session_token": "b020ea96-83c0-46a8-aac0-0954abd1c8ac", "user_id": "7341faed-f80e-457e-a71e-789214869c04", "user_name": "Alice" } }'`)
     - `STRATUSD_BACKEND_URL`: The URL of the backend WebSocket API
       (**required**, e.g. `ws://localhost:4000` or `wss://api.playstratus.io`)
+    - `STRATUSD_CAPTURE_DEBUG`: Set to log proxied Wayland messages
+    - `STRATUSD_ENCODE_DEBUG`: Set to log encoded video frames
+    - `STRATUSD_GAME_DEBUG`: Set to log game output
     - `STRATUSD_GAME_DIR`: The directory containing the packaged games (defaults
       to `../games/build`)
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
-    - `STRATUSD_API_MSG`: An inital API message to be "received" by the SideCar
-      for testing purposes (e.g.
-      `'{ "type": "start_session", "timestamp": "2026-02-27 18:00:00", "request_id": "b50e8400-e29b-41d4-a716-446655440000", "payload": { "session_id": "550e8400-e29b-41d4-a716-446655440001", "game_id": "sleep", "width": 640, "height": 480, "session_token": "b020ea96-83c0-46a8-aac0-0954abd1c8ac", "user_id": "7341faed-f80e-457e-a71e-789214869c04", "user_name": "Alice" } }'`)
 
 6.  Run binary located at `./build/src/stratusd`

@@ -58,7 +58,8 @@ extern const struct wl_interface wl_display_interface;
 /*
  * Whether to log all proxied Wayland messages
  *
- * Set in handle_session_create according to the WAYLAND_DEBUG variable.
+ * Set in handle_session_create according to the STRATUSD_CAPTURE_DEBUG
+ * variable.
  */
 static bool wayland_debug = false;
 
@@ -516,7 +517,7 @@ int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
     int i, client_fd;
 
-    wayland_debug = (getenv("WAYLAND_DEBUG") != NULL);
+    wayland_debug = (getenv("STRATUSD_CAPTURE_DEBUG") != NULL);
 
     while (true) {
         if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0) {

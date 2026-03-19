@@ -6,6 +6,7 @@
  */
 
 #include <assert.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,7 +57,7 @@ void session_teardown(struct session *session) {
  * Returns the PID of the child game process on success and -1 on failure.
  */
 static int session_launch_game(char *game_id) {
-    int pid;
+    int pid, devnull;
     char game_path[MAX_GAME_PATH];
     char *argv[2];
     char *game_dir;
@@ -88,6 +89,16 @@ static int session_launch_game(char *game_id) {
         if (setenv("WAYLAND_DISPLAY", "stratus", 1) < 0) {
             perror("[Sidecar] setenv");
             exit(1);
+        }
+
+        // Hide game output unless explicitly enabled
+        if (getenv("STRATUSD_GAME_DEBUG") == NULL) {
+            if ((devnull = open("/dev/null", O_WRONLY, 0)) < 0) {
+                perror("[Sidecar] open");
+                exit(1);
+            }
+            dup2(devnull, 1);
+            dup2(devnull, 2);
         }
 
         execvp(argv[0], argv);
