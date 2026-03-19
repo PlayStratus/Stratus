@@ -510,7 +510,7 @@ err_zalloc:
 /*
  * Run a Wayland proxy
  *
- * Returns 0 after the client disconnects successfully and -1 on failure
+ * Returns -1 on failure
  */
 int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
@@ -528,11 +528,6 @@ int proxy_run(struct proxy *proxy) {
         if (ev.events & EPOLLHUP && ev.data.ptr != NULL) {
             // Client disconnected
             proxy_destroy_session(((struct proxy_conn*)(ev.data.ptr))->session);
-            for (i = 0; i < MAX_SESSIONS; i++) {
-                if (proxy->sessions[i] != NULL) break;
-            }
-            if (i == MAX_SESSIONS)
-                return 0; // exit if no sessions remain
 
         } else if (ev.events & EPOLLIN && ev.data.ptr == NULL) {
             // Client connected
