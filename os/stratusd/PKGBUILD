@@ -8,7 +8,7 @@ arch=('x86_64')
 url="https://github.com/playstratus/stratus"
 license=('MIT')
 
-depends=('ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'weston')
+depends=('ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'sway')
 makedepends=('cmake' 'git')
 
 provides=('stratusd')
@@ -24,7 +24,7 @@ source=(
   'stratusd.conf'
   'stratusd.tmpfiles'
   'stratusd.service'
-  'stratusd-weston.service'
+  'stratusd-sway.service'
   'stratusd.sysusers'
   'udev.rules'
 )
@@ -45,7 +45,7 @@ package() {
   install -Dm755 "$srcdir/stratus/stratusd/build/stratusd" "$pkgdir/usr/bin/stratusd"
   install -Dm644 "$srcdir/stratusd.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/stratusd.conf"
   install -Dm644 "$srcdir/stratusd.service" "$pkgdir/usr/lib/systemd/user/stratusd.service"
-  install -Dm644 "$srcdir/stratusd-weston.service" "$pkgdir/usr/lib/systemd/user/stratusd-weston.service"
+  install -Dm644 "$srcdir/stratusd-sway.service" "$pkgdir/usr/lib/systemd/user/stratusd-sway.service"
   install -Dm644 "$srcdir/stratusd.sysusers" "$pkgdir/usr/lib/sysusers.d/stratusd.conf"
   install -Dm644 "$srcdir/udev.rules" "$pkgdir/usr/lib/udev/rules.d/60-stratus.rules"
 }
