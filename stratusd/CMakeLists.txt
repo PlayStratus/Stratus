@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.16.0)
 
-project(stratusd VERSION 0.1.0 LANGUAGES C)
+project(stratusd VERSION 0.1.0 LANGUAGES C CXX)
 
 file(GLOB sourcefiles CONFIGURE_DEPENDS "*.h" "*.c")
 
 # Load dependencies
 add_subdirectory(libs/wayland)
+add_subdirectory(libs/libquiche)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -33,7 +35,8 @@ add_executable(stratusd ${sourcefiles})
 target_include_directories(stratusd PUBLIC ${CMAKE_BINARY_DIR})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Capture CapturePw Encode Input SideCar)
+target_link_libraries(stratusd PRIVATE "-Wl,--exclude-libs,ALL" Capture
+    CapturePw Encode Input SideCar)
 
 # Get version from git
 execute_process(
