@@ -6,10 +6,15 @@
  */
 
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "session.h"
+#include "Capture.h"
+#include "Input.h"
 
 /*
  * The maximum length of the filepath of a game, NULL terminator included
@@ -31,12 +36,6 @@ void session_teardown(struct session *session) {
         pthread_cancel(session->input_thread);
         pthread_join(session->input_thread, NULL);
     }
-
-    // Teardown modules
-    if (session->capture != NULL)
-        capture_destroy(session->capture);
-    if (session->input != NULL)
-        input_destroy(session->input);
 
     // Check to make sure game has exited (either gracefully in response to user
     // input, or abruptly due to the Wayland proxy socket being closed).
@@ -117,23 +116,18 @@ struct session *session_start(char *session_id, char *game_id, int width,
         goto err;
     }
     memset(session, 0x00, sizeof(struct session));
+
+    session->args.encode_output = encode_output;
+    session->args.width = width;
+    session->args.height = height;
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
-    // Initialize modules
-    // Order is important here! Some modules must be initialized before others.
-    session->capture = capture_init(encode_output, width, height, NULL);
-    if (session->capture == NULL)
-        goto err;
-    session->input = input_init();
-    if (session->input == NULL)
-        goto err;
-
     // Start modules in separate threads
-    pthread_create(&session->capture_thread, NULL, (void *)&capture_run,
-                   session->capture);
-    pthread_create(&session->input_thread, NULL, (void *)&input_run,
-                   session->input);
+    pthread_create(&session->capture_thread, NULL, (void *)&capture_main,
+                   &session->args);
+    pthread_create(&session->input_thread, NULL, (void *)&input_main,
+                   &session->args);
 
     // Start game
     session->game_pid = session_launch_game(session->game_id);

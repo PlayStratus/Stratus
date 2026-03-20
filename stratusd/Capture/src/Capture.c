@@ -21,11 +21,13 @@
  */
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 
 #include <wayland-private.h>
 
+#include "Capture.h"
 #include "capture-priv.h"
 #include "resize-pub.h"
 #include "shm-buffers-pub.h"
@@ -123,50 +125,52 @@ static void handle_session_destroy(struct proxy_session *session) {
 }
 
 /*
- * Initialize a capture session
- *
- * Returns a pointer to the created capture session on success and NULL on
- * failure.
+ * Destroy a capture session and free its resources
  */
-struct capture_session *capture_init(char *encode_output, uint32_t width,
-                                     uint32_t height, encoder_context *encoder)
-{
-    struct capture_session *session;
+static void capture_destroy(struct capture_session *session) {
+    fprintf(stderr, "[Capture] Wayland proxy destroyed\n");
 
-    assert(width > 0);
-    assert(height > 0);
-    assert(encoder == NULL); // See TODO below in capture_run
+    if (session->encoder != NULL)
+        encoder_teardown(session->encoder);
+    proxy_destroy(session->proxy);
+    free(session);
+}
+
+/*
+ * Run the capture module
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int capture_main(struct session_args *args) {
+    int ret = 0;
+    struct capture_session *session;
 
     session = malloc(sizeof(struct capture_session));
     if (session == NULL) {
         perror("[Capture] malloc");
-        return NULL;
+        return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
 
-    session->encode_output = encode_output;
-    session->width = width;
-    session->height = height;
-    session->encoder = encoder;
+    pthread_cleanup_push((void (*)(void*))capture_destroy, session);
+
+    assert(args != NULL);
+    assert(args->width > 0);
+    assert(args->height > 0);
+    session->encode_output = args->encode_output;
+    session->width = args->width;
+    session->height = args->height;
 
     session->proxy = proxy_init("stratus");
     if (session->proxy == NULL) {
         free(session);
-        return NULL;
+        ret = -1;
+        goto end;
     }
     session->proxy->on_session_create   = &handle_session_create;
     session->proxy->on_message          = &handle_message;
     session->proxy->on_session_destroy  = &handle_session_destroy;
     session->proxy->userdata            = session;
 
-    return session;
-}
-
-/*
- * Run a capture session
- *
- * Returns 0 on success and -1 on failure.
- */
-int capture_run(struct capture_session *session) {
     // TODO: EGL doesn't like being initialized in one thread and then run in
     // a different thread. It's possible to change this, but eventually the
     // Encode module will be running completely in its own thread anyway. So for
@@ -175,25 +179,24 @@ int capture_run(struct capture_session *session) {
     session->encoder = encoder_startup(session->encode_output, session->width,
                                        session->height, AV_PIX_FMT_BGR0,
                                        AV_PIX_FMT_RGBA);
-    if (session->encoder == NULL)
-        return -1;
+    if (session->encoder == NULL) {
+        ret = -1;
+        goto end;
+    }
     session->encoder->egl_ctx = egl_capture_init();
-    if (session->encoder->egl_ctx == NULL)
-        return -1;
+    if (session->encoder->egl_ctx == NULL) {
+        ret = -1;
+        goto end;
+    }
 
     fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);
-    if (proxy_run(session->proxy) < 0)
-        return -1;
-    return 0;
-}
+    if (proxy_run(session->proxy) < 0) {
+        ret = -1;
+        goto end;
+    }
 
-/*
- * Destroy a capture session and free its resources
- */
-void capture_destroy(struct capture_session *session) {
-    if (session->encoder != NULL)
-        encoder_teardown(session->encoder);
-    proxy_destroy(session->proxy);
-    free(session);
+end:
+    pthread_cleanup_pop(1);
+    return ret;
 }
