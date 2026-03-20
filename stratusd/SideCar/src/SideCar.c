@@ -5,8 +5,12 @@
  */
 
 #include <assert.h>
+#include <errno.h>
 #include <dirent.h>
+#include <sensors/sensors.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/sysinfo.h>
 #include <sys/vfs.h>
 #include <unistd.h>
@@ -25,6 +29,51 @@
  * The maximum number of installed games that can be detected
  */
 #define MAX_GAMES 16
+
+/*
+ * Get the first temperature of the first sensor found resembling a CPU
+ *
+ * Returns the temperature in Celsius on success and 0 on failure.
+ */
+static float get_cpu_temperature() {
+    int i, j;
+    double temp = 0;
+    const sensors_chip_name *chip;
+    const sensors_feature *feature;
+    const sensors_subfeature *subfeature;
+
+    if (sensors_init(NULL) != 0) {
+        fprintf(stderr, "[SideCar] sensors_init failed\n");
+        return 0;
+    }
+
+    i = 0;
+    while ((chip = sensors_get_detected_chips(NULL, &i)) != NULL) {
+        if ((strstr(chip->prefix, "cpu") != NULL) ||
+            (strcmp(chip->prefix, "coretemp") == 0) ||
+            (strcmp(chip->prefix, "k10temp") == 0) ||
+            (strcmp(chip->prefix, "zenpower") == 0)) {
+
+            // Chip prefix matchs a common CPU prefix (see tempDriverPriority in
+            // linux/LibSensors.c of htop)
+
+            j = 0;
+            while ((feature = sensors_get_features(chip, &j)) != NULL) {
+                if (feature->type == SENSORS_FEATURE_TEMP) {
+                    subfeature = sensors_get_subfeature(chip, feature, SENSORS_SUBFEATURE_TEMP_INPUT);
+                    if (subfeature) {
+                        if (!sensors_get_value(chip, subfeature->number, &temp))
+                            goto end;
+                    }
+                }
+            }
+        }
+    }
+
+end:
+    sensors_cleanup();
+    return temp;
+}
 
 /*
  * Perform a heartbeat and send it to the backend server
@@ -89,7 +138,7 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
     msg.ram_total = info.totalram * info.mem_unit;
     msg.disk_used = (fs.f_blocks - fs.f_bfree) * fs.f_bsize;
     msg.disk_total = fs.f_blocks * fs.f_bsize;
-    msg.temperature = 0; // TODO
+    msg.temperature = get_cpu_temperature();
 
     return api_send_heartbeat(ctx->api_client, &msg);
 }

@@ -18,6 +18,7 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavutil
     libswscale)
 find_package(OpenGL COMPONENTS GLES3 EGL REQUIRED)
+find_package(Sensors REQUIRED)
 
 add_subdirectory(Capture)
 add_subdirectory(Encode)

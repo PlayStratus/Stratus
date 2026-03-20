@@ -8,4 +8,4 @@ add_library(SideCar STATIC ${sourcefiles})
 
 target_include_directories(SideCar PUBLIC include PRIVATE ${CMAKE_BINARY_DIR})
 target_link_libraries(SideCar PRIVATE Capture Encode Input ${LIBCURL_LIBRARIES}
-  ${LIBCJSON_LIBRARIES})
+  ${LIBCJSON_LIBRARIES} ${SENSORS_LIBRARIES})
