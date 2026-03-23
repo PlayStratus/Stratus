@@ -12,6 +12,7 @@
 #define DEFAULT_GAME_DIR "../games/build"
 
 struct sidecar_context {
+    struct api_client *api_client;
     struct session *active_session;
 };
 

@@ -106,8 +106,8 @@ static int session_launch_game(char *game_id) {
  *
  * Returns the crated session struct on success and NULL on failure.
  */
-struct session *session_start(char *game_id, int width, int height,
-                              char *encode_output) {
+struct session *session_start(char *session_id, char *game_id, int width,
+                              int height, char *encode_output) {
     struct session *session;
 
     // Create session struct
@@ -117,6 +117,7 @@ struct session *session_start(char *game_id, int width, int height,
         goto err;
     }
     memset(session, 0x00, sizeof(struct session));
+    strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
     // Initialize modules

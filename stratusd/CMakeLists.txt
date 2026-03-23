@@ -10,12 +10,15 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PipeWire REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(LIBEVDEV REQUIRED libevdev)
+pkg_search_module(LIBCURL REQUIRED libcurl)
+pkg_search_module(LIBCJSON REQUIRED libcjson)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavcodec
     libavformat
     libavutil
     libswscale)
 find_package(OpenGL COMPONENTS GLES3 EGL REQUIRED)
+find_package(Sensors REQUIRED)
 
 add_subdirectory(Capture)
 add_subdirectory(Encode)
