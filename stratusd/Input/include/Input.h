@@ -1,12 +1,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-struct input_session; // internal to Input module
+#include <SideCar.h>
 
-struct input_session *input_init();
-
-int input_run(struct input_session *session);
-
-void input_destroy(struct input_session *session);
+int input_main(struct session_args *args);
 
 #endif

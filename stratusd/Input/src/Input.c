@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,46 +66,42 @@ void gamepad_stk_console(struct gamepad *gamepad) {
 }
 
 /*
- * Initialize an input session.
- *
- * Returns a pointer to the created input session on success and NULL on
- * failure.
+ * Destroy an input session and free its resources
  */
-struct input_session *input_init() {
+static void input_destroy(struct input_session *session) {
+    gamepad_destroy(session->gamepad);
+    free(session);
+}
+
+/*
+ * Run the input module
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int input_main(struct session_args *args) {
+    int ret = 0;
     struct input_session *session;
 
     session = malloc(sizeof(struct input_session));
     if (session == NULL) {
         perror("[Input] malloc");
-        return NULL;
+        return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+
+    pthread_cleanup_push((void (*)(void*))input_destroy, session);
 
     session->gamepad = gamepad_init("stratus");
     if (session->gamepad == NULL) {
         free(session);
-        return NULL;
+        ret = -1;
+        goto end;
     }
 
     usleep(10000);  // Wait 10ms for gamepad device to be detected
 
-    return session;
-}
-
-/*
- * Run an input session
- *
- * Returns 0 on success and -1 on failure.
- */
-int input_run(struct input_session *session) {
     gamepad_stk_console(session->gamepad);
 
-    return 0;
-}
-
-/*
- * Destroy an input session and free its resources
- */
-void input_destroy(struct input_session *session) {
-    gamepad_destroy(session->gamepad);
-    free(session);
+end:
+    pthread_cleanup_pop(1);
+    return ret;
 }
