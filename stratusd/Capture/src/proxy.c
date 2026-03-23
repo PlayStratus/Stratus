@@ -35,7 +35,7 @@
 /*
  * The maximum number of simultaneous client/server sessions per proxy
  */
-#define MAX_SESSIONS 4
+#define MAX_SESSIONS 8
 
 /*
  * The maximum length of a proxy session name
@@ -58,7 +58,8 @@ extern const struct wl_interface wl_display_interface;
 /*
  * Whether to log all proxied Wayland messages
  *
- * Set in handle_session_create according to the WAYLAND_DEBUG variable.
+ * Set in handle_session_create according to the STRATUSD_CAPTURE_DEBUG
+ * variable.
  */
 static bool wayland_debug = false;
 
@@ -510,13 +511,13 @@ err_zalloc:
 /*
  * Run a Wayland proxy
  *
- * Returns 0 after the client disconnects successfully and -1 on failure
+ * Returns -1 on failure
  */
 int proxy_run(struct proxy *proxy) {
     struct epoll_event ev;
     int i, client_fd;
 
-    wayland_debug = (getenv("WAYLAND_DEBUG") != NULL);
+    wayland_debug = (getenv("STRATUSD_CAPTURE_DEBUG") != NULL);
 
     while (true) {
         if (epoll_wait(proxy->epoll_fd, &ev, 1, -1) < 0) {
@@ -528,11 +529,6 @@ int proxy_run(struct proxy *proxy) {
         if (ev.events & EPOLLHUP && ev.data.ptr != NULL) {
             // Client disconnected
             proxy_destroy_session(((struct proxy_conn*)(ev.data.ptr))->session);
-            for (i = 0; i < MAX_SESSIONS; i++) {
-                if (proxy->sessions[i] != NULL) break;
-            }
-            if (i == MAX_SESSIONS)
-                return 0; // exit if no sessions remain
 
         } else if (ev.events & EPOLLIN && ev.data.ptr == NULL) {
             // Client connected

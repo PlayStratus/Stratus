@@ -62,6 +62,8 @@ encoder_context* encoder_startup(
         return NULL;
     }
 
+    state->debug = (getenv("STRATUSD_ENCODE_DEBUG") != NULL);
+
     state->width = width;
     state->height = height;
     state->frame_count = 0;
@@ -151,7 +153,7 @@ encoder_context* encoder_startup(
         return NULL;
     }
 
-    printf("Encoder initialized: %dx%d\n", width, height);
+    printf("[Encode] Encoder initialized: %dx%d\n", width, height);
     return state;
 }
 
@@ -229,7 +231,7 @@ int encoder_teardown(encoder_context *state) {
     avcodec_send_and_receive(state, 1);
 
     // Cleanup
-    printf("Encoded %d frames total\n", state->frame_count);
+    printf("[Encode] Encoded %d frames total\n", state->frame_count);
 
     av_packet_free(&state->pkt);
     sws_freeContext(state->shm_sws_ctx);

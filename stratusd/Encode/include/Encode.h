@@ -21,6 +21,7 @@ typedef struct {
     int width;
     int height;
     struct egl_capture_context *egl_ctx;
+    bool debug;
 } encoder_context;
 
 int test_encode();

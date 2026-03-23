@@ -117,6 +117,7 @@ enum proxy_actions wl_compositor_create_surface(struct proxy_message *msg) {
     assert(wl_map_lookup(map, surf->id) == NULL);
     if (wl_map_insert_at(map, 0, surf->id, surf) < 0) {
         perror("[Capture] wl_map_insert_at");
+        free(surf);
         return PROXY_ACTION_ERR;
     }
 
