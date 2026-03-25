@@ -1,40 +1,28 @@
 "use client"
 
-import { GoogleLogin } from "@react-oauth/google"
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google"
 import { useRouter } from "next/navigation"
 
-import { getBackendPath } from "@/lib/backend/getBackendPath"
+import { useAuth } from "@/components/auth/AuthProvider"
 
 export default function SignInButton() {
   const router = useRouter()
+  const { signInWithGoogle } = useAuth()
 
-  const handleSuccess = async (credentialResponse: any) => {
+  const handleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
-      const res = await fetch(getBackendPath("/auth/google"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          credential: credentialResponse.credential,
-        }),
-      })
+      if (!credentialResponse.credential) {
+        throw new Error("Google sign-in did not return a credential")
+      }
 
-      const data = await res.json()
+      const result = await signInWithGoogle(credentialResponse.credential)
 
-      if (res.status === 403) {
+      if (result.needsUsername) {
         router.push("/signin/username")
-        router.refresh()
         return
       }
 
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed")
-      }
-
       router.push("/browse")
-      router.refresh()
     } catch (err) {
       console.error("Login failed:", err)
       const message =
@@ -46,7 +34,11 @@ export default function SignInButton() {
   return (
     <GoogleLogin
       onSuccess={handleSuccess}
-      onError={() => console.log("Google Login Failed")}
+      onError={() =>
+        router.push(
+          `/signin?error=${encodeURIComponent("Google sign-in failed")}`,
+        )
+      }
     />
   )
 }

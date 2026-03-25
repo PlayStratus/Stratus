@@ -1,45 +1,13 @@
 import Nav from "@/components/Nav"
-import { getBackendPath } from "@/lib/backend/getBackendPath"
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-
-async function verifyAuth() {
-  const cookieStore = await cookies()
-  const authToken = cookieStore.get("auth_token")
-
-  if (!authToken) {
-    redirect("/signin")
-  }
-
-  try {
-    const response = await fetch(getBackendPath("/auth"), {
-      method: "GET",
-      headers: {
-        Cookie: cookieStore.toString(),
-      },
-      credentials: "include",
-      cache: "no-store",
-    })
-
-    if (!response.ok) {
-      redirect("/signin")
-    }
-
-    return response.json()
-  } catch (error) {
-    return redirect("/signin")
-  }
-}
+import ProtectedShell from "@/components/auth/ProtectedShell"
 
 export default async function ProtectedLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  await verifyAuth()
-
   return (
-    <>
+    <ProtectedShell>
       <Nav />
 
       {children}
@@ -49,6 +17,6 @@ export default async function ProtectedLayout({
           <h2 className='text-3xl md:text-5xl font-bold mb-6'>Stratus</h2>
         </div>
       </footer>
-    </>
+    </ProtectedShell>
   )
 }

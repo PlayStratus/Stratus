@@ -1,77 +1,68 @@
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
+"use client"
+
+import { FormEvent, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { getBackendPath } from "@/lib/backend/getBackendPath"
+import { useAuth } from "@/components/auth/AuthProvider"
 
-async function handleSetUsername(formData: FormData) {
-  "use server"
+export default function SetUsernamePage() {
+  const router = useRouter()
+  const { createUsername, status } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const username = formData.get("username") as string
-
-  if (!username) {
-    return
-  }
-
-  // Get the access token from cookies
-  const cookieStore = await cookies()
-  const auth_token = cookieStore.get("auth_token")?.value
-
-  if (!auth_token) {
-    redirect("/signin?error=No authentication token found")
-  }
-
-  // Only wrap the network call in try/catch. Avoid catching the special
-  // Next.js redirect exception (NEXT_REDIRECT) by performing redirects
-  // outside of the try/catch so they aren't swallowed and treated as errors.
-  let response: Response | undefined
-  try {
-    response = await fetch(getBackendPath("/auth/create"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: cookieStore.toString(),
-      },
-      credentials: "include",
-      body: JSON.stringify({ username }),
-    })
-  } catch (error) {
-    console.error("Network error creating user:", error)
-    redirect(
-      `/signin?error=${encodeURIComponent(
-        "Failed to set username. Please try again.",
-      )}`,
-    )
-  }
-
-  if (!response || !response.ok) {
-    try {
-      const errorData = await response?.json()
-      console.error("Error creating user:", errorData)
-    } catch (e) {
-      // ignore JSON parse errors
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/signin?error=No authentication token found")
     }
 
-    redirect(
-      `/signin?error=${encodeURIComponent(
-        "Failed to set username. Please try again.",
-      )}`,
+    if (status === "authenticated") {
+      router.replace("/browse")
+    }
+  }, [router, status])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const username = formData.get("username")?.toString().trim()
+
+    if (!username) {
+      setError("Username is required")
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      await createUsername(username)
+      router.push("/browse")
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to set username. Please try again."
+      setError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (status === "loading") {
+    return (
+      <main className='flex min-h-screen items-center justify-center'>
+        <p className='text-sm text-muted-foreground'>Checking session...</p>
+      </main>
     )
   }
 
-  // Successful - perform the redirect outside the try/catch above.
-  redirect("/browse")
-}
-
-export default async function SetUsernamePage() {
-  const cookieStore = await cookies()
-  const auth_token = cookieStore.get("auth_token")?.value
-
-  if (!auth_token) {
-    redirect("/signin?error=No authentication token found")
+  if (status !== "needs-username") {
+    return null
   }
 
   return (
@@ -94,7 +85,7 @@ export default async function SetUsernamePage() {
             Set your username
           </div>
 
-          <form action={handleSetUsername}>
+          <form onSubmit={handleSubmit}>
             <Input
               id='username'
               name='username'
@@ -104,8 +95,14 @@ export default async function SetUsernamePage() {
               required
             />
 
+            {error && (
+              <div className='mb-4 rounded-lg border border-red-500 bg-red-500/10 p-3 text-sm text-red-500'>
+                {error}
+              </div>
+            )}
+
             <Button type='submit' className='w-full'>
-              Set Username
+              {isSubmitting ? "Saving..." : "Set Username"}
             </Button>
           </form>
         </div>

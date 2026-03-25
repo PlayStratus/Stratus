@@ -1,11 +1,12 @@
 [Unit]
 Description=The stratus game streaming daemon
 After=network.target
-Requires=stratusd-weston.service
-After=stratusd-weston.service
+Requires=stratusd-sway.service
+After=stratusd-sway.service
 
 [Service]
-Environment="WAYLAND_DISPLAY=weston"
+Environment="WAYLAND_DISPLAY=wayland-1"
+Environment="DISPLAY=:0"
 EnvironmentFile=/etc/stratusd.conf
 ExecStart=/usr/bin/stratusd --daemon
 Restart=always

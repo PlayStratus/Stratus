@@ -1,0 +1,12 @@
+[Unit]
+Description=A Sway session for the stratus game streaming daemon
+After=network.target
+AssertPathExists=!/run/user/%U/wayland-1
+
+[Service]
+Environment="WLR_BACKENDS=headless"
+ExecStart=/usr/bin/sway
+Restart=always
+
+[Install]
+WantedBy=default.target
