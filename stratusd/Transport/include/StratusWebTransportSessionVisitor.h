@@ -90,7 +90,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
       quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, Test);
       quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, Test);
 
-      quiche::StreamWriteOptions CurrentWriteOptions;
+      webtransport::StreamWriteOptions CurrentWriteOptions;
       VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
       VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
       VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
