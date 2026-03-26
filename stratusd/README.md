@@ -32,6 +32,8 @@ cluster.
     - `STRATUSD_BACKEND_URL`: The URL of the backend WebSocket API
       (**required**, e.g. `ws://localhost:4000` or `wss://api.playstratus.io`)
     - `STRATUSD_CAPTURE_DEBUG`: Set to log proxied Wayland messages
+    - `STRATUSD_CAPTUREPW_DEBUG`: Set to log captured PipeWire audio chunks
+    - `STRATUSD_AUDIO_ENCODE_DEBUG`: Set to log encoded audio frames
     - `STRATUSD_ENCODE_DEBUG`: Set to log encoded video frames
     - `STRATUSD_GAME_DEBUG`: Set to log game output
     - `STRATUSD_GAME_DIR`: The directory containing the packaged games (defaults

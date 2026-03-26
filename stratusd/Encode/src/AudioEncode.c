@@ -1,6 +1,7 @@
 #include "AudioEncode.h"
 #include "SideCar.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@
 struct audio_encoder_context {
     FILE *output_file;
     uint32_t channels;
+    bool debug;
 };
 
 /**
@@ -30,6 +32,7 @@ struct audio_encoder_context *audio_encoder_startup(uint32_t channels) {
     }
 
     ctx->channels = channels;
+    ctx->debug = (getenv("STRATUSD_AUDIO_ENCODE_DEBUG") != NULL);
 
     ctx->output_file = fopen(OUTPUT_AUDIO_FILE, "wb");
     if (ctx->output_file == NULL) {
@@ -58,7 +61,9 @@ int encode_audio_frame(struct audio_encoder_context *ctx, const float *samples,
 
     total_samples = frame_count * ctx->channels;
 
-    fprintf(stdout, "[EncodeAudio] Received audio frames: %u\n", frame_count);
+    if (ctx->debug)
+        fprintf(stdout, "[EncodeAudio] Received audio frames: %u\n",
+                frame_count);
 
     // TODO: Implement actual audio encoding here. For now, we will just write
     // the raw PCM data to the output file.

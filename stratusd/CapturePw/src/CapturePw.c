@@ -18,6 +18,7 @@
 #include <inttypes.h>
 #include <pthread.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +39,7 @@ struct capture_pw_session {
 
     uint64_t dropped_frames; // Counter for frames discarded when a single
                              // capture chunk exceeds ring capacity
+    bool debug;
 };
 
 /*
@@ -73,26 +75,29 @@ static void on_process(void *userdata) {
 
     buf = b->buffer;
     if (buf->datas[0].data == NULL || buf->datas[0].chunk == NULL) {
-        pw_stream_queue_buffer(session->stream, b);
-        return;
+        goto end;
     }
 
     frame_data = buf->datas[0].data;
 
     audio_ring_buffer = capture_pw_ring_buffer(session);
     if (audio_ring_buffer == NULL || session->audio_context->channels == 0) {
-        pw_stream_queue_buffer(session->stream, b);
-        return;
+        goto end;
     }
 
     n_frames = buf->datas[0].chunk->size /
                (sizeof(float) * session->audio_context->channels);
     if (n_frames == 0) {
-        pw_stream_queue_buffer(session->stream, b);
-        return;
+        goto end;
     }
 
     written_frames = ring_buffer_write(audio_ring_buffer, frame_data, n_frames);
+
+    if (session->debug) {
+        fprintf(stdout,
+                "[CapturePw] Captured audio chunk: frames=%u written=%u\n",
+                n_frames, written_frames);
+    }
 
     // The ring buffer now overwrites the oldest unread frames to preserve the
     // newest audio. A short write only happens when a single PipeWire chunk is
@@ -107,6 +112,7 @@ static void on_process(void *userdata) {
                                           // for RTC performance
     }
 
+end:
     pw_stream_queue_buffer(session->stream, b);
 }
 
@@ -293,6 +299,7 @@ int capture_pw_main(void *userdata) {
     }
 
     session->audio_context = &args->audio_context;
+    session->debug = (getenv("STRATUSD_CAPTUREPW_DEBUG") != NULL);
 
     if (capture_pw_run(session) < 0) {
         fprintf(stderr, "[CapturePw] Failed to run capture session\n");
