@@ -1,8 +1,6 @@
 # Copyright 2022 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 
 load(
     "//build:source_list.bzl",
@@ -359,6 +357,7 @@ cc_library(
         "@boringssl//:ssl",
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:no_destructor",
         "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/cleanup",
         "@com_google_absl//absl/container:btree",
@@ -431,6 +430,7 @@ cc_library(
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:cord",
         "@com_google_absl//absl/strings:str_format",
         "@com_google_absl//absl/time",
         "@com_google_absl//absl/types:span",
@@ -521,6 +521,7 @@ cc_library(
         "@com_google_absl//absl/algorithm:container",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/base:nullability",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status",
@@ -697,7 +698,7 @@ cc_binary(
 )
 
 cc_shared_library(
-    name = "WebTransportPublic",
+    name = "quiche",
     deps = [
         ":io_tool_support",
         ":quic_server_factory",
