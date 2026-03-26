@@ -5,7 +5,7 @@ A `output_audio.pcm` file will be generated when `./build/stratusd` is ran. This
 
 To convert the `.pcm` file to a `.mp3` file run:
 ```
-ffmpeg -f f32le -ar 48000 -ac 2 -i output_audio.raw -codec:a libmp3lame -qscale:a 2 output.mp3
+ffmpeg -f f32le -ar 48000 -ac 2 -i output_audio.pcm -codec:a libmp3lame -qscale:a 2 output.mp3
 ```
 
 ## Implementation
@@ -24,7 +24,7 @@ ffmpeg -f f32le -ar 48000 -ac 2 -i output_audio.raw -codec:a libmp3lame -qscale:
 #### Capture Loop
 - Captures audio frames from the desktop and writes them to the audio ring buffer
 
-### [Audio Ring Buffer](/stratusd/CapturePw/src/AudioRingBuffer.c)
+### [Audio Ring Buffer](/stratusd/Common/src/ringBuffer.c)
 
 > Saw this [reddit post](https://www.reddit.com/r/C_Programming/comments/1f2k7u6/how_are_memory_buffers_reallocatedmanaged_for/) and it talked about ring buffers and just followed it lol
 

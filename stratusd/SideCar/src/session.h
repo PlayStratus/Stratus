@@ -18,6 +18,8 @@ struct session {
     int game_pid;
 
     pthread_t capture_thread;
+    pthread_t capture_pw_thread;
+    pthread_t audio_encoder_thread;
     pthread_t input_thread;
 };
 
