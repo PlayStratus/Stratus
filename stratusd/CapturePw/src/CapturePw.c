@@ -282,8 +282,8 @@ void capture_pw_destroy(struct capture_pw_session *session) {
  *  - Runs the capture session
  *  - Destroys the session after it finishes
  */
-
 int capture_pw_main(void *userdata) {
+    int ret = 0;
     struct session_args *args = userdata;
     struct capture_pw_session *session;
 
@@ -293,9 +293,11 @@ int capture_pw_main(void *userdata) {
         return -1;
     }
 
+    pthread_cleanup_push((void (*)(void *))capture_pw_destroy, session);
+
     if (args == NULL) {
-        free(session);
-        return -1;
+        ret = -1;
+        goto end;
     }
 
     session->audio_context = &args->audio_context;
@@ -303,10 +305,11 @@ int capture_pw_main(void *userdata) {
 
     if (capture_pw_run(session) < 0) {
         fprintf(stderr, "[CapturePw] Failed to run capture session\n");
-        capture_pw_destroy(session);
-        return -1;
+        ret = -1;
+        goto end;
     }
 
-    capture_pw_destroy(session);
-    return 0;
+end:
+    pthread_cleanup_pop(1);
+    return ret;
 }
