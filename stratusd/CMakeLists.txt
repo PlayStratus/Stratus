@@ -20,7 +20,9 @@ pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
 find_package(OpenGL COMPONENTS GLES3 EGL REQUIRED)
 find_package(Sensors REQUIRED)
 
+add_subdirectory(Common)
 add_subdirectory(Capture)
+add_subdirectory(CapturePw)
 add_subdirectory(Encode)
 add_subdirectory(Input)
 add_subdirectory(SideCar)
@@ -31,7 +33,7 @@ add_executable(stratusd ${sourcefiles})
 target_include_directories(stratusd PUBLIC ${CMAKE_BINARY_DIR})
 
 # Link modules here
-target_link_libraries(stratusd PRIVATE Capture Encode Input SideCar)
+target_link_libraries(stratusd PRIVATE Capture CapturePw Encode Input SideCar)
 
 # Get version from git
 execute_process(
