@@ -209,7 +209,7 @@ enum proxy_actions wl_shm_surface_commit(struct capture_session *session,
     assert(shm_buf != NULL);
 
     // Encode frame
-    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride, 0)
+    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride, 0, wl_buf->height)
            == 0);
 
     return PROXY_ACTION_FWD;

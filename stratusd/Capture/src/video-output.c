@@ -193,7 +193,7 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     session = msg->conn->session->proxy->userdata;
 
     if (buf != NULL) {
-        if (buf->width == session->width && buf->height == session->height) {
+        if (buf->width <= session->width && buf->height <= session->height) {
             assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
 
             if (buf->shm_buf != NULL)
