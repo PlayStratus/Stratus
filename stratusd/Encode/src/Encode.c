@@ -23,7 +23,7 @@ int test_encode(){
 
     for (int i = 0; i < num_frames; i++) {
         generate_argb_frame(frame_buffer, width, height, i);
-        if (encode_video_frame(encoder, frame_buffer, width*4, 0, height) < 0) {
+        if (encode_video_frame(encoder, frame_buffer, width*4, 0) < 0) {
             fprintf(stderr, "Failed to encode frame %d\n", i);
             break;
         }
@@ -174,7 +174,7 @@ int dma_encode_video_frame(
         return -1;
     }
 
-    encode_video_frame(state, pixel_data, stride, 1, dma_buf->height);
+    encode_video_frame(state, pixel_data, stride, 1);
 
     free(pixel_data);
 }
@@ -184,7 +184,7 @@ int dma_encode_video_frame(
  * 1 -> dma
  */
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
-                       int stride, int buf_type, int height) {
+                       int stride, int buf_type) {
 
     if (!state || !argb_buffer) {
         return -1;
@@ -208,7 +208,7 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
     sws_scale(sws_ctx,
               (const uint8_t * const*)&argb_buffer,
               &stride,
-              0, height,
+              0, state->height,
               state->yuv_frame->data,
               state->yuv_frame->linesize);
 
