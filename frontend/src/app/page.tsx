@@ -12,6 +12,7 @@ import wordmarkLogo from "@/assets/wordmark-logo.png"
 
 const games = await getGames()
 
+// Test
 const aboutUs = [
   {
     name: "Asher",
