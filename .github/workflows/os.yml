@@ -37,9 +37,9 @@ jobs:
 
       - name: Build stratus Arch packages
         run: |
-          su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/fastfetch'
           su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/stratusd'
           su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/stratus-launcher'
+          su arch -c 'makepkg --force --syncdeps --noconfirm --dir os/fastfetch'
 
       - name: Construct stratus Arch repository
         run: |

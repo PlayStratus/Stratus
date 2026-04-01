@@ -61,8 +61,8 @@ else
 fi
 
 # Install packages
-pacstrap -K /mnt base fastfetch linux linux-firmware networkmanager openssh \
-    stratusd stratus-launcher sudo $UCODE vim
+pacstrap -K /mnt base fastfetch less linux linux-firmware networkmanager \
+    openssh stratusd stratus-launcher sudo tmux $UCODE vim
 
 # Initialize basic config files
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -72,6 +72,7 @@ sed --in-place "s|^\[core\]|$STRATUS_REPO[core]|" /mnt/etc/pacman.conf
 # Enable system services
 arch-chroot /mnt systemctl enable NetworkManager
 arch-chroot /mnt systemctl enable sshd
+arch-chroot /mnt systemctl enable systemd-timesyncd
 
 # Configure stratusd user service. Note that loginctl & systemctl --user don't
 # work correctly in the chroot, so we must create the required files manully.
@@ -85,9 +86,9 @@ arch-chroot /mnt ln -s \
 
 # Configure systemd-boot
 arch-chroot /mnt bootctl install
-echo 'default arch' > /mnt/boot/loader/loader.conf
-cat << EOF > /mnt/boot/loader/entries/arch.conf
-title    Arch Linux
+echo 'default stratus' > /mnt/boot/loader/loader.conf
+cat << EOF > /mnt/boot/loader/entries/stratus.conf
+title    Stratus OS
 linux    /vmlinuz-linux
 initrd   /$UCODE.img
 initrd   /initramfs-linux.img
