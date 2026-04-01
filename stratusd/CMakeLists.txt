@@ -42,6 +42,10 @@ execute_process(
     OUTPUT_VARIABLE GIT_DESCRIBE_VERSION
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+execute_process(
+    # Ensure version.h is regenerated every time we compile
+    COMMAND touch ${CMAKE_SOURCE_DIR}/version.h.in
+)
 configure_file(
     ${CMAKE_SOURCE_DIR}/version.h.in
     ${CMAKE_BINARY_DIR}/version.h
