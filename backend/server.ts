@@ -6,7 +6,7 @@ import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb"
 import { WebSocketServer } from "ws"
 import http from "node:http"
 
-import usersRoutes from "./routes/users.js"
+import playRoutes from "./routes/play.js"
 import gamesRoutes from "./routes/games.js"
 import authRoutes from "./routes/auth.js"
 
@@ -35,7 +35,7 @@ app.use(cookieParser())
 
 app.use("/games", gamesRoutes)
 app.use("/auth", authRoutes)
-app.use("/users", usersRoutes)
+app.use("/play", playRoutes)
 
 /*
 Socket, guide https://karlhadwen.medium.com/node-js-websocket-tutorial-real-time-chat-room-using-multiple-clients-44a8e26a953e

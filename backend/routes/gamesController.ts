@@ -44,6 +44,12 @@ export const ControllerGetByID = async (
       Key: { GameID: id },
     }
     const game = await dynamoDb.send(new GetCommand(params))
+
+    if (!game.Item) {
+      res.status(404).json({ error: "Game not found" })
+      return
+    }
+
     res.status(200).json(game.Item)
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch game" })

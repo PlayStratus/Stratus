@@ -8,15 +8,17 @@ export default async function ProtectedLayout({
 }>) {
   return (
     <ProtectedShell>
-      <Nav />
+      <div className='min-h-screen flex flex-col'>
+        <Nav />
 
-      {children}
+        {children}
 
-      <footer className='px-4 py-20 bg-muted/30'>
-        <div className='container mx-auto'>
-          <h2 className='text-3xl md:text-5xl font-bold mb-6'>Stratus</h2>
-        </div>
-      </footer>
+        <footer className='px-4 py-20 bg-muted/30'>
+          <div className='container mx-auto'>
+            <h2 className='text-3xl md:text-5xl font-bold mb-6'>Stratus</h2>
+          </div>
+        </footer>
+      </div>
     </ProtectedShell>
   )
 }
