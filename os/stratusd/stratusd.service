@@ -8,6 +8,7 @@ After=stratusd-sway.service
 Environment="WAYLAND_DISPLAY=wayland-1"
 Environment="DISPLAY=:0"
 EnvironmentFile=/etc/stratusd.conf
+ExecStartPre=/bin/sh -c "until ping -c 1 $(echo $STRATUSD_BACKEND_URL | awk -F[/:] '{print $4}'); do sleep 1; done"
 ExecStart=/usr/bin/stratusd --daemon
 Restart=always
 
