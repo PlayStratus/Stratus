@@ -331,7 +331,7 @@ int api_poll(struct api_client *client, int timeout) {
     // Read new data into buffer
     ret = curl_ws_recv(client->curl, buf, 4096, &size, &meta);
     if (ret != CURLE_OK) {
-        fprintf(stderr, "[Sidecar] curl_ws_send: %s\n",
+        fprintf(stderr, "[Sidecar] curl_ws_recv: %s\n",
                 curl_easy_strerror(ret));
         return -1;
     } else if (meta->bytesleft != 0) {
