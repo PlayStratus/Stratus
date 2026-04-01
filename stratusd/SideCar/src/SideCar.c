@@ -23,7 +23,7 @@
 /*
  * The number of seconds between heartbeat messages
  */
-#define HEARTBEAT_INTERVAL 60
+#define HEARTBEAT_INTERVAL 30
 
 /*
  * The maximum number of installed games that can be detected
