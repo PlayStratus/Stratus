@@ -114,6 +114,13 @@ BUILD_ID=rolling
 HOME_URL="https://www.playstratus.io"
 EOF
 
+# Download all available games
+for game in $(curl -sL https://games.playstratus.io | grep -oP '(?<=Key>)[^<]+')
+do
+    curl -sL https://games.playstratus.io/$game -o /var/lib/stratusd/games/$game
+    chmod +x /var/lib/stratusd/games/$game
+done
+
 # Print post-installation info
 echo '================================================================'
 echo 'Stratus OS installation complete.'
