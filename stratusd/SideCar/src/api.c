@@ -368,6 +368,8 @@ int api_send_heartbeat(struct api_client *client,
         goto err_cjson;
     if (cJSON_AddStringToObject(payload, "hostname", data->hostname) == NULL)
         goto err_cjson;
+    if (cJSON_AddStringToObject(payload, "ip", data->ip) == NULL)
+        goto err_cjson;
     if (cJSON_AddStringToObject(payload, "version", data->version) == NULL)
         goto err_cjson;
 

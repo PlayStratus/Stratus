@@ -121,7 +121,7 @@ echo 'Installation log:'
 echo "    $LOG"
 echo 'Password for stratusd user:'
 echo "    $password"
-echo 'A reboot is required.'
+echo 'A reboot is required. Please also review /etc/stratusd.conf.'
 echo '================================================================'
 
 # Copy install log to /var/log/ in the chroot

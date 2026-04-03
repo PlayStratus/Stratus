@@ -38,6 +38,8 @@ cluster.
     - `STRATUSD_GAME_DEBUG`: Set to log game output
     - `STRATUSD_GAME_DIR`: The directory containing the packaged games (defaults
       to `../games/build`)
+    - `STRATUSD_IP`: The IP for stratusd that clients should connect to
+      (defaults to `127.0.0.1`)
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
 

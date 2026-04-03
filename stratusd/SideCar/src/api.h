@@ -8,6 +8,7 @@
  */
 struct api_msg_heartbeat {
     char *hostname;
+    char *ip;
     char *version;
 
     char **games;       // NULL-terminated array of UUIDs
