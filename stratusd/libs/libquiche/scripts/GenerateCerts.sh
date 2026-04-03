@@ -12,4 +12,4 @@ Thumbprint=$(openssl x509 -pubkey -noout -in StratusDevCert.pem |
 
 
 echo "Google Chrome Launch Option:"
-echo "./chromium -origin-to-force-quic-on=localhost:4433 --ignore-certificate-errors-spki-list=${Thumbprint}"
+echo "./chromium --ignore-certificate-errors-spki-list=${Thumbprint}"
