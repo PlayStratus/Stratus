@@ -46,7 +46,6 @@ export function useVideoStream(
           return null
         }
 
-        // Look at
         const decoder = new VideoDecoder({
           output: (frame) => {
             if (canvas.width !== frame.codedWidth) {
