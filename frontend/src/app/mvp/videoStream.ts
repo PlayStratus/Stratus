@@ -46,6 +46,7 @@ export function useVideoStream(
           return null
         }
 
+        // Look at
         const decoder = new VideoDecoder({
           output: (frame) => {
             if (canvas.width !== frame.codedWidth) {
@@ -70,7 +71,7 @@ export function useVideoStream(
             }
           },
           error: (error) =>
-            addLogEvent(`VideoDecoder error: ${error}`, "error"),
+            console.log(`VideoDecoder error: ${error} Current Decoder Object State: ` + decoder, "error"),
         })
 
         videoDecoderRef.current = decoder
@@ -141,16 +142,14 @@ export function useVideoStream(
             const msgType = buffer[0]
             const payloadLen = readU32BE(buffer, 1)
 
-            //console.log(msgType)
-            //console.log(payloadLen)
+            console.log("Message Type: " + msgType + "Payload length: " + payloadLen)
             
-
             if (buffer.length < 5 + payloadLen) break
 
             const payload = buffer.subarray(5, 5 + payloadLen)
             buffer = buffer.subarray(5 + payloadLen)
 
-            //console.log(payload)
+            console.log("Payload Recieved: " + payload)
             if (msgType === 0x00) {
               // CONFIG (avcC) 
               decoder = ensureVideoDecoder(payload)
