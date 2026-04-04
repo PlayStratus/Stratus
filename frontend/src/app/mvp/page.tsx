@@ -61,7 +61,7 @@ function MVPPage() {
 
       <canvas ref={canvasRef} className='h-screen w-screen bg-black' />
 
-      {status === "loading" && <Loading canvasRef={canvasRef} />}
+      {status === "loading" && <Loading />}
 
       <LogsPanel logs={logs} />
     </>
