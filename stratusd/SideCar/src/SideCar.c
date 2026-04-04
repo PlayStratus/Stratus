@@ -124,6 +124,9 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
     }
 
     msg.hostname = hostname;
+    msg.ip = getenv("STRATUSD_IP");
+    if (msg.ip == NULL)
+        msg.ip = "127.0.0.1";
     msg.version = STRATUSD_VERSION;
 
     sessions[0] = ctx->active_session == NULL ? NULL : ctx->active_session->id;
