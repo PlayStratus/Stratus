@@ -376,7 +376,8 @@ int api_send_heartbeat(struct api_client *client,
     if ((games = cJSON_AddArrayToObject(payload, "games")) == NULL)
         goto err_cjson;
     for (i = 0; data->games[i] != NULL; i++) {
-        if ((game = cJSON_CreateString(data->games[i])) == NULL)
+        // games ID strings come from readdir, and so must not be free'd
+        if ((game = cJSON_CreateStringReference(data->games[i])) == NULL)
             goto err_cjson;
         cJSON_AddItemToArray(games, game);
     }
