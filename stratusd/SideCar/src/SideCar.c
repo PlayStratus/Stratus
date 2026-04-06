@@ -81,7 +81,7 @@ end:
  * Returns 0 on success and -1 on failure.
  */
 int sidecar_heartbeat(struct sidecar_context *ctx) {
-    int i = 0;
+    int i = 0, ret;
     char hostname[HOST_NAME_MAX], *sessions[2], *game_dir, *games[MAX_GAMES];
     DIR *dir;
     struct dirent *ent;
@@ -96,7 +96,7 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
         game_dir = DEFAULT_GAME_DIR;
     if ((dir = opendir(game_dir)) == NULL) {
         perror("[Sidecar] opendir");
-        return -1;
+        goto err_opendir;
     }
     errno = 0;
     while (i < MAX_GAMES && (ent = readdir(dir)) != NULL) {
@@ -105,22 +105,22 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
     }
     if (errno != 0) {
         perror("[Sidecar] readdir");
-        return -1;
+        goto err_post_opendir;
     }
     games[i] = NULL;
 
     // Get system stats
     if (gethostname(hostname, HOST_NAME_MAX) < 0) {
         perror("[Sidecar] gethostname");
-        return -1;
+        goto err_post_opendir;
     }
     if (sysinfo(&info) < 0) {
         perror("[Sidecar] sysinfo");
-        return -1;
+        goto err_post_opendir;
     }
     if (statfs("/", &fs) < 0) {
         perror("[Sidecar] statfs");
-        return -1;
+        goto err_post_opendir;
     }
 
     msg.hostname = hostname;
@@ -143,7 +143,15 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
     msg.disk_total = fs.f_blocks * fs.f_bsize;
     msg.temperature = get_cpu_temperature();
 
-    return api_send_heartbeat(ctx->api_client, &msg);
+    ret = api_send_heartbeat(ctx->api_client, &msg);
+
+    closedir(dir);
+    return ret;
+
+err_post_opendir:
+    closedir(dir);
+err_opendir:
+    return -1;
 }
 
 /*
