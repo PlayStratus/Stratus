@@ -38,7 +38,6 @@ export async function getHeartbeat() {
     }
 
     const data: NodeHeartbeat[] = await response.json();
-    console.log(data)
     return data;
   } catch (error) {
     
