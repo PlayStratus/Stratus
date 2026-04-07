@@ -9,4 +9,4 @@ file(GLOB_RECURSE sourcefiles CONFIGURE_DEPENDS "src/*.h" "src/*.cpp" "include/*
 add_library(Transport STATIC ${sourcefiles})
 
 target_include_directories(Transport PUBLIC include)
-target_link_libraries(Transport PUBLIC libquiche Common)
+target_link_libraries(Transport PUBLIC libquiche Common SideCar)

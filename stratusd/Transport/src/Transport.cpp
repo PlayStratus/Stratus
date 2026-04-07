@@ -22,8 +22,8 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
 
   if (url.path() == "/") {
     return std::make_unique<StratusWebTransportSessionVisitor>(session);
-  }                                
-  
+  }
+
 
   return absl::NotFoundError("Path not found");
 }
@@ -31,7 +31,7 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
 }
 
 transport_session* transport_init(int port)
-{   
+{
     // Session init
     transport_session* session = (transport_session*)malloc(sizeof(transport_session));
     StaticTransportSession = session;
@@ -50,8 +50,17 @@ transport_session* transport_init(int port)
     return session;
 }
 
+void transport_submit(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int64_t Length)
+{
+  if (StaticTransportSession->WebTransportSessionArray[0])
+  {
+    quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
+    CurrentSession->SubmitDataToStream(Stream, MessageType, Buffer, Length);
+  }
+}
+
 void transport_thread(struct transport_session* session)
-{ 
+{
     quic::QuicServer* server = (quic::QuicServer*)session->QuicServer;
     if (!server->CreateUDPSocketAndListen(*(quic::QuicSocketAddress*)session->QuicAddr)) {
         std::cerr << "[transport] Failed to create UDP socket" << std::endl;
@@ -72,31 +81,34 @@ void transport_thread(struct transport_session* session)
 
        free(CurrentLetter);
     }
-
-    server->Shutdown();
-    
-    pthread_exit(0);
 }
 
-void transport_submit(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int64_t Length)
+void transport_destroy(struct transport_session* session)
 {
-  if (StaticTransportSession->WebTransportSessionArray[0])
-  {
-    quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
-    CurrentSession->SubmitDataToStream(Stream, MessageType, Buffer, Length);
-  }
-}
-
-void transport_destroy(transport_session* session, pthread_t* transport_thread)
-{
-  session->ShutdownInitiated = 1;
-
-  pthread_join(*transport_thread, NULL);
-
+  ((quic::QuicServer*)session->QuicServer)->Shutdown();
   delete (quic::QuicServer*)session->QuicServer;
   delete (quic::QuicSimpleServerBackend*)session->WebTransportBackend;
   delete (quic::QuicSocketAddress*)session->QuicAddr;
 
   free(session);
   return;
+}
+
+int transport_main(struct session_args *args) {
+    int ret = 0;
+    struct transport_session *session;
+
+    session = transport_init(4433);
+    if (session == NULL) {
+        std::cerr << "[Transport] transport_init failed\n";
+        return -1; // No need to jump to end outside of pthread_cleanup_* macro
+    }
+
+    pthread_cleanup_push((void (*)(void*))transport_destroy, session);
+
+    transport_thread(session);
+
+end:
+    pthread_cleanup_pop(1);
+    return 0;
 }

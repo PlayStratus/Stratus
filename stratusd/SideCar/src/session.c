@@ -58,6 +58,10 @@ void session_teardown(struct session *session) {
         ring_buffer_close(audio_context->ring_buffer);
     if (session->audio_encoder_thread != 0)
         pthread_join(session->audio_encoder_thread, NULL);
+    if (session->transport_thread != 0) {
+        pthread_cancel(session->transport_thread);
+        pthread_join(session->transport_thread, NULL);
+    }
 
     // Check to make sure game has exited (either gracefully in response to user
     // input, or abruptly due to the Wayland proxy socket being closed).
@@ -183,6 +187,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
     pthread_create(&session->audio_encoder_thread, NULL,
                    (void *)&audio_encoder_main, &session->args);
     pthread_create(&session->input_thread, NULL, (void *)&input_main,
+                   &session->args);
+    pthread_create(&session->transport_thread, NULL, (void *)&transport_main,
                    &session->args);
 
     // Start game

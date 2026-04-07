@@ -31,10 +31,9 @@ enum VideoMessageType
     Codec_Payload
 };
 
-struct transport_session* transport_init(int port);
-void transport_thread(struct transport_session* session);
-void transport_destroy(struct transport_session* session, pthread_t* transport_thread);
-void transport_submit(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, __int64_t Length);
+#include <SideCar.h>
+
+int transport_main(struct session_args *args);
 
 #ifdef __cplusplus
 }
