@@ -1,6 +1,7 @@
 import type { Request, Response } from "express"
 
 import { startGameSession } from "../socket/send.js"
+import { getAllNodes } from "../socket/node.js"
 
 import type { Token } from "../lib/authToken.js"
 import {
@@ -39,7 +40,7 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
 
   const user_id = decodedToken.userId
 
-  const user = await getUserById(user_id)
+  const user = {Username : "temp"}
 
   if (!user) {
     return res.status(403).json({ error: "User not found" })
@@ -65,5 +66,16 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
   return res.status(201).json({
     session_id: result.payload.session_id,
     TLSFingerprint: result.payload.tls_fingerprint,
+    ip: result.payload.ip,
   })
 }
+
+export function ControllerGetNodes(req: Request, res: Response) {
+  const nodesArray = Array.from(getAllNodes().entries()).map(([, info]) => ({
+    name: info.name,
+    last_heartbeat: info.last_heartbeat,
+    payload: info.node_payload
+  }))
+  res.json(nodesArray)
+}
+
