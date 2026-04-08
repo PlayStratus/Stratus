@@ -239,6 +239,8 @@ int sidecar_main() {
         {
             api_send_stop_session(ctx.api_client, ctx.active_session->id);
             sidecar_on_stop_session(&ctx, ctx.active_session->id);
+            if (getenv("STRATUSD_SIDECAR_ONESHOT") != NULL)
+                break;
         }
 
         if (api_poll(ctx.api_client, 100) == -1)
