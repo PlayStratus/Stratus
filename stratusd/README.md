@@ -7,9 +7,9 @@ cluster.
 
 1.  Install required dependencies:
 
-    - Debian, Ubuntu, etc: `# apt install pipewire libavcodec-dev libavformat-dev libavutil-dev libcjson-dev libcurl4-openssl-dev libevdev-dev libswscale-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libdrm-dev libglvnd-dev libegl-dev libgles-dev`
-    - RHEL, Fedora, etc: `# dnf install cjson-devel libcurl-devel libevdev-devel pipewire-devel ffmpeg-devel mesa-libGL mesa-libEGL mesa-libGLES libdrm libdrm-devel libglvnd libglvnd-devel libglvnd-egl libglvnd-gles`
-    - Arch: `# pacman -S cjson libevdev libpipewire ffmpeg mesa libdrm libglvnd`
+    ```
+    # pacman -S cjson ffmpeg libevdev libdrm libglvnd libpipewire mesa
+    ```
 
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
 
@@ -19,12 +19,18 @@ cluster.
     # reboot
     ```
 
-3.  Generate CMake build files with `cmake -DCMAKE_BUILD_TYPE=Debug -B ./build`
+3.  Generate dev certificates for Transport module
 
-4.  Build project with `cmake --build ./build`
+    ```
+    $ ./libs/libquiche/scripts/GenerateCerts.sh
+    ```
 
-5.  Set applicable options via environment variables (you may find it useful to
-    add these to a `.env` file that you source before running stratusd):
+4.  Generate CMake build files with `cmake -DCMAKE_BUILD_TYPE=Debug -B ./build`
+
+5.  Build project with `cmake --build ./build`
+
+6.  Set applicable options via environment variables (you may find it useful to
+    `export` these in a `.env` file that you source before running stratusd):
 
     - `STRATUSD_API_MSG`: An inital API message to be "received" by the SideCar
       for testing purposes (e.g.
@@ -43,4 +49,4 @@ cluster.
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
 
-6.  Run binary located at `./build/src/stratusd`
+7.  Run binary located at `./build/src/stratusd`
