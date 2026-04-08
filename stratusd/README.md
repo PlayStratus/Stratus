@@ -48,5 +48,7 @@ cluster.
       (defaults to `127.0.0.1`)
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
+    - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first
+      session is stopped
 
 7.  Run binary located at `./build/src/stratusd`
