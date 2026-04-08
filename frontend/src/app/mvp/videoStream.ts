@@ -3,13 +3,17 @@ import { useCallback, useEffect, useRef } from "react"
 import { useLogs } from "./logs"
 import { StatusType } from "./page"
 
+const MAX_CHUNK_BATCH_COUNT = 8
+const MAX_CHUNK_BATCH_BYTES = 128 * 1024
+const CHUNK_BATCH_DELAY_MS = 8
+
 export function useVideoStream(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   setStatus: React.Dispatch<React.SetStateAction<StatusType>>,
 ) {
   const { addLogEvent } = useLogs()
   const streamNumberRef = useRef<number>(1)
-  const videoDecoderRef = useRef<VideoDecoder | null>(null)
+  const workerRef = useRef<Worker | null>(null)
   const incomingStreamReaderRef = useRef<ReadableStreamDefaultReader<
     ReadableStream<Uint8Array>
   > | null>(null)
@@ -18,186 +22,129 @@ export function useVideoStream(
   )
   const isUnmountedRef = useRef(false)
 
-  const ensureVideoDecoder = useCallback(
-    (description: Uint8Array) => {
-      // If we already have a decoder, optionally reconfigure if description changed.
-      // (Simplest: only configure once; recreate on stream restart if needed.)
-      if (!videoDecoderRef.current) {
-        if (typeof VideoDecoder === "undefined") {
-          addLogEvent("VideoDecoder API not available in this browser", "error")
-          return null
-        }
+  const getWorker = useCallback(() => {
+    if (workerRef.current) {
+      return workerRef.current
+    }
 
-        const canvas = canvasRef.current
-        if (!canvas) {
-          addLogEvent("Canvas not ready for AVC rendering", "error")
-          return null
-        }
+    if (typeof Worker === "undefined") {
+      addLogEvent("Worker API not available in this browser", "error")
+      return null
+    }
 
-        const ctx = canvas.getContext("2d")
-        if (!ctx) {
-          addLogEvent("Could not get 2D context for canvas", "error")
-          return null
-        }
+    const canvas = canvasRef.current
+    if (!canvas) {
+      addLogEvent("Canvas not ready for worker rendering", "error")
+      return null
+    }
 
-        const decoder = new VideoDecoder({
-          output: (frame) => {
-            if (canvas.width !== frame.codedWidth) {
-              canvas.width = frame.codedWidth
-            }
-            if (canvas.height !== frame.codedHeight) {
-              canvas.height = frame.codedHeight
-            }
-            try {
-              const anyFrame = frame as VideoFrame & {
-                transferToImageBitmap?: () => ImageBitmap
-              }
-              if (typeof anyFrame.transferToImageBitmap === "function") {
-                const bitmap = anyFrame.transferToImageBitmap()
-                ctx.drawImage(bitmap, 0, 0)
-                bitmap.close()
-              } else {
-                ctx.drawImage(frame, 0, 0)
-              }
-            } finally {
-              frame.close()
-            }
-          },
-          error: (error) =>
-            addLogEvent(`VideoDecoder error: ${error}`, "error"),
-        })
+    if (typeof canvas.transferControlToOffscreen !== "function") {
+      addLogEvent("OffscreenCanvas transfer is not available", "error")
+      return null
+    }
 
-        videoDecoderRef.current = decoder
-        addLogEvent("VideoDecoder created (not yet configured)")
+    const worker = new Worker(
+      new URL("./videoStream.worker.ts", import.meta.url),
+      {
+        type: "module",
+      },
+    )
+
+    worker.onmessage = (event: MessageEvent<any>) => {
+      const message = event.data
+
+      if (message.type === "log") {
+        addLogEvent(message.message, message.severity)
+        return
       }
 
-      // Configure only when we have description (avcC)
-      if (description && videoDecoderRef.current.state === "unconfigured") {
-        videoDecoderRef.current.configure({
-          codec: "avc1.42C01E",
-          description,
-          optimizeForLatency: true,
-        })
-        addLogEvent(
-          `VideoDecoder configured with avcC (${description.byteLength} bytes)`,
-        )
+      if (message.type === "status") {
+        setStatus(message.status)
       }
+    }
 
-      return videoDecoderRef.current
-    },
-    [addLogEvent, canvasRef],
-  )
+    worker.onerror = (event) => {
+      if (isUnmountedRef.current) return
+      addLogEvent(
+        `Video worker error: ${event.message || "Unknown worker error"}`,
+        "error",
+      )
+    }
+
+    const offscreenCanvas = canvas.transferControlToOffscreen()
+    worker.postMessage({ type: "init", canvas: offscreenCanvas }, [
+      offscreenCanvas,
+    ])
+
+    workerRef.current = worker
+    return worker
+  }, [addLogEvent, canvasRef, setStatus])
 
   const readFromIncomingStream = useCallback(
     async (stream: ReadableStream<Uint8Array>, number: number) => {
-      const reader = stream.getReader()
-      streamReadersRef.current.add(reader)
-      let buffer = new Uint8Array(0)
-
-      // Decoder state
-      let decoder: VideoDecoder | null = null
-      let haveConfig = false
-      let waitingForKeyAfterConfig = true
-
-      // Use a running timestamp. WebCodecs expects microseconds.
-      const frameDurationUs = Math.round(1_000_000 / 15) // or derive from sender
-      let ts = 0
-
-      function readU32BE(b: Uint8Array, off: number) {
-        // >>> 0 to force unsigned
-        return (
-          ((b[off] << 24) |
-            (b[off + 1] << 16) |
-            (b[off + 2] << 8) |
-            b[off + 3]) >>>
-          0
-        )
+      const worker = getWorker()
+      if (!worker) {
+        addLogEvent("No video worker available; cannot read stream", "error")
+        return
       }
 
-      setStatus("streaming")
+      const reader = stream.getReader()
+      streamReadersRef.current.add(reader)
+      worker.postMessage({ type: "stream-start", stream: number })
+      let pendingChunks: ArrayBuffer[] = []
+      let pendingChunkBytes = 0
+      let flushTimeoutId: ReturnType<typeof setTimeout> | null = null
+      const flushPendingChunks = () => {
+        flushTimeoutId = null
+
+        if (pendingChunks.length === 0) {
+          return
+        }
+
+        const chunks = pendingChunks
+        pendingChunks = []
+        pendingChunkBytes = 0
+        worker.postMessage(
+          { type: "chunk-batch", stream: number, chunks },
+          chunks,
+        )
+      }
 
       try {
         while (true) {
           const { value, done } = await reader.read()
           if (done) {
+            if (flushTimeoutId) {
+              clearTimeout(flushTimeoutId)
+              flushPendingChunks()
+            } else if (pendingChunks.length > 0) {
+              flushPendingChunks()
+            }
             addLogEvent("Stream #" + number + " closed")
+            worker.postMessage({ type: "stream-end", stream: number })
             return
           }
           if (!value || value.length === 0) continue
 
-          // append to buffer
-          const tmp = new Uint8Array(buffer.length + value.length)
-          tmp.set(buffer, 0)
-          tmp.set(value, buffer.length)
-          buffer = tmp
+          const chunk = toTransferableBuffer(value)
+          pendingChunks.push(chunk)
+          pendingChunkBytes += chunk.byteLength
 
-          // parse messages
-          while (buffer.length >= 5) {
-            const msgType = buffer[0]
-            const payloadLen = readU32BE(buffer, 1)
-
-            if (buffer.length < 5 + payloadLen) break
-
-            const payload = buffer.subarray(5, 5 + payloadLen)
-            buffer = buffer.subarray(5 + payloadLen)
-
-            if (msgType === 0x00) {
-              // CONFIG (avcC)
-              const description = payload // already a Uint8Array view
-              decoder = ensureVideoDecoder(description)
-              if (!decoder) {
-                addLogEvent("No decoder; dropping config", "error")
-                continue
-              }
-
-              haveConfig = true
-              waitingForKeyAfterConfig = true
-
-              addLogEvent(
-                `Received config (avcC) ${description.byteLength} bytes on stream #${number}`,
-              )
-              continue
+          if (
+            pendingChunks.length >= MAX_CHUNK_BATCH_COUNT ||
+            pendingChunkBytes >= MAX_CHUNK_BATCH_BYTES
+          ) {
+            if (flushTimeoutId) {
+              clearTimeout(flushTimeoutId)
             }
+            flushPendingChunks()
+            continue
+          }
 
-            if (msgType === 0x01) {
-              if (!haveConfig) {
-                addLogEvent("Received frame before config; dropping", "error")
-                continue
-              }
-              if (!decoder || decoder.state === "unconfigured") {
-                addLogEvent(
-                  "Decoder not configured yet; dropping frame",
-                  "error",
-                )
-                continue
-              }
-
-              if (payloadLen < 1) continue
-              const isKey = payload[0] === 1
-              const frameData = payload.subarray(1)
-
-              // Enforce keyframe requirement after configure/flush/restart
-              if (waitingForKeyAfterConfig) {
-                if (!isKey) {
-                  // drop until first IDR
-                  continue
-                }
-                waitingForKeyAfterConfig = false
-              }
-
-              const chunk = new EncodedVideoChunk({
-                type: isKey ? "key" : "delta",
-                timestamp: ts,
-                data: frameData,
-              })
-              ts += frameDurationUs
-
-              decoder.decode(chunk)
-              continue
-            }
-
-            // Unknown msg type
-            addLogEvent(`Unknown message type ${msgType}; dropping`, "error")
+          if (!flushTimeoutId) {
+            flushTimeoutId = setTimeout(() => {
+              flushPendingChunks()
+            }, CHUNK_BATCH_DELAY_MS)
           }
         }
       } catch (e) {
@@ -208,11 +155,15 @@ export function useVideoStream(
           "error",
         )
       } finally {
+        if (flushTimeoutId) {
+          clearTimeout(flushTimeoutId)
+          flushPendingChunks()
+        }
         streamReadersRef.current.delete(reader)
         reader.releaseLock()
       }
     },
-    [addLogEvent, ensureVideoDecoder],
+    [addLogEvent, getWorker],
   )
 
   const handleVideoStreams = useCallback(
@@ -232,6 +183,7 @@ export function useVideoStream(
             addLogEvent("Done accepting unidirectional streams!")
             return
           }
+
           const stream = value
           const number = streamNumberRef.current++
           addLogEvent("New incoming unidirectional stream #" + number)
@@ -252,6 +204,7 @@ export function useVideoStream(
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true
+
       const incomingReader = incomingStreamReaderRef.current
       if (incomingReader) {
         void incomingReader.cancel().catch(() => undefined)
@@ -262,11 +215,26 @@ export function useVideoStream(
       })
       streamReadersRef.current.clear()
 
-      if (videoDecoderRef.current) {
-        videoDecoderRef.current.close()
+      const worker = workerRef.current
+      workerRef.current = null
+      if (worker) {
+        worker.postMessage({ type: "close" })
+        worker.terminate()
       }
     }
   }, [])
 
   return { handleVideoStreams }
+}
+
+function toTransferableBuffer(value: Uint8Array) {
+  if (
+    value.buffer instanceof ArrayBuffer &&
+    value.byteOffset === 0 &&
+    value.byteLength === value.buffer.byteLength
+  ) {
+    return value.buffer
+  }
+
+  return value.slice().buffer
 }

@@ -1,4 +1,7 @@
 #include "EncodeUtils.h"
+#include <unistd.h>
+#include "Common.h"
+
 
 void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) {
     uint8_t r, g, b;
@@ -46,9 +49,14 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
             return ret;
         }
 
-        // Write Annex B start code
-        uint8_t start_code[4] = {0x00, 0x00, 0x00, 0x01};
-        fwrite(start_code, 1, 4, state->output_file);
+        if (state->pkt->flags && AV_PKT_FLAG_KEY)
+        {
+            SendTransportMail(Stream_Video, Codec_Decsription, state->pkt->data, state->pkt->size);
+        }
+        else
+        {
+            SendTransportMail(Stream_Video, Codec_Payload, state->pkt->data, state->pkt->size);
+        }
 
         // Write packet data
         fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);

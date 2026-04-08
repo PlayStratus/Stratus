@@ -1,0 +1,125 @@
+#include <arpa/inet.h>
+#include <cstdlib>
+#include <iostream>
+
+#include "quiche/quic/core/web_transport_interface.h"
+#include "quiche/web_transport/web_transport.h"
+
+#include "Common.h"
+#include "TransportPriv.h"
+
+void FreeBuffer(absl::string_view test)
+{
+  free((void*)test.data());
+}
+
+
+namespace quic {
+
+class StratusWebTransportSessionVisitor : public WebTransportVisitor {
+ public:
+  StratusWebTransportSessionVisitor(WebTransportSession* session)
+  {
+    session_ = session;
+    ControlStream = nullptr;
+    InputStream = nullptr;
+    VideoStream = nullptr;
+
+    assert(StaticTransportSession->WebTransportSessionCount < 10);
+    if (StaticTransportSession->WebTransportSessionCount > 0) {
+      std::cerr << "[Transport] Warning: multiple sessions established, but only the first will receive data" << std::endl;
+    }
+    StaticTransportSession->WebTransportSessionArray[StaticTransportSession->WebTransportSessionCount] = this;
+    StaticTransportSession->WebTransportSessionCount++;
+  }
+
+  void OnSessionReady() override {
+    if (session_->CanOpenNextOutgoingUnidirectionalStream()) {
+      OnCanCreateNewOutgoingUnidirectionalStream();
+    }
+  }
+
+  void OnSessionClosed(WebTransportSessionError error_code, const std::string& error_message) override {
+    std::cerr << "[Transport] Session closed with Error Code " << error_code << " " << error_message << std::endl;
+  }
+
+  void OnIncomingBidirectionalStreamAvailable() override {
+    std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
+
+    if (!ControlStream){
+        ControlStream = session_->AcceptIncomingBidirectionalStream();
+    }
+    else
+    {
+        std::cerr << "[Transport] ControlStream is Already Open!" << std::endl;
+    }
+
+  }
+
+  void OnIncomingUnidirectionalStreamAvailable() override {
+    std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
+
+    if (!InputStream){
+        InputStream = session_->AcceptIncomingUnidirectionalStream();
+    }
+    else
+    {
+        std::cerr << "[Transport] InputStream is Already Open!" << std::endl;
+    }
+  }
+
+  void OnDatagramReceived(absl::string_view datagram) override {
+    std::cerr << "[Transport] OnDatagramReceived()" << std::endl;
+  }
+
+  void OnCanCreateNewOutgoingBidirectionalStream() override {
+    std::cerr << "[Transport] OnCanCreateNewOutgoingBidirectionalStream()" << std::endl;
+  }
+
+  void OnCanCreateNewOutgoingUnidirectionalStream() override {
+    std::cerr << "[Transport] OnCanCreateNewOutgoingUnidirectionalStream()" << std::endl;
+
+    VideoStream = session_->OpenOutgoingUnidirectionalStream();
+
+    webtransport::SessionStats SessionStats = session_->GetSessionStats();
+
+    std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
+  }
+
+  absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length) {
+    if (VideoStream && VideoStream->CanWrite())
+    {
+      // Huuge Mem leak will fix.
+
+      webtransport::StreamWriteOptions CurrentWriteOptions;
+
+      uint8_t NetMessageType = MessageType;
+      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
+      absl::Status ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+      delete MessageTypeData;
+      if (!ret.ok()) return ret;
+
+      int NetLength = htonl(Length);
+      quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
+      ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+      delete SizeData;
+      if (!ret.ok()) return ret;
+
+      quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
+      ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+      delete Data;
+      if (!ret.ok()) return ret;
+
+    }
+
+    return absl::OkStatus();
+  }
+
+ private:
+  WebTransportSession* session_;
+  WebTransportStream* ControlStream;
+  WebTransportStream* InputStream;
+  WebTransportStream* VideoStream;
+};
+
+}

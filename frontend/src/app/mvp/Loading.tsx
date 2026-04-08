@@ -1,11 +1,8 @@
 import { useEffect, useRef } from "react"
 
-type Props = {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>
-}
-
-export default function Loading({ canvasRef }: Readonly<Props>) {
+export default function Loading() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const lockedScaleRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -97,14 +94,20 @@ export default function Loading({ canvasRef }: Readonly<Props>) {
   }, [])
 
   return (
-    <video
-      ref={videoRef}
-      src='/loading.mp4'
-      autoPlay
-      muted
-      loop
-      playsInline
-      style={{ display: "none" }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className='pointer-events-none fixed inset-0 h-screen w-screen bg-black'
+      />
+      <video
+        ref={videoRef}
+        src='/loading.mp4'
+        autoPlay
+        muted
+        loop
+        playsInline
+        style={{ display: "none" }}
+      />
+    </>
   )
 }

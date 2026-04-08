@@ -1,3 +1,5 @@
 .env
 *.h264
 *.pcm
+*.pem
+*.key
