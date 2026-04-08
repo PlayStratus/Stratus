@@ -1,8 +1,11 @@
+#include <arpa/inet.h>
+#include <iostream>
+
 #include "quiche/quic/core/web_transport_interface.h"
 #include "quiche/web_transport/web_transport.h"
-#include <iostream>
+
+#include "Common.h"
 #include "TransportPriv.h"
-#include <arpa/inet.h>
 
 void Test(absl::string_view test)
 {
@@ -22,6 +25,9 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
     VideoStream = nullptr;
 
     assert(StaticTransportSession->WebTransportSessionCount < 10);
+    if (StaticTransportSession->WebTransportSessionCount > 0) {
+      std::cerr << "[Transport] Warning: multiple sessions established, but only the first will receive data" << std::endl;
+    }
     StaticTransportSession->WebTransportSessionArray[StaticTransportSession->WebTransportSessionCount] = this;
     StaticTransportSession->WebTransportSessionCount++;
   }
@@ -79,7 +85,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
     std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
   }
 
-  void SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length) {
+  absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length) {
     if (VideoStream && VideoStream->CanWrite())
     {
       // Huuge Mem leak will fix.
@@ -91,10 +97,15 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
       quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, Test);
 
       webtransport::StreamWriteOptions CurrentWriteOptions;
-      VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
-      VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-      VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+      absl::Status ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+      if (!ret.ok()) return ret;
+      ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+      if (!ret.ok()) return ret;
+      ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+      if (!ret.ok()) return ret;
     }
+
+    return absl::OkStatus();
   }
 
  private:

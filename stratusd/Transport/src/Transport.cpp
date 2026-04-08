@@ -1,7 +1,7 @@
 #include "QuicheCore.h"
 #include "Transport.h"
 #include "QuicheTools.h"
-#include "StratusWebTransportSessionVisitor.h"
+#include "StratusWebTransportSessionVisitor.cpp"
 #include <assert.h>
 #include <iostream>
 #include <vector>
@@ -37,7 +37,6 @@ transport_session* transport_init(int port)
     StaticTransportSession = session;
 
     session->port = port;
-    session->ShutdownInitiated = 0;
 
     memset(session->WebTransportSessionArray, 0, sizeof(session->WebTransportSessionArray));
     session->WebTransportSessionCount = 0;
@@ -50,15 +49,6 @@ transport_session* transport_init(int port)
     return session;
 }
 
-void transport_submit(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int64_t Length)
-{
-  if (StaticTransportSession->WebTransportSessionArray[0])
-  {
-    quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
-    CurrentSession->SubmitDataToStream(Stream, MessageType, Buffer, Length);
-  }
-}
-
 void transport_thread(struct transport_session* session)
 {
     quic::QuicServer* server = (quic::QuicServer*)session->QuicServer;
@@ -68,18 +58,20 @@ void transport_thread(struct transport_session* session)
 
     std::cerr << "[transport] Starting WebTransport on port: " << (int)session->port;
 
-    while (!session->ShutdownInitiated)
-    {
-       server->WaitForEvents();
+    while (1) {
+      server->WaitForEvents();
 
-       struct Letter* CurrentLetter = CheckMail();
+      struct Letter* CurrentLetter = CheckMail();
 
-       if (CurrentLetter)
-       {
-        transport_submit(CurrentLetter->Stream, CurrentLetter->MessageType, CurrentLetter->Data, CurrentLetter->DataLength);
-       }
+      if (CurrentLetter && StaticTransportSession->WebTransportSessionArray[0]) {
+        quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
+        absl::Status ret = CurrentSession->SubmitDataToStream(CurrentLetter->Stream, CurrentLetter->MessageType, CurrentLetter->Data, CurrentLetter->DataLength);
+        if (!ret.ok()) {
+          std::cerr << "[Transport] " << ret;
+        }
+      }
 
-       free(CurrentLetter);
+      free(CurrentLetter);
     }
 }
 

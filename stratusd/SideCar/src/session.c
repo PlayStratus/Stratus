@@ -15,10 +15,11 @@
 #include <unistd.h>
 
 #include "session.h"
+#include "AudioEncode.h"
 #include "Capture.h"
 #include "CapturePw.h"
-#include "AudioEncode.h"
 #include "Input.h"
+#include "Transport.h"
 
 /*
  * The maximum length of the filepath of a game, NULL terminator included

@@ -17,7 +17,19 @@ void ring_buffer_close(struct ring_buffer *ring);
 
 
 
-#include <Transport.h>
+enum TransportStreamType
+{
+    Stream_Control,
+    Stream_Video,
+    Stream_Audio,
+    Stream_Input
+};
+
+enum VideoMessageType
+{
+    Codec_Decsription,
+    Codec_Payload
+};
 
 // Mail Box Thread Communication:
 struct Letter
