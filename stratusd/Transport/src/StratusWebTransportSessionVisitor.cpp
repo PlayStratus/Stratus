@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <cstdlib>
 #include <iostream>
 
 #include "quiche/quic/core/web_transport_interface.h"
@@ -7,9 +8,9 @@
 #include "Common.h"
 #include "TransportPriv.h"
 
-void Test(absl::string_view test)
+void FreeBuffer(absl::string_view test)
 {
-  //std::cerr << "[Transport] TEST" << std::endl;
+  free((void*)test.data());
 }
 
 
@@ -89,20 +90,26 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
     if (VideoStream && VideoStream->CanWrite())
     {
       // Huuge Mem leak will fix.
-      uint8_t NetMessageType = MessageType;
-      int NetLength = htonl(Length);
-
-      quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, Test);
-      quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, Test);
-      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, Test);
 
       webtransport::StreamWriteOptions CurrentWriteOptions;
+
+      uint8_t NetMessageType = MessageType;
+      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
       absl::Status ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+      delete MessageTypeData;
       if (!ret.ok()) return ret;
+
+      int NetLength = htonl(Length);
+      quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
       ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+      delete SizeData;
       if (!ret.ok()) return ret;
+
+      quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
       ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+      delete Data;
       if (!ret.ok()) return ret;
+
     }
 
     return absl::OkStatus();
