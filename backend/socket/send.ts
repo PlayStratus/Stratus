@@ -11,16 +11,17 @@ interface ConfirmStart {
   payload: {
     session_id: string
     tls_fingerprint: string
+    ip: string
   }
 }
 
 export function startGameSession(gameId: string, userId: string, userName: string, width: number, height: number): Promise<ConfirmStart | null> {        //pass in value from request
-  const ws = findNodeByGame(gameId)                                                         //find game
+  let session_id = uuidv4()
+  const ws = findNodeByGame(gameId, session_id)                                                         //find game
   if (!ws) {                                                                                //no game found return null
     console.error("No node available for game:", gameId)
     return Promise.resolve(null);
   }
-  let session_id = uuidv4()
   let request_id = uuidv4()
   const startMessage = {                                                                    //build message
     type: "start_session",

@@ -1,27 +1,41 @@
 import { WebSocket } from "ws"
 
+interface NodePayload {
+  hostname: string
+  games: string[]
+  sessions: string[]
+  [key: string]: any
+}
+
 interface NodeInfo {
   name: string
   last_heartbeat: number
-  node_payload: any                                                 //we load payload here
+  node_payload: NodePayload                                                 //we load payload here
 }
 
 const nodes = new Map<WebSocket, NodeInfo>()
+let lastClear = Date.now();
+const clearFrequency = 60*60*1000;                                  //first 60 is for seconds 2nd for minutes, 1000 is to exit mil
 
 function loadNode(ws: WebSocket, inName: string, payload: any) {    //load node into nodes
-  if (!nodes.has(ws)) {                                             //check if a connection already exists
-    nodes.set(ws, {                                                 //add to nodes
+  if (!isValidPayload(payload)) {                                   //Check if required values are in the node payload
+    console.error("Invalid payload, rejecting node")                //if no error 
+    return
+  }
+  if (!nodes.has(ws)) {
+    nodes.set(ws, {
       name: inName,
-      last_heartbeat: Date.now(),                                   //this just shows last connection, not necissarily last heartbeat sent
+      last_heartbeat: Date.now(),
       node_payload: payload
     })
   }
-  else {
-    console.error("Error: Socket Connection Already Exists");
-  }
 }
 
-export function updateHeartbeat(ws: WebSocket, payload: any) {          //update hartbeet
+export function updateHeartbeat(ws: WebSocket, payload: any) {          //update heartbeat
+    if (Date.now()-lastClear> clearFrequency){                                                     //checks when old heartbeats were last cleared out. If not within our limit clear any old beats
+      lastClear = Date.now();
+      clearUnresponsive();
+    }
     let node = nodes.get(ws)                                            //get connection
     if (!node) {
         loadNode(ws, payload.hostname, payload)
@@ -32,12 +46,16 @@ export function updateHeartbeat(ws: WebSocket, payload: any) {          //update
     node.node_payload = payload
 }
 
-export function findNodeByGame(gameId: string): WebSocket | null {
-  console.log()
+export function findNodeByGame(gameId: string, sessionId: string): WebSocket | null {
   for (const [ws, node] of nodes.entries()) {
-    if (node.node_payload.games.includes(gameId) && node.node_payload.sessions.length == 0) {
+    if (Date.now()-node.last_heartbeat > 120000){                                                               //heartbeat should happen every 30 seconds so if it misses 4 beats or 2 minutes we do not want to join it
+      deleteNode(ws);
+    }
+    else if (node.node_payload.games.includes(gameId) && node.node_payload.sessions.length == 0) {              //check if node includes needed game and if no user is on it
+      node.node_payload.sessions.push(sessionId)
       return ws
     }
+    
   }
   return null
 }
@@ -50,3 +68,18 @@ export function getAllNodes() {
   return nodes
 }
 
+function clearUnresponsive() {
+  for (const [ws, node] of nodes.entries()) {
+    if (Date.now()-node.last_heartbeat > 120000){                                                               //heartbeat should happen every 30 seconds so if it misses 4 beats or 2 minutes we do not want to join it
+      deleteNode(ws);
+    }
+  }
+}
+
+function isValidPayload(payload: any): payload is NodePayload {             //Checks to ensure payload is valid
+  return (                                                                  //we require games and sessions otherwise we could have an ungraceful exit. Hostname is important but would not cause a crash if left out. Can add more if required
+    typeof payload.hostname === "string" &&
+    Array.isArray(payload.games) &&
+    Array.isArray(payload.sessions)
+  )
+}

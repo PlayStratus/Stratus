@@ -40,7 +40,7 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
 
   const user_id = decodedToken.userId
 
-  const user = {Username : "temp"}
+  const user = await getUserById(user_id)
 
   if (!user) {
     return res.status(403).json({ error: "User not found" })

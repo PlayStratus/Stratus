@@ -10,6 +10,8 @@ import playRoutes from "./routes/play.js"
 import gamesRoutes from "./routes/games.js"
 import authRoutes from "./routes/auth.js"
 
+import jwt from "jsonwebtoken"
+
 import { handleMessage } from "./socket/messages.js" //to .js git rebase
 
 import "dotenv/config"
@@ -72,3 +74,13 @@ socket.on("connection", (ws) => {
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
 })
+
+/*
+Example on how to generate temp token for get and post testing
+const token = jwt.sign(
+    { userId: "test-user-id", email: "test@oregonstate.edu" },
+    process.env.AUTH_SECRET as string,
+    { expiresIn: "7d" }
+)
+
+console.log(token)*/
