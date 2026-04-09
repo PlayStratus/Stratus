@@ -28,8 +28,11 @@ export function handleMessage(ws: WebSocket, message: any) {        //most funct
 
 
 function start_confirmed(ws: WebSocket, message: any) {
-  const { session_id, tls_fingerprint } = message.payload
-  console.log(`Session started. session: ${session_id} | TLS: ${tls_fingerprint}`)
+  const { session_id, tls_fingerprint, ip} = message.payload
+  //console.log(`Session started. session: ${session_id} | TLS: ${tls_fingerprint} | ip: ${ip}`)
+  if (!session_id || !tls_fingerprint || !ip) {
+    throw new Error("Missing required fields: session_id, tls_fingerprint, ip")
+  }
   resolveStart(message);
 }
 
