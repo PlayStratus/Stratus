@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include <libavutil/imgutils.h>
 
 #include "Common.h"
 
@@ -22,12 +23,20 @@ struct audio_context {
     int shutdown_requested;
 };
 
+struct video_context {
+    uint32_t buffer_capacity_frames;
+    struct ring_buffer *ring_buffer;
+    enum AVPixelFormat shm_pix_fmt;
+    enum AVPixelFormat dma_pix_fmt;
+};
+
 struct session_args {
     char *encode_output;
     uint32_t width;
     uint32_t height;
 
     struct audio_context audio_context;
+    struct video_context *video_context;
 };
 
 int sidecar_main();

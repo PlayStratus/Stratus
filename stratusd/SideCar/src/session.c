@@ -19,6 +19,7 @@
 #include "CapturePw.h"
 #include "AudioEncode.h"
 #include "Input.h"
+#include "Encode.h"
 
 /*
  * The maximum length of the filepath of a game, NULL terminator included
@@ -30,11 +31,13 @@
  */
 void session_teardown(struct session *session) {
     struct audio_context *audio_context;
+    struct video_context *video_context;
 
     if (session == NULL)
         return;
 
     audio_context = &session->args.audio_context;
+    video_context = session->args.video_context;
 
     pthread_mutex_lock(&audio_context->format_mutex);
     audio_context->shutdown_requested = 1;
@@ -58,6 +61,11 @@ void session_teardown(struct session *session) {
         ring_buffer_close(audio_context->ring_buffer);
     if (session->audio_encoder_thread != 0)
         pthread_join(session->audio_encoder_thread, NULL);
+
+    if (video_context->ring_buffer != NULL)
+        ring_buffer_close(video_context->ring_buffer);
+    if (session->video_encoder_thread != 0)
+        pthread_join(session->video_encoder_thread, NULL);
 
     // Check to make sure game has exited (either gracefully in response to user
     // input, or abruptly due to the Wayland proxy socket being closed).
@@ -140,6 +148,29 @@ static int session_launch_game(char *game_id) {
     }
 }
 
+int video_context_init(struct session *session, uint32_t ring_buffer_capacity) {
+    struct video_context *video_context = malloc(sizeof(struct video_context));
+    if (video_context == NULL) {
+        perror("[Sidecar] malloc video_context");
+        return -1;
+    }
+
+    memset(video_context, 0x00, sizeof(struct video_context));
+    video_context->buffer_capacity_frames = ring_buffer_capacity;
+    video_context->ring_buffer = ring_buffer_init(ring_buffer_capacity, sizeof(struct wl_buffer));
+    if (video_context->ring_buffer == NULL) {
+        perror("[Sidecar] ring_buffer_init (video)");
+        return -1;
+    }
+
+    video_context->shm_pix_fmt = AV_PIX_FMT_BGR0;
+    video_context->dma_pix_fmt = AV_PIX_FMT_RGBA;
+
+    session->args.video_context = video_context;
+    return 0;
+
+}
+
 /*
  * Create and start a new stream session
  *
@@ -148,6 +179,7 @@ static int session_launch_game(char *game_id) {
 struct session *session_start(char *session_id, char *game_id, int width,
                               int height, char *encode_output) {
     struct session *session;
+    uint32_t ring_buffer_capacity = 2048;
 
     // Create session struct
     session = malloc(sizeof(struct session));
@@ -172,6 +204,9 @@ struct session *session_start(char *session_id, char *game_id, int width,
     session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;
+    if (video_context_init(session, ring_buffer_capacity) < 0)
+        goto err;
+
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
@@ -183,6 +218,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
     pthread_create(&session->audio_encoder_thread, NULL,
                    (void *)&audio_encoder_main, &session->args);
     pthread_create(&session->input_thread, NULL, (void *)&input_main,
+                   &session->args);
+    pthread_create(&session->video_encoder_thread, NULL, (void *)&encoder_main,
                    &session->args);
 
     // Start game

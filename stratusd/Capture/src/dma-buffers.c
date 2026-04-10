@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-
+#include "Common.h"
 #include "dma-buffers-pub.h"
 #include "dma-buffers-priv.h"
 #include "EGLUtils.h"
@@ -221,9 +221,7 @@ enum proxy_actions wl_dmabuf_surface_commit(struct capture_session *session,
     dma_buf = wl_buf->dma_buf;
     assert(dma_buf != NULL);
 
-    int stride = dma_buf->width * 4;
-    if (dma_encode_video_frame(session->encoder, dma_buf, stride) < 0)
-        return PROXY_ACTION_ERR;
+    ring_buffer_write(session->video_context->ring_buffer, wl_buf, 1);
 
     return PROXY_ACTION_FWD;
 }

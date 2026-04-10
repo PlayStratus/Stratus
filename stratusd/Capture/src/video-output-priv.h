@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "Common.h"
+
 /*
  * Contains data for a wl_surface object
  */
@@ -13,19 +15,6 @@ struct wl_surface {
     uint32_t dependents;
 };
 
-/*
- * Contains data for a wl_buffer object
- *
- * Note: we do not process all methods that create buffers, so not every
- * wl_buffer object will correspond to an instance of the wl_buffer struct.
- */
-struct wl_buffer {
-    uint32_t id;
-    int32_t width;
-    int32_t height;
-    struct wl_shm_buffer *shm_buf; // NULL if buffer is not shm-backed
-    struct wl_dma_buffer *dma_buf;
-    uint32_t dependents;
-};
+
 
 #endif

@@ -21,6 +21,7 @@ struct session {
     pthread_t capture_pw_thread;
     pthread_t audio_encoder_thread;
     pthread_t input_thread;
+    pthread_t video_encoder_thread;
 };
 
 struct session *session_start(char *session_id, char *game_uuid, int width,

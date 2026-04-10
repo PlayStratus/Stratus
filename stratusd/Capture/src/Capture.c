@@ -130,8 +130,6 @@ static void handle_session_destroy(struct proxy_session *session) {
 static void capture_destroy(struct capture_session *session) {
     fprintf(stderr, "[Capture] Wayland proxy destroyed\n");
 
-    if (session->encoder != NULL)
-        encoder_teardown(session->encoder);
     proxy_destroy(session->proxy);
     free(session);
 }
@@ -159,6 +157,7 @@ int capture_main(struct session_args *args) {
     session->encode_output = args->encode_output;
     session->width = args->width;
     session->height = args->height;
+    session->video_context = args->video_context;
 
     session->proxy = proxy_init("stratus");
     if (session->proxy == NULL) {
@@ -171,6 +170,9 @@ int capture_main(struct session_args *args) {
     session->proxy->on_session_destroy  = &handle_session_destroy;
     session->proxy->userdata            = session;
 
+
+
+/*
     // TODO: EGL doesn't like being initialized in one thread and then run in
     // a different thread. It's possible to change this, but eventually the
     // Encode module will be running completely in its own thread anyway. So for
@@ -188,6 +190,7 @@ int capture_main(struct session_args *args) {
         ret = -1;
         goto end;
     }
+*/
 
     fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);

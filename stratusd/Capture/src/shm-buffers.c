@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <sys/mman.h>
 
+#include "Common.h"
 #include "shm-buffers-pub.h"
 #include "shm-buffers-priv.h"
 #include "video-output-priv.h"
@@ -24,14 +25,7 @@ struct wl_shm_pool {
     uint32_t dependents;
 };
 
-/*
- * Contains data for a shm-backed wl_buffer object
- */
-struct wl_shm_buffer {
-    void *p;
-    int32_t stride;
-    struct wl_shm_pool *pool;
-};
+
 
 /*
  * Handle a wl_shm@format event
@@ -211,9 +205,8 @@ enum proxy_actions wl_shm_surface_commit(struct capture_session *session,
     shm_buf = wl_buf->shm_buf;
     assert(shm_buf != NULL);
 
-    // Encode frame
-    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride, 0)
-           == 0);
+    // Enqueue frame in ring buffer
+    ring_buffer_write(session->video_context->ring_buffer, wl_buf, 1);
 
     return PROXY_ACTION_FWD;
 }

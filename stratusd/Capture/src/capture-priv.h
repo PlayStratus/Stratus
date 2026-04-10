@@ -12,7 +12,7 @@ struct capture_session {
     uint32_t width;
     uint32_t height;
     struct proxy *proxy;
-    encoder_context *encoder;
+    struct video_context *video_context;
 };
 
 /*
