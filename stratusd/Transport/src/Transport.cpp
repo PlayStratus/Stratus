@@ -1,6 +1,6 @@
 #include "QuicheCore.h"
 #include "Transport.h"
-#include "QuicheTools.h"
+#include "Certs.h"
 #include "StratusWebTransportSessionVisitor.cpp"
 #include <assert.h>
 #include <iostream>
@@ -30,7 +30,7 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
 
 }
 
-transport_session* transport_init(int port)
+transport_session* transport_init(int port, struct StratusCertificate *cert)
 {
     // Session init
     transport_session* session = (transport_session*)malloc(sizeof(transport_session));
@@ -43,7 +43,7 @@ transport_session* transport_init(int port)
 
     // Storing as void PTRs for C Backwards Compat.
     session->WebTransportBackend = new quic::WebTransportOnlyBackend(quic::ProcessRequest);
-    session->QuicServer = new quic::QuicServer(quiche::CreateStratusDevProofSourceImpl(), nullptr, (quic::QuicSimpleServerBackend*)session->WebTransportBackend);
+    session->QuicServer = new quic::QuicServer(std::move(cert->proof_source), nullptr, (quic::QuicSimpleServerBackend*)session->WebTransportBackend);
     session->QuicAddr = new quic::QuicSocketAddress(quic::QuicIpAddress::Any6(), port);
 
     return session;
@@ -90,7 +90,7 @@ int transport_main(struct session_args *args) {
     int ret = 0;
     struct transport_session *session;
 
-    session = transport_init(4433);
+    session = transport_init(4433, args->cert);
     if (session == NULL) {
         std::cerr << "[Transport] transport_init failed\n";
         return -1; // No need to jump to end outside of pthread_cleanup_* macro

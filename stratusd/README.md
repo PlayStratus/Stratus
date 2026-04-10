@@ -52,3 +52,9 @@ cluster.
       session is stopped
 
 7.  Run binary located at `./build/src/stratusd`
+
+8.  If connected to the stream locally, use the following chromium flags:
+
+    ```
+    chromium -origin-to-force-quic-on=localhost:4433 --ignore-certificate-errors-spki-list=<base64 fingerprint>
+    ```
