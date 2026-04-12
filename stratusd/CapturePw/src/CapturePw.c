@@ -40,7 +40,18 @@ struct capture_pw_session {
     uint64_t dropped_frames; // Counter for frames discarded when a single
                              // capture chunk exceeds ring capacity
     bool debug;
+    int16_t *convert_buffer;
+    uint32_t convert_buffer_samples;
 };
+
+static int16_t capture_pw_float_to_s16(float sample) {
+    if (sample >= 1.0f)
+        return INT16_MAX;
+    if (sample <= -1.0f)
+        return INT16_MIN;
+
+    return (int16_t)(sample * 32768.0f);
+}
 
 /*
  * Helper function to get the ring buffer from the session's audio context
@@ -64,8 +75,12 @@ static void on_process(void *userdata) {
     struct pw_buffer *b;
     struct spa_buffer *buf;
     float *frame_data;
+    int16_t *convert_buffer;
     uint32_t n_frames;
+    uint32_t channels;
+    uint32_t total_samples;
     uint32_t written_frames;
+    uint32_t sample_idx;
 
     // Get frame data
     if ((b = pw_stream_dequeue_buffer(session->stream)) == NULL) {
@@ -81,17 +96,38 @@ static void on_process(void *userdata) {
     frame_data = buf->datas[0].data;
 
     audio_ring_buffer = capture_pw_ring_buffer(session);
-    if (audio_ring_buffer == NULL || session->audio_context->channels == 0) {
+    channels = session->audio_context->channels;
+    if (audio_ring_buffer == NULL || channels == 0) {
         goto end;
     }
 
-    n_frames = buf->datas[0].chunk->size /
-               (sizeof(float) * session->audio_context->channels);
+    n_frames = buf->datas[0].chunk->size / (sizeof(float) * channels);
     if (n_frames == 0) {
         goto end;
     }
 
-    written_frames = ring_buffer_write(audio_ring_buffer, frame_data, n_frames);
+    total_samples = n_frames * channels;
+    if (total_samples > session->convert_buffer_samples) {
+        convert_buffer =
+            realloc(session->convert_buffer,
+                    (size_t)total_samples * sizeof(*session->convert_buffer));
+        if (convert_buffer == NULL) {
+            fprintf(stderr,
+                    "[CapturePw] Failed to allocate audio conversion buffer\n");
+            goto end;
+        }
+
+        session->convert_buffer = convert_buffer;
+        session->convert_buffer_samples = total_samples;
+    }
+
+    for (sample_idx = 0; sample_idx < total_samples; sample_idx++) {
+        session->convert_buffer[sample_idx] =
+            capture_pw_float_to_s16(frame_data[sample_idx]);
+    }
+
+    written_frames =
+        ring_buffer_write(audio_ring_buffer, session->convert_buffer, n_frames);
 
     if (session->debug) {
         fprintf(stdout,
@@ -157,7 +193,8 @@ static void on_stream_param_changed(void *_data, uint32_t id,
             buffer_capacity_frames = 2048;
 
         audio_ring_buffer = ring_buffer_init(buffer_capacity_frames,
-                                             (size_t)channels * sizeof(float));
+                                             (size_t)channels *
+                                                 sizeof(*session->convert_buffer));
         if (audio_ring_buffer == NULL) {
             fprintf(stderr, "[CapturePw] Failed to initialize ring buffer\n");
             return;
@@ -273,6 +310,7 @@ void capture_pw_destroy(struct capture_pw_session *session) {
         pw_main_loop_destroy(session->loop);
 
     pw_deinit();
+    free(session->convert_buffer);
     free(session);
 }
 
