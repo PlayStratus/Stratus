@@ -232,19 +232,22 @@ int sidecar_main() {
     last_heartbeat = 0;
     while (1) {
         if (time(NULL) - last_heartbeat > HEARTBEAT_INTERVAL) {
-            sidecar_heartbeat(&ctx);
+            if (sidecar_heartbeat(&ctx) < 0)
+                break;
             last_heartbeat = time(NULL);
         }
 
         if (ctx.active_session != NULL && session_poll(ctx.active_session) != 0)
         {
-            api_send_stop_session(ctx.api_client, ctx.active_session->id);
-            sidecar_on_stop_session(&ctx, ctx.active_session->id);
+            if (api_send_stop_session(ctx.api_client, ctx.active_session->id) < 0)
+                break;
+            if (sidecar_on_stop_session(&ctx, ctx.active_session->id) < 0)
+                break;
             if (getenv("STRATUSD_SIDECAR_ONESHOT") != NULL)
                 break;
         }
 
-        if (api_poll(ctx.api_client, 100) == -1)
+        if (api_poll(ctx.api_client, 100) < 0)
             break;
     }
 

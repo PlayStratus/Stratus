@@ -17,6 +17,14 @@
 #include "api.h"
 #include "sidecar-priv.h"
 
+/*
+ * The minimum time between curl_ws_recv failures
+ *
+ * If curl_ws_recv fails earlier, we will return an error instead of attempting
+ * to reconnect.
+ */
+#define RECONNECT_LIMIT 60
+
 // Forward declarations needed by api_recv()
 static int api_recv_start_session(struct api_client *client, cJSON *payload);
 static int api_recv_stop_session(struct api_client *client, cJSON *payload);
@@ -104,38 +112,29 @@ static char *get_uuid() {
 }
 
 /*
- * Initialize an API client
+ * Connects to the API server
  *
  * The URL of the backend WebSocket server must be set in the
- * STRATUSD_BACKEND_URL environment variable.
+ * STRATUSD_BACKEND_URL environment variable. If the curl handle has already
+ * been initialized, it will be destroyed and reinitialized.
  *
- * Returns the client struct on success and NULL on failure.
+ * Returns 0 success and -1 on failure.
  */
-struct api_client *api_init() {
+static int api_connect(struct api_client *client) {
     char *url;
-    struct api_client *client;
     CURLcode ret;
 
     url = getenv("STRATUSD_BACKEND_URL");
     assert(url != NULL);
 
-    api_debug = (getenv("STRATUSD_API_DEBUG") != NULL);
+    if (client->curl != NULL)
+        curl_easy_cleanup(client->curl);
 
-    // Initialize client
-    client = malloc(sizeof(struct api_client));
-    if (client == NULL) {
-        perror("[Sidecar] malloc");
-        goto err_malloc;
-    }
-    client->on_start_session = NULL;
-    client->on_stop_session = NULL;
-    client->userdata = NULL;
-
-    // Initialize curl handle
+    // (re)initialize curl handle
     client->curl = curl_easy_init();
     if (client->curl == NULL) {
         perror("[Sidecar] curl_easy_init");
-        goto err_init;
+        goto err_pre_init;
     }
     assert(curl_easy_setopt(client->curl, CURLOPT_URL, url) == CURLE_OK);
     assert(curl_easy_setopt(client->curl, CURLOPT_CONNECT_ONLY, 2) == CURLE_OK);
@@ -154,11 +153,45 @@ struct api_client *api_init() {
         goto err_post_init;
     }
 
-    return client;
+    return 0;
 
 err_post_init:
     curl_easy_cleanup(client->curl);
-err_init:
+err_pre_init:
+    return -1;
+}
+
+
+/*
+ * Initialize an API client
+ *
+ * Returns the client struct on success and NULL on failure.
+ */
+struct api_client *api_init() {
+    char *url;
+    struct api_client *client;
+    CURLcode ret;
+
+    api_debug = (getenv("STRATUSD_API_DEBUG") != NULL);
+
+    // Initialize client
+    client = malloc(sizeof(struct api_client));
+    if (client == NULL) {
+        perror("[Sidecar] malloc");
+        goto err_malloc;
+    }
+    client->on_start_session = NULL;
+    client->on_stop_session = NULL;
+    client->userdata = NULL;
+    client->curl = NULL;
+    client->last_reconnect = time(NULL);
+
+    if (api_connect(client) < 0)
+        goto err_connect;
+
+    return client;
+
+err_connect:
     free(client);
 err_malloc:
     return NULL;
@@ -248,7 +281,7 @@ err_uuid:
  *
  * TODO: Make static (currently non-static for testing purposes).
  *
- * Returns 0 on success, -1 on fatal failure, and -2 on message parsing errors.
+ * Returns 0 on success and -1 on failure.
  */
 int api_recv(struct api_client *client, char *msg) {
     int ret;
@@ -299,13 +332,13 @@ int api_recv(struct api_client *client, char *msg) {
 
 err:
     cJSON_Delete(json);
-    return -2;
+    return -1;
 }
 
 /*
  * Receive and process new API messages
  *
- * Returns 0 on success, -1 on fatal failure, and -2 on message parsing errors.
+ * Returns 0 on success and -1 on failure.
  */
 int api_poll(struct api_client *client, int timeout) {
     int events;
@@ -333,7 +366,15 @@ int api_poll(struct api_client *client, int timeout) {
     if (ret != CURLE_OK) {
         fprintf(stderr, "[Sidecar] curl_ws_recv: %s\n",
                 curl_easy_strerror(ret));
-        return -1;
+
+        // Broken connection, try to reconnect
+        if (time(NULL) - client->last_reconnect > RECONNECT_LIMIT) {
+            client->last_reconnect = time(NULL);
+            fprintf(stderr, "[Sidecar] Attempting to reconnect...\n");
+            return api_connect(client);
+        } else {
+            return -1;
+        }
     } else if (meta->bytesleft != 0) {
         // We're using a fixed buffer size for simplicity, but 4K should be more
         // than enough the messages we'll be receiving.
@@ -423,7 +464,7 @@ err_cjson:
 /*
  * Process a parsed start message and call the appropriate handlers
  *
- * Returns 0 on success, -1 on fatal failure, and -2 on message parsing errors.
+ * Returns 0 on success and -1 on failure.
  */
 static int api_recv_start_session(struct api_client *client, cJSON *payload) {
     struct api_msg_start_session data;
@@ -473,7 +514,7 @@ static int api_recv_start_session(struct api_client *client, cJSON *payload) {
 
 err:
     fprintf(stderr, "[Sidecar] Error: received invalid start message\n");
-    return -2;
+    return -1;
 }
 
 /*
@@ -507,7 +548,7 @@ err_cjson:
 /*
  * Process a parsed stop message and call the appropriate handlers
  *
- * Returns 0 on success, -1 on fatal failure, and -2 on message parsing errors.
+ * Returns 0 on success and -1 on failure.
  */
 static int api_recv_stop_session(struct api_client *client, cJSON *payload) {
     char *session_id;
@@ -525,7 +566,7 @@ static int api_recv_stop_session(struct api_client *client, cJSON *payload) {
 
 err:
     fprintf(stderr, "[Sidecar] Error: received invalid stop message\n");
-    return -2;
+    return -1;
 }
 
 /*
