@@ -161,7 +161,7 @@ encoder_context* encoder_startup(
 
 int dma_encode_video_frame(
         encoder_context *state,
-        struct wl_dma_buffer *dma_buf,
+        struct dma_buffer *dma_buf,
         int stride) {
 
     size_t pixel_size = dma_buf->width * dma_buf->height * 4; // RGBA specific

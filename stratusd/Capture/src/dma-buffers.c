@@ -11,6 +11,22 @@
 #include "EGLUtils.h"
 
 /*
+ * Contains data for a zwp_linux_buffer_params_v1 object
+ * This is a temporary object used to build a dmabuf_backed wl_buffer
+ */
+struct zwp_linux_buffer_params {
+    uint32_t id;
+    int num_planes;
+    struct {
+        int fd;
+        uint32_t offset;
+        uint32_t stride;
+    } planes[4];
+    uint64_t modifier;
+};
+
+
+/*
  * Handle a zwp_linux_dmabuf_v1@create_params request
  *
  * Client creates a params object to build a dmabuf buffer.
@@ -98,7 +114,7 @@ enum proxy_actions zwp_linux_buffer_params_create_immed(struct proxy_message *ms
     struct wl_map *map;
     struct zwp_linux_buffer_params *params;
     struct wl_buffer *wl_buf;
-    struct wl_dma_buffer *dma_buf;
+    struct dma_buffer *dma_buf;
     uint32_t buffer_id;
     int32_t width, height;
     uint32_t format, flags;
@@ -117,7 +133,7 @@ enum proxy_actions zwp_linux_buffer_params_create_immed(struct proxy_message *ms
     if (wl_buf == NULL)
         return PROXY_ACTION_ERR;
 
-    dma_buf = calloc(1, sizeof(struct wl_dma_buffer));
+    dma_buf = calloc(1, sizeof(struct dma_buffer));
     if (dma_buf == NULL) {
         free(wl_buf);
         return PROXY_ACTION_ERR;
@@ -190,7 +206,7 @@ enum proxy_actions zwp_linux_buffer_params_destroy(struct proxy_message *msg) {
  *
  * Called when wl_buffer@destroy is received and buffer is not attached.
  */
-void wl_dma_buffer_free(struct wl_dma_buffer *buf) {
+void wl_dma_buffer_free(struct dma_buffer *buf) {
     assert(buf != NULL);
 
     for (int i = 0; i < buf->num_planes; i++) {
@@ -213,7 +229,7 @@ void wl_dma_buffer_free(struct wl_dma_buffer *buf) {
 enum proxy_actions wl_dmabuf_surface_commit(struct capture_session *session,
                                             struct wl_surface *surf) {
     struct wl_buffer *wl_buf;
-    struct wl_dma_buffer *dma_buf;
+    struct dma_buffer *dma_buf;
     uint8_t *pixel_data = NULL;
 
     wl_buf = surf->buf;

@@ -33,7 +33,7 @@ encoder_context* encoder_startup(
         enum AVPixelFormat dma_pix_fmt);
 int dma_encode_video_frame(
         encoder_context *state,
-        struct wl_dma_buffer *dma_buf,
+        struct dma_buffer *dma_buf,
         int stride);
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer, int stride, int buf_type);
 int encoder_teardown(encoder_context *state);
