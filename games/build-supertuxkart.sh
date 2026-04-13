@@ -53,6 +53,16 @@ Categories=Game
 Icon=io.playstratus.supertuxkart
 EOF
 
+# Create player config file to disable tutorial popup
+cat << EOF > $CONFIG_DIR/players.xml
+<?xml version="1.0"?>
+<players version="1" >
+    <current player="stratus"/>
+    <player name="stratus" guest="false" use-frequency="1">
+    </player>
+</players>
+EOF
+
 # Create additional required symlinks
 ln -sr "$SYS_DIR/data/supertuxkart_256.png" \
     "$APPDIR/io.playstratus.supertuxkart.png"
