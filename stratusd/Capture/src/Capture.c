@@ -176,15 +176,8 @@ int capture_main(struct session_args *args) {
     // Encode module will be running completely in its own thread anyway. So for
     // now we will just initialize it in the Capture thread, since that's where
     // its called from.
-    session->encoder = encoder_startup(session->encode_output, session->width,
-                                       session->height, AV_PIX_FMT_BGR0,
-                                       AV_PIX_FMT_RGBA);
+    session->encoder = encoder_startup(args);
     if (session->encoder == NULL) {
-        ret = -1;
-        goto end;
-    }
-    session->encoder->egl_ctx = egl_capture_init();
-    if (session->encoder->egl_ctx == NULL) {
         ret = -1;
         goto end;
     }

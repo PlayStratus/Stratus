@@ -1,41 +1,6 @@
 #include "Encode.h"
 #include "EncodeUtils.h"
 
-int test_encode(){
-    int width = 640;
-    int height = 480;
-    int num_frames = 120;
-
-    const char *output_file = "encode_output.h264";
-    enum AVPixelFormat shm_pix_fmt = AV_PIX_FMT_ARGB;
-    enum AVPixelFormat dma_pix_fmt = AV_PIX_FMT_ARGB;
-
-    encoder_context *encoder = encoder_startup(output_file, width, height, shm_pix_fmt, dma_pix_fmt);
-    if (!encoder) {
-        return 1;
-    }
-
-    uint8_t *frame_buffer = malloc(width * height * 4);
-    if (!frame_buffer) {
-        encoder_teardown(encoder);
-        return 1;
-    }
-
-    for (int i = 0; i < num_frames; i++) {
-        generate_argb_frame(frame_buffer, width, height, i);
-        if (encode_video_frame(encoder, frame_buffer, width*4, 0) < 0) {
-            fprintf(stderr, "Failed to encode frame %d\n", i);
-            break;
-        }
-    }
-
-    free(frame_buffer);
-    encoder_teardown(encoder);
-
-    printf("\nDone! Play with: ffplay %s\n", output_file);
-    return 0;
-}
-
 void cleanup_encoder(encoder_context *state) {
     if (!state) return;
     if (state->pkt) av_packet_free(&state->pkt);
@@ -50,12 +15,7 @@ void cleanup_encoder(encoder_context *state) {
     free(state);
 }
 
-encoder_context* encoder_startup(
-    const char *output_file,
-    int width,
-    int height,
-    enum AVPixelFormat shm_pix_fmt,
-    enum AVPixelFormat dma_pix_fmt) {
+encoder_context* encoder_startup(struct session_args *args) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
         fprintf(stderr, "Failed to allocate encoder context\n");
@@ -64,8 +24,8 @@ encoder_context* encoder_startup(
 
     state->debug = (getenv("STRATUSD_ENCODE_DEBUG") != NULL);
 
-    state->width = width;
-    state->height = height;
+    state->width = args->width;
+    state->height = args->height;
     state->frame_count = 0;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
@@ -84,8 +44,8 @@ encoder_context* encoder_startup(
 
     // Configure encoder
     state->codec_ctx->bit_rate = 2000000;  // 2 Mbps
-    state->codec_ctx->width = width;
-    state->codec_ctx->height = height;
+    state->codec_ctx->width = state->width;
+    state->codec_ctx->height = state->height;
     state->codec_ctx->time_base = (AVRational){1, 30}; // 30 fps
     state->codec_ctx->framerate = (AVRational){30, 1};
     state->codec_ctx->gop_size = 0;
@@ -104,9 +64,9 @@ encoder_context* encoder_startup(
         return NULL;
     }
 
-    state->output_file = fopen(output_file, "wb");
+    state->output_file = fopen(args->encode_output, "wb");
     if (!state->output_file) {
-        fprintf(stderr, "Could not open output file %s\n", output_file);
+        fprintf(stderr, "Could not open output file %s\n", args->encode_output);
         cleanup_encoder(state);
         return NULL;
     }
@@ -119,28 +79,31 @@ encoder_context* encoder_startup(
         return NULL;
     }
     state->yuv_frame->format = state->codec_ctx->pix_fmt;
-    state->yuv_frame->width = width;
-    state->yuv_frame->height = height;
+    state->yuv_frame->width = args->width;
+    state->yuv_frame->height = state->height;
     if (av_image_alloc(state->yuv_frame->data, state->yuv_frame->linesize,
-                       width, height, state->codec_ctx->pix_fmt, 32) < 0) {
+                       state->width, state->height, state->codec_ctx->pix_fmt,
+                       32) < 0) {
         fprintf(stderr, "Could not allocate YUV frame buffer\n");
         cleanup_encoder(state);
         return NULL;
     }
 
     // Initialize shm swscale context
-    state->shm_sws_ctx = sws_getContext(width, height, shm_pix_fmt,
-                                    width, height, AV_PIX_FMT_YUV420P,
-                                    SWS_BILINEAR, NULL, NULL, NULL);
+    state->shm_sws_ctx = sws_getContext(state->width, state->height,
+                                        AV_PIX_FMT_BGR0, state->width,
+                                        state->height, AV_PIX_FMT_YUV420P,
+                                        SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->shm_sws_ctx) {
         fprintf(stderr, "Could not initialize shm swscale context\n");
         cleanup_encoder(state);
         return NULL;
     }
 
-    state->dma_sws_ctx = sws_getContext(width, height, dma_pix_fmt,
-                                    width, height, AV_PIX_FMT_YUV420P,
-                                    SWS_BILINEAR, NULL, NULL, NULL);
+    state->dma_sws_ctx = sws_getContext(state->width, state->height,
+                                        AV_PIX_FMT_RGBA, state->width,
+                                        state->height, AV_PIX_FMT_YUV420P,
+                                        SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->dma_sws_ctx) {
         fprintf(stderr, "Could not initialize swscale context\n");
         cleanup_encoder(state);
@@ -155,7 +118,13 @@ encoder_context* encoder_startup(
         return NULL;
     }
 
-    printf("[Encode] Encoder initialized: %dx%d\n", width, height);
+    state->egl_ctx = egl_capture_init();
+    if (state->egl_ctx == NULL) {
+        cleanup_encoder(state);
+        return NULL;
+    }
+
+    printf("[Encode] Encoder initialized: %dx%d\n", state->width, state->height);
     return state;
 }
 

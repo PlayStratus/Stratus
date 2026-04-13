@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "EGLUtils.h"
+#include "SideCar.h"
 
 typedef struct {
     AVCodecContext *codec_ctx;
@@ -24,13 +25,7 @@ typedef struct {
     bool debug;
 } encoder_context;
 
-int test_encode();
-encoder_context* encoder_startup(
-        const char *output_file,
-        int width,
-        int height,
-        enum AVPixelFormat shm_pix_fmt,
-        enum AVPixelFormat dma_pix_fmt);
+encoder_context* encoder_startup(struct session_args *args);
 int dma_encode_video_frame(
         encoder_context *state,
         struct dma_buffer *dma_buf,
