@@ -62,3 +62,8 @@ CMakeUserPresets.json
 !/games/build/
 /games/build/*
 !/games/build/sleep
+
+
+# Build
+/build
+.vscode
