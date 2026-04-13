@@ -158,25 +158,30 @@ struct session *session_start(char *session_id, char *game_id, int width,
     session = malloc(sizeof(struct session));
     if (session == NULL) {
         perror("[Sidecar] malloc");
-        goto err;
+        goto err_malloc_1;
     }
     memset(session, 0x00, sizeof(struct session));
 
     if (pthread_mutex_init(&session->args.audio_context.format_mutex, NULL) !=
         0) {
         perror("[Sidecar] pthread_mutex_init");
-        goto err;
+        goto err_mutex_init;
     }
     if (pthread_cond_init(&session->args.audio_context.format_cond, NULL) !=
         0) {
         perror("[Sidecar] pthread_cond_init");
-        pthread_mutex_destroy(&session->args.audio_context.format_mutex);
-        goto err;
+        goto err_cond_init;
     }
 
     session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;
+    session->args.cert = create_certificate();
+    if (session->args.cert == NULL) {
+        goto err_malloc_2;
+    }
+    printf("[Sidecar] Generated TLS certificate: %s\n",
+           get_fingerprint(session->args.cert));
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
@@ -195,12 +200,19 @@ struct session *session_start(char *session_id, char *game_id, int width,
     // Start game
     session->game_pid = session_launch_game(session->game_id);
     if (session->game_pid < 0)
-        goto err;
+        goto err_start;
 
     return session;
 
-err:
+err_start:
+    free(session->args.cert);
+err_malloc_2:
+    pthread_cond_destroy(&session->args.audio_context.format_cond);
+err_cond_init:
+    pthread_mutex_destroy(&session->args.audio_context.format_mutex);
+err_mutex_init:
     session_teardown(session);
+err_malloc_1:
     return NULL;
 }
 
