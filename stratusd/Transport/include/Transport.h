@@ -10,6 +10,10 @@ extern "C" {
 
 int transport_main(struct session_args *args);
 
+struct StratusCertificate *create_certificate();
+
+char *get_fingerprint(struct StratusCertificate *cert);
+
 #ifdef __cplusplus
 }
 #endif

@@ -26,7 +26,7 @@ struct session_args {
     char *encode_output;
     uint32_t width;
     uint32_t height;
-
+    struct StratusCertificate *cert;
     struct audio_context audio_context;
 
     struct TransportMessageQueue* VideoMessageQueue;
