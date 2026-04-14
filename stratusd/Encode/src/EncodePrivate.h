@@ -24,6 +24,7 @@ typedef struct {
     struct egl_capture_context *egl_ctx;
     bool debug;
     struct rbuf *input_queue;
+    struct rbuf *output_queue;
 } encoder_context;
 
 #endif

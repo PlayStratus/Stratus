@@ -31,6 +31,8 @@ encoder_context* encoder_startup(struct session_args *args) {
     state->height = args->height;
     state->frame_count = 0;
     state->input_queue = args->video_encode_queue;
+    state->output_queue = args->video_transport_queue;
+    rbuf_set_free(state->output_queue, &encode_free_frame);
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {

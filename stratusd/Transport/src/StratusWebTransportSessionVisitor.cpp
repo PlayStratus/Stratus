@@ -5,7 +5,6 @@
 #include "quiche/quic/core/web_transport_interface.h"
 #include "quiche/web_transport/web_transport.h"
 
-#include "Common.h"
 #include "TransportPriv.h"
 
 void FreeBuffer(absl::string_view test)

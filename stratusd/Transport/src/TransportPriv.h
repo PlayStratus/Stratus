@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include "rbuf2.h"
 
 struct transport_session
 {
@@ -9,6 +10,21 @@ struct transport_session
     void* WebTransportBackend;
     void* WebTransportSessionArray[10];
     int   WebTransportSessionCount;
+    struct rbuf *video_queue;
+};
+
+enum TransportStreamType
+{
+    Stream_Control,
+    Stream_Video,
+    Stream_Audio,
+    Stream_Input
+};
+
+enum VideoMessageType
+{
+    Codec_Decsription,
+    Codec_Payload
 };
 
 // Something Something Global vars bad. Will refactor after MVP maybe.

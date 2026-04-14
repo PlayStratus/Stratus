@@ -86,6 +86,8 @@ void session_teardown(struct session *session) {
         ring_buffer_destroy(audio_context->ring_buffer);
     if (session->args.video_encode_queue != NULL)
         rbuf_destroy(session->args.video_encode_queue);
+    if (session->args.video_transport_queue != NULL)
+        rbuf_destroy(session->args.video_transport_queue );
 
     pthread_cond_destroy(&audio_context->format_cond);
     pthread_mutex_destroy(&audio_context->format_mutex);
@@ -194,7 +196,10 @@ struct session *session_start(char *session_id, char *game_id, int width,
     strncpy(session->game_id, game_id, UUID_LEN);
     session->args.video_encode_queue = rbuf_init(8);
     if (session->args.video_encode_queue == NULL)
-        goto err_rbuf;
+        goto err_rbuf_1;
+    session->args.video_transport_queue = rbuf_init(8);
+    if (session->args.video_transport_queue == NULL)
+        goto err_rbuf_2;
 
     // Start modules in separate threads
     pthread_create(&session->capture_thread, NULL, (void *)&capture_main,
@@ -218,8 +223,10 @@ struct session *session_start(char *session_id, char *game_id, int width,
     return session;
 
 err_start:
+    rbuf_destroy(session->args.video_transport_queue);
+err_rbuf_2:
     rbuf_destroy(session->args.video_encode_queue);
-err_rbuf:
+err_rbuf_1:
     free(session->args.cert);
 err_malloc_2:
     pthread_cond_destroy(&session->args.audio_context.format_cond);

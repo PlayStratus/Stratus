@@ -30,6 +30,7 @@ struct session_args {
     struct StratusCertificate *cert;
     struct audio_context audio_context;
     struct rbuf *video_encode_queue;
+    struct rbuf *video_transport_queue;
 };
 
 int sidecar_main();
