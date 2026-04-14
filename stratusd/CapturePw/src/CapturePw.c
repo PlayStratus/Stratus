@@ -8,6 +8,7 @@
  */
 
 #include "CapturePw.h"
+#include "CapturedAudioFrame.h"
 #include "Common.h"
 #include "SideCar.h"
 
@@ -22,6 +23,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 /*
  * Structure holding the Pipewire session states
@@ -40,10 +42,16 @@ struct capture_pw_session {
     uint64_t dropped_frames; // Counter for frames discarded when a single
                              // capture chunk exceeds ring capacity
     bool debug;
-    int16_t *convert_buffer;
-    uint32_t convert_buffer_samples;
+    unsigned char *convert_buffer;
+    uint32_t convert_buffer_frames;
+    size_t convert_buffer_item_size;
 };
 
+/**
+ * Helper function to convert a float sample in the range [-1.0, 1.0] to int16
+ * Pipewire captures audio in 32-bit float format, but opus encodes in 16-bit
+ * int
+ */
 static int16_t capture_pw_float_to_s16(float sample) {
     if (sample >= 1.0f)
         return INT16_MAX;
@@ -51,6 +59,19 @@ static int16_t capture_pw_float_to_s16(float sample) {
         return INT16_MIN;
 
     return (int16_t)(sample * 32768.0f);
+}
+
+/**
+ * Helper function to get the monotonic time in microseconds
+ */
+static uint64_t get_monotonic_time_us(void) {
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+        return 0;
+
+    return (uint64_t)ts.tv_sec * 1000000ULL +
+           (uint64_t)ts.tv_nsec / 1000ULL;
 }
 
 /*
@@ -75,12 +96,13 @@ static void on_process(void *userdata) {
     struct pw_buffer *b;
     struct spa_buffer *buf;
     float *frame_data;
-    int16_t *convert_buffer;
     uint32_t n_frames;
     uint32_t channels;
-    uint32_t total_samples;
+    uint32_t sample_rate;
     uint32_t written_frames;
-    uint32_t sample_idx;
+    uint32_t frame_idx;
+    size_t frame_item_size;
+    uint64_t chunk_origin_us;
 
     // Get frame data
     if ((b = pw_stream_dequeue_buffer(session->stream)) == NULL) {
@@ -97,7 +119,8 @@ static void on_process(void *userdata) {
 
     audio_ring_buffer = capture_pw_ring_buffer(session);
     channels = session->audio_context->channels;
-    if (audio_ring_buffer == NULL || channels == 0) {
+    sample_rate = session->audio_context->sample_rate;
+    if (audio_ring_buffer == NULL || channels == 0 || sample_rate == 0) {
         goto end;
     }
 
@@ -106,11 +129,13 @@ static void on_process(void *userdata) {
         goto end;
     }
 
-    total_samples = n_frames * channels;
-    if (total_samples > session->convert_buffer_samples) {
-        convert_buffer =
-            realloc(session->convert_buffer,
-                    (size_t)total_samples * sizeof(*session->convert_buffer));
+    frame_item_size = captured_audio_frame_item_size(channels);
+    if (n_frames > session->convert_buffer_frames ||
+        frame_item_size != session->convert_buffer_item_size) {
+        unsigned char *convert_buffer;
+
+        convert_buffer = realloc(session->convert_buffer,
+                                 (size_t)n_frames * frame_item_size);
         if (convert_buffer == NULL) {
             fprintf(stderr,
                     "[CapturePw] Failed to allocate audio conversion buffer\n");
@@ -118,12 +143,31 @@ static void on_process(void *userdata) {
         }
 
         session->convert_buffer = convert_buffer;
-        session->convert_buffer_samples = total_samples;
+        session->convert_buffer_frames = n_frames;
+        session->convert_buffer_item_size = frame_item_size;
     }
 
-    for (sample_idx = 0; sample_idx < total_samples; sample_idx++) {
-        session->convert_buffer[sample_idx] =
-            capture_pw_float_to_s16(frame_data[sample_idx]);
+    chunk_origin_us = get_monotonic_time_us();
+    for (frame_idx = 0; frame_idx < n_frames; frame_idx++) {
+        void *frame_item;
+        int16_t *samples;
+        uint32_t channel_idx;
+        uint64_t frame_timestamp_us;
+
+        frame_item = captured_audio_frame_at(session->convert_buffer,
+                                             frame_item_size, frame_idx);
+        frame_timestamp_us =
+            chunk_origin_us +
+            ((uint64_t)frame_idx * 1000000ULL / (uint64_t)sample_rate);
+        captured_audio_frame_set_timestamp_us(frame_item, frame_timestamp_us);
+
+        samples = captured_audio_frame_samples(frame_item);
+        for (channel_idx = 0; channel_idx < channels; channel_idx++) {
+            uint32_t sample_idx = frame_idx * channels + channel_idx;
+
+            samples[channel_idx] =
+                capture_pw_float_to_s16(frame_data[sample_idx]);
+        }
     }
 
     written_frames =
@@ -192,9 +236,8 @@ static void on_stream_param_changed(void *_data, uint32_t id,
         if (buffer_capacity_frames == 0)
             buffer_capacity_frames = 2048;
 
-        audio_ring_buffer = ring_buffer_init(buffer_capacity_frames,
-                                             (size_t)channels *
-                                                 sizeof(*session->convert_buffer));
+        audio_ring_buffer = ring_buffer_init(
+            buffer_capacity_frames, captured_audio_frame_item_size(channels));
         if (audio_ring_buffer == NULL) {
             fprintf(stderr, "[CapturePw] Failed to initialize ring buffer\n");
             return;
