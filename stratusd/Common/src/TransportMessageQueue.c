@@ -1,7 +1,6 @@
 #include "Common.h"
 #include <string.h>
 #include <stdlib.h>
-#include <stdatomic.h>
 #include <stdio.h>
 
 struct TransportMessageQueue* ConstructTransportMessageQueue(int MaxMessageCount)

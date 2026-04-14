@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include <pthread.h>
 
+// Necessary for C++ support for C Atomics on GCC
+#ifdef __cplusplus
+#include <atomic>
+using namespace std;
+#else
+#include <stdatomic.h>
+#endif
+
 struct ring_buffer;
 
 struct ring_buffer *ring_buffer_init(uint32_t capacity, size_t item_size);
@@ -32,8 +40,8 @@ struct TransportMessage
 struct TransportMessageQueue
 {
     struct TransportMessage* Messages;
-    _Atomic int Consumer;
-    _Atomic int Producer;
+    atomic_int Consumer;
+    atomic_int Producer;
     int MaxMessageCount;
 };
 
