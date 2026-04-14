@@ -3,8 +3,10 @@
 
 /*
  * This header file contains definitions shared between the Capture and Encode
- * modules.
+ * modules for their video encode queue.
  */
+
+#include <stdint.h>
 
 /*
  * Contains data for a dmabuf-backed wl_buffer object
@@ -20,6 +22,19 @@ struct dma_buffer {
         uint32_t offset;
         uint32_t stride;
     } planes[4];
+};
+
+/*
+ * Contains data for a single captured frame
+ */
+struct video_encode_queue_frame {
+    uint8_t *shm_data;
+    struct dma_buffer *dma_data;
+    int stride;
+
+    // internal to capture module:
+    void *buf;
+    void *conn;
 };
 
 #endif

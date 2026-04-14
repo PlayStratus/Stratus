@@ -66,6 +66,8 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
 
         av_packet_unref(state->pkt);
     }
+
+    return 0;
 }
 
 

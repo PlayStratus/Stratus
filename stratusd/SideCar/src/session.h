@@ -20,6 +20,7 @@ struct session {
     pthread_t capture_thread;
     pthread_t capture_pw_thread;
     pthread_t audio_encoder_thread;
+    pthread_t encode_thread;
     pthread_t input_thread;
     pthread_t transport_thread;
 };

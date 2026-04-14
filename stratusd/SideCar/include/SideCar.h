@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "Common.h"
+#include "rbuf2.h"
 
 /*
  * Contains arguments that are provided to each module on startup
@@ -28,6 +29,7 @@ struct session_args {
     uint32_t height;
     struct StratusCertificate *cert;
     struct audio_context audio_context;
+    struct rbuf *video_encode_queue;
 };
 
 int sidecar_main();

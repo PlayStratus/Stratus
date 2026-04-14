@@ -2,13 +2,13 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
-
 #include "dma-buffers-pub.h"
 #include "dma-buffers-priv.h"
-#include "EGLUtils.h"
+#include "video-output-priv.h"
 
 /*
  * Contains data for a zwp_linux_buffer_params_v1 object
@@ -206,7 +206,7 @@ enum proxy_actions zwp_linux_buffer_params_destroy(struct proxy_message *msg) {
  *
  * Called when wl_buffer@destroy is received and buffer is not attached.
  */
-void wl_dma_buffer_free(struct dma_buffer *buf) {
+void dma_buffer_free(struct dma_buffer *buf) {
     assert(buf != NULL);
 
     for (int i = 0; i < buf->num_planes; i++) {
@@ -216,32 +216,6 @@ void wl_dma_buffer_free(struct dma_buffer *buf) {
     }
 
     free(buf);
-}
-
-
-
-
-/*
- * Handle a wl_surface@commit request when the attached buffer is dmabuf-backed
- *
- * Import dmabuf via EGL and pass to encoder.
- */
-enum proxy_actions wl_dmabuf_surface_commit(struct capture_session *session,
-                                            struct wl_surface *surf) {
-    struct wl_buffer *wl_buf;
-    struct dma_buffer *dma_buf;
-    uint8_t *pixel_data = NULL;
-
-    wl_buf = surf->buf;
-    assert(wl_buf != NULL);
-    dma_buf = wl_buf->dma_buf;
-    assert(dma_buf != NULL);
-
-    int stride = dma_buf->width * 4;
-    if (dma_encode_video_frame(session->encoder, dma_buf, stride) < 0)
-        return PROXY_ACTION_ERR;
-
-    return PROXY_ACTION_FWD;
 }
 
 /*

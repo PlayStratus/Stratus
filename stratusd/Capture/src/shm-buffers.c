@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 #include "shm-buffers-pub.h"
@@ -22,15 +23,6 @@ struct wl_shm_pool {
     void *p;
     int32_t size;
     uint32_t dependents;
-};
-
-/*
- * Contains data for a shm-backed wl_buffer object
- */
-struct wl_shm_buffer {
-    void *p;
-    int32_t stride;
-    struct wl_shm_pool *pool;
 };
 
 /*
@@ -194,28 +186,6 @@ void wl_shm_buffer_free(struct wl_shm_buffer *buf) {
     }
 
     free(buf);
-}
-
-/*
- * Handle a wl_surface@commit request when the attached buffer is shm-backed
- *
- * Pass buffer to encode module.
- */
-enum proxy_actions wl_shm_surface_commit(struct capture_session *session,
-                                         struct wl_surface *surf) {
-    struct wl_buffer *wl_buf;
-    struct wl_shm_buffer *shm_buf;
-
-    wl_buf = surf->buf;
-    assert(wl_buf != NULL);
-    shm_buf = wl_buf->shm_buf;
-    assert(shm_buf != NULL);
-
-    // Encode frame
-    assert(encode_video_frame(session->encoder, shm_buf->p, shm_buf->stride, 0)
-           == 0);
-
-    return PROXY_ACTION_FWD;
 }
 
 /*

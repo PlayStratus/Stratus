@@ -15,6 +15,15 @@ struct wl_surface {
 };
 
 /*
+ * Contains data for a shm-backed wl_buffer object
+ */
+struct wl_shm_buffer {
+    void *p;
+    int32_t stride;
+    struct wl_shm_pool *pool;
+};
+
+/*
  * Contains data for a wl_buffer object
  *
  * Note: we do not process all methods that create buffers, so not every

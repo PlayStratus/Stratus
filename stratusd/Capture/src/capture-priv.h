@@ -2,7 +2,7 @@
 #define CAPTURE_PRIV_H
 
 #include "proxy.h"
-#include "Encode.h"
+#include "rbuf2.h"
 
 /*
  * Contains capture data associated with an instance of the Capture module
@@ -12,7 +12,7 @@ struct capture_session {
     uint32_t width;
     uint32_t height;
     struct proxy *proxy;
-    encoder_context *encoder;
+    struct rbuf *encode_queue;
 };
 
 /*

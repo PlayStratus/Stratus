@@ -1,5 +1,8 @@
 #include "Encode.h"
+#include "EncodePrivate.h"
 #include "EncodeUtils.h"
+
+int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer, int stride, int buf_type);
 
 void cleanup_encoder(encoder_context *state) {
     if (!state) return;
@@ -27,6 +30,7 @@ encoder_context* encoder_startup(struct session_args *args) {
     state->width = args->width;
     state->height = args->height;
     state->frame_count = 0;
+    state->input_queue = args->video_encode_queue;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {
@@ -149,6 +153,8 @@ int dma_encode_video_frame(
     assert(encode_video_frame(state, pixel_data, stride, 1) == 0);
 
     free(pixel_data);
+
+    return 0;
 }
 
 /* buf_type is the type of buffer that backs the underlying wl_buffer capturing the frame
@@ -193,10 +199,8 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
 }
 
 
-int encoder_teardown(encoder_context *state) {
-    if (!state) {
-        return -1;
-    }
+void encoder_teardown(encoder_context *state) {
+    assert(state != NULL);
 
     // Flush encoder (send NULL frame)
     avcodec_send_and_receive(state, 1);
@@ -212,8 +216,34 @@ int encoder_teardown(encoder_context *state) {
     avcodec_free_context(&state->codec_ctx);
     fclose(state->output_file);
     free(state);
-
-    return 0;
 }
 
+/*
+ * Run the Encode module
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+int encode_main(struct session_args *args) {
+    encoder_context *ctx = encoder_startup(args);
+    if (ctx == NULL) {
+        return -1; // No need to jump to end outside of pthread_cleanup_* macro
+    }
 
+    pthread_cleanup_push((void (*)(void*))encoder_teardown, ctx);
+
+    while (1) {
+        struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
+        if (frame != NULL) {
+            if (frame->shm_data != NULL) {
+                assert(encode_video_frame(ctx, frame->shm_data, frame->stride, 0) == 0);
+            } else if (frame->dma_data != NULL) {
+                assert(dma_encode_video_frame(ctx, frame->dma_data, frame->stride) == 0);
+            }
+            rbuf_pop(ctx->input_queue);
+        }
+    }
+
+end:
+    pthread_cleanup_pop(1);
+    return 0;
+}
