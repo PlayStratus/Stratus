@@ -1,5 +1,6 @@
 #include "Encode.h"
 #include "EncodeUtils.h"
+#include <stdlib.h>
 
 int test_encode(){
     int width = 640;
@@ -10,7 +11,7 @@ int test_encode(){
     enum AVPixelFormat shm_pix_fmt = AV_PIX_FMT_ARGB;
     enum AVPixelFormat dma_pix_fmt = AV_PIX_FMT_ARGB;
 
-    encoder_context *encoder = encoder_startup(output_file, width, height, shm_pix_fmt, dma_pix_fmt);
+    encoder_context *encoder = encoder_startup(output_file, width, height, shm_pix_fmt, dma_pix_fmt, NULL);
     if (!encoder) {
         return 1;
     }
@@ -55,7 +56,8 @@ encoder_context* encoder_startup(
     int width,
     int height,
     enum AVPixelFormat shm_pix_fmt,
-    enum AVPixelFormat dma_pix_fmt) {
+    enum AVPixelFormat dma_pix_fmt,
+    struct session_args *args) {
     encoder_context *state = calloc(1, sizeof(encoder_context));
     if (!state) {
         fprintf(stderr, "Failed to allocate encoder context\n");
@@ -67,6 +69,7 @@ encoder_context* encoder_startup(
     state->width = width;
     state->height = height;
     state->frame_count = 0;
+    state->args = args;
 
     const AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {

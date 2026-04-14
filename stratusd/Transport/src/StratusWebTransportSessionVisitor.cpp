@@ -1,4 +1,7 @@
 #include "StratusWebTransportSessionVisitor.h"
+#include "quiche/web_transport/web_transport.h"
+#include "TransportPriv.h"
+#include <memory>
 
 namespace quic {
 
@@ -9,16 +12,25 @@ StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTranspor
     InputStream = nullptr;
     VideoStream = nullptr;
 
-    assert(StaticTransportSession->WebTransportSessionCount < 10);
-    if (StaticTransportSession->WebTransportSessionCount > 0) {
-      std::cerr << "[Transport] Warning: multiple sessions established, but only the first will receive data" << std::endl;
+    if (StaticTransportSession->WebTransportSession) {
+      std::cerr << "[Transport] Warning: A client attempted to establish a connection but was rejected." << std::endl;
+
+      DropSession = true;
+      return;
     }
-    StaticTransportSession->WebTransportSessionArray[StaticTransportSession->WebTransportSessionCount] = this;
-    StaticTransportSession->WebTransportSessionCount++;
+
+    StaticTransportSession->WebTransportSession = this;
+
+    std::cerr << "[Transport] Info: Session Established" << std::endl;
 }
 
 void StratusWebTransportSessionVisitor::OnSessionReady()
 {
+    if (DropSession)
+    {
+        session_->CloseSession(webtransport::SessionErrorCode(1), "[Transport] Error: A client has already established a connection to this node.");
+    }
+
     if (session_->CanOpenNextOutgoingUnidirectionalStream()) {
       OnCanCreateNewOutgoingUnidirectionalStream();
     }
@@ -50,6 +62,7 @@ void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable(
 
     if (!InputStream){
         InputStream = session_->AcceptIncomingUnidirectionalStream();
+        InputStream->SetVisitor(std::make_unique<StratusWebTransportInboundStreamVisitor>(InputStream, StaticSessionArgs->InputMessageQueue));
     }
     else
     {
@@ -73,44 +86,26 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
 
     VideoStream = session_->OpenOutgoingUnidirectionalStream();
 
+    VideoStream->SetVisitor(std::make_unique<StratusWebTransportOutboundStreamVisitor>(VideoStream, StaticSessionArgs->VideoMessageQueue));
+
     webtransport::SessionStats SessionStats = session_->GetSessionStats();
 
     std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
 }
 
-absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length) 
+void StratusWebTransportSessionVisitor::FlushMessageQueue()
 {
-    if (VideoStream && VideoStream->CanWrite())
+
+
+    if (VideoStream)
     {
-      // Huuge Mem leak will fix.
+        StratusWebTransportOutboundStreamVisitor* StreamVisitor = (StratusWebTransportOutboundStreamVisitor*)VideoStream->visitor();
+        if (StreamVisitor)
+        {
 
-      webtransport::StreamWriteOptions CurrentWriteOptions;
-
-      uint8_t NetMessageType = MessageType;
-      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
-      absl::Status ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
-      delete MessageTypeData;
-      if (!ret.ok()) return ret;
-
-      int NetLength = htonl(Length);
-      quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
-      ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-      delete SizeData;
-      if (!ret.ok()) return ret;
-
-      quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
-      ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-      delete Data;
-      if (!ret.ok()) return ret;
-
-}
-
-    return absl::OkStatus();
-  }
-
-void StratusWebTransportSessionVisitor::FreeBuffer(absl::string_view test)
-{
-  free((void*)test.data());
+            StreamVisitor->FlushMessageQueue();
+        }
+    }
 }
 
 }

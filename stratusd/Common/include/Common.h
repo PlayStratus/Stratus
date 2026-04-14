@@ -15,46 +15,30 @@ uint32_t ring_buffer_wait_read(struct ring_buffer *ring, void *data,
                                uint32_t items);
 void ring_buffer_close(struct ring_buffer *ring);
 
-
-
-enum TransportStreamType
+enum TransportMessageType
 {
-    Stream_Control,
-    Stream_Video,
-    Stream_Audio,
-    Stream_Input
+    Video_KeyFrame,
+    Video_IntermediateFrame,
+    Input_GamepadStateUpdate
 };
 
-enum VideoMessageType
+struct TransportMessage
 {
-    Codec_Decsription,
-    Codec_Payload
-};
-
-// Mail Box Thread Communication:
-struct Letter
-{
-    enum TransportStreamType Stream;
-    enum VideoMessageType MessageType;
+    enum TransportMessageType Type;
     void* Data;
-    int DataLength;
+    size_t Length;
 };
 
-struct MailBox_Transport
+struct TransportMessageQueue
 {
-    struct Letter Letter[500];
-    int LetterCount;
-    int LetterMax;
+    struct TransportMessage* Messages;
+    _Atomic int Consumer;
+    _Atomic int Producer;
+    int MaxMessageCount;
 };
 
-
-// Putting Cross Module Singletons here for now.
-// TODO: Move to Session struct before merging.
-static struct MailBox_Transport* StaticTransportMailbox = NULL;
-static pthread_mutex_t StaticMailBoxMutex;
-
-void SendTransportMail(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Data, int length);
-
-struct Letter* CheckMail();
-
+struct TransportMessageQueue* ConstructTransportMessageQueue(int MaxMessageCount);
+void DestroyTransportMessageQueue(struct TransportMessageQueue* MessageQueue);
+void SendTransportMessage(struct TransportMessageQueue* MessageQueue, enum TransportMessageType MessageType, void* Data, size_t Length);
+struct TransportMessage* RecieveTransportMessage(struct TransportMessageQueue* MessageQueue);
 #endif

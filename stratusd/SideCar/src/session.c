@@ -18,6 +18,7 @@
 #include "AudioEncode.h"
 #include "Capture.h"
 #include "CapturePw.h"
+#include "Common.h"
 #include "Input.h"
 #include "Transport.h"
 
@@ -180,6 +181,10 @@ struct session *session_start(char *session_id, char *game_id, int width,
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
+    // Construct Transport Message Queus
+    session->args.VideoMessageQueue = ConstructTransportMessageQueue(1000);
+    session->args.InputMessageQueue = ConstructTransportMessageQueue(1000);
+    
     // Start modules in separate threads
     pthread_create(&session->capture_thread, NULL, (void *)&capture_main,
                    &session->args);

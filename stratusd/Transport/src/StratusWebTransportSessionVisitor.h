@@ -1,11 +1,8 @@
-#include <arpa/inet.h>
-#include <cstdlib>
-#include <iostream>
-
 #include "quiche/quic/core/web_transport_interface.h"
-#include "quiche/web_transport/web_transport.h"
-#include "Common.h"
-#include "TransportPriv.h"
+#include "StratusSteamVisitors/StratusWebTransportOutboundStreamVisitor.h"
+#include "StratusSteamVisitors/StratusWebTransportInboundStreamVisitor.h"
+
+
 
 namespace quic {
 
@@ -27,15 +24,16 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
 
   void OnCanCreateNewOutgoingUnidirectionalStream() override; 
 
-  absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length);
-
+  void FlushMessageQueue();
  private:
-  static void FreeBuffer(absl::string_view Buffer);
 
+  bool DropSession = false;
   WebTransportSession* session_;
   WebTransportStream* ControlStream;
   WebTransportStream* InputStream;
   WebTransportStream* VideoStream;
+
+  StratusWebTransportOutboundStreamVisitor* VideoVisitor;
 };
 
 }

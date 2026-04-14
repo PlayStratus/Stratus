@@ -4,6 +4,7 @@
 #include "StratusWebTransportSessionVisitor.cpp"
 #include <assert.h>
 #include <iostream>
+#include <quiche/quic/core/web_transport_interface.h>
 #include <vector>
 #include "TransportPriv.h"
 
@@ -21,7 +22,15 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
   }
 
   if (url.path() == "/") {
-    return std::make_unique<StratusWebTransportSessionVisitor>(session);
+    if (!StaticTransportSession->WebTransportSession)
+    {
+      return std::make_unique<StratusWebTransportSessionVisitor>(session);
+    }
+    else
+    {
+      std::cerr << "[Transport] Warning: A client attempted to establish a connection but was rejected." << std::endl;
+      return absl::AlreadyExistsError("[Transport] Error: A client has already established a connection to this node.");
+    }
   }
 
 
@@ -38,8 +47,7 @@ transport_session* transport_init(int port)
 
     session->port = port;
 
-    memset(session->WebTransportSessionArray, 0, sizeof(session->WebTransportSessionArray));
-    session->WebTransportSessionCount = 0;
+    session->WebTransportSession = NULL;
 
     // Storing as void PTRs for C Backwards Compat.
     session->WebTransportBackend = new quic::WebTransportOnlyBackend(quic::ProcessRequest);
@@ -59,19 +67,15 @@ void transport_thread(struct transport_session* session)
     std::cerr << "[transport] Starting WebTransport on port: " << (int)session->port;
 
     while (1) {
+
       server->WaitForEvents();
-
-      struct Letter* CurrentLetter = CheckMail();
-
-      if (CurrentLetter && StaticTransportSession->WebTransportSessionArray[0]) {
-        quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
-        absl::Status ret = CurrentSession->SubmitDataToStream(CurrentLetter->Stream, CurrentLetter->MessageType, CurrentLetter->Data, CurrentLetter->DataLength);
-        if (!ret.ok()) {
-          std::cerr << "[Transport] " << ret;
-        }
+      
+      quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSession;
+      
+      if (CurrentSession)
+      {
+        CurrentSession->FlushMessageQueue();
       }
-
-      free(CurrentLetter);
     }
 }
 
@@ -89,6 +93,8 @@ void transport_destroy(struct transport_session* session)
 int transport_main(struct session_args *args) {
     int ret = 0;
     struct transport_session *session;
+
+    StaticSessionArgs = args;
 
     session = transport_init(4433);
     if (session == NULL) {

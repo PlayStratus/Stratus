@@ -178,7 +178,7 @@ int capture_main(struct session_args *args) {
     // its called from.
     session->encoder = encoder_startup(session->encode_output, session->width,
                                        session->height, AV_PIX_FMT_BGR0,
-                                       AV_PIX_FMT_RGBA);
+                                       AV_PIX_FMT_RGBA, args);
     if (session->encoder == NULL) {
         ret = -1;
         goto end;

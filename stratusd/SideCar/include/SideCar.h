@@ -28,6 +28,9 @@ struct session_args {
     uint32_t height;
 
     struct audio_context audio_context;
+
+    struct TransportMessageQueue* VideoMessageQueue;
+    struct TransportMessageQueue* InputMessageQueue;
 };
 
 int sidecar_main();

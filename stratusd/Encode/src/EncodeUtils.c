@@ -1,6 +1,7 @@
 #include "EncodeUtils.h"
 #include <unistd.h>
 #include "Common.h"
+#include "SideCar.h"
 
 
 void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) {
@@ -51,11 +52,11 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
 
         if (state->pkt->flags && AV_PKT_FLAG_KEY)
         {
-            SendTransportMail(Stream_Video, Codec_Decsription, state->pkt->data, state->pkt->size);
+            SendTransportMessage(state->args->VideoMessageQueue, Video_KeyFrame, state->pkt->data, state->pkt->size);
         }
         else
         {
-            SendTransportMail(Stream_Video, Codec_Payload, state->pkt->data, state->pkt->size);
+            SendTransportMessage(state->args->VideoMessageQueue, Video_IntermediateFrame, state->pkt->data, state->pkt->size);
         }
 
         // Write packet data

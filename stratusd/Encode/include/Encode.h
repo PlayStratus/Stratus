@@ -10,6 +10,8 @@
 
 #include "EGLUtils.h"
 
+#include "SideCar.h"
+
 typedef struct {
     AVCodecContext *codec_ctx;
     struct SwsContext *shm_sws_ctx;
@@ -22,6 +24,7 @@ typedef struct {
     int height;
     struct egl_capture_context *egl_ctx;
     bool debug;
+    struct session_args *args;
 } encoder_context;
 
 int test_encode();
@@ -30,7 +33,9 @@ encoder_context* encoder_startup(
         int width,
         int height,
         enum AVPixelFormat shm_pix_fmt,
-        enum AVPixelFormat dma_pix_fmt);
+        enum AVPixelFormat dma_pix_fmt,
+        struct session_args *args
+);
 int dma_encode_video_frame(
         encoder_context *state,
         struct wl_dma_buffer *dma_buf,
