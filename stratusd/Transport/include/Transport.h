@@ -12,7 +12,9 @@ int transport_main(struct session_args *args);
 
 struct StratusCertificate *create_certificate();
 
-char *get_fingerprint(struct StratusCertificate *cert);
+char *get_der_hash(struct StratusCertificate *cert);
+
+char *get_spki_hash(struct StratusCertificate *cert);
 
 #ifdef __cplusplus
 }

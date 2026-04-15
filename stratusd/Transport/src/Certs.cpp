@@ -47,7 +47,7 @@ static void base64_encode(const uint8_t *in, size_t insize, char *output) {
 
 struct StratusCertificate *create_certificate() {
     // Generate certificate options
-    quic::CertificateOptions options;
+    quic::CertificateOptions options = {};
     options.subject = "CN=subject";
     options.serial_number = 0x12345678;
 
@@ -80,14 +80,21 @@ struct StratusCertificate *create_certificate() {
     cert->proof_source = quic::ProofSourceX509::Create(chain,
                                                       std::move(private_key));
 
-    // Dump fingerprint
-    std::string raw_fingerprint = quic::RawSha256(der_cert);
-    char *fingerprint = (char*)malloc(FINGERPRINT_LEN);
-    base64_encode((uint8_t*)raw_fingerprint.c_str(), 32, cert->fingerprint);
+    // Dump fingerprints
+    std::string raw_der_hash = quic::RawSha256(der_cert);
+    base64_encode((uint8_t*)raw_der_hash.c_str(), 32, cert->der_hash);
+    std::string raw_spki_hash = quic::RawSha256(
+        quic::CertificateView::ParseSingleCertificate(der_cert)->raw_spki()
+    );
+    base64_encode((uint8_t*)raw_spki_hash.c_str(), 32, cert->spki_hash);
 
     return cert;
 }
 
-char *get_fingerprint(struct StratusCertificate *cert) {
-    return cert->fingerprint;
+char *get_der_hash(struct StratusCertificate *cert) {
+    return cert->der_hash;
+};
+
+char *get_spki_hash(struct StratusCertificate *cert) {
+    return cert->spki_hash;
 };

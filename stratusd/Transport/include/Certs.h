@@ -4,6 +4,7 @@
 #define FINGERPRINT_LEN 45  // Including padding & NULL-terminator
 
 struct StratusCertificate {
-    char fingerprint[FINGERPRINT_LEN];
+    char der_hash[FINGERPRINT_LEN];
+    char spki_hash[FINGERPRINT_LEN];
     std::unique_ptr<quic::ProofSource> proof_source;
 };
