@@ -179,7 +179,7 @@ int sidecar_on_start_session(struct sidecar_context *ctx,
     }
     else {
         return api_send_confirm_start(ctx->api_client, data->session_id,
-                                      get_fingerprint(ctx->active_session->args.cert));
+                                      get_der_hash(ctx->active_session->args.cert));
     }
 }
 

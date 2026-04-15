@@ -82,6 +82,7 @@ void session_teardown(struct session *session) {
     pthread_cond_destroy(&audio_context->format_cond);
     pthread_mutex_destroy(&audio_context->format_mutex);
 
+    free(session->args.cert);
     free(session);
 }
 
@@ -180,8 +181,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
     if (session->args.cert == NULL) {
         goto err_malloc_2;
     }
-    printf("[Sidecar] Generated TLS certificate: %s\n",
-           get_fingerprint(session->args.cert));
+    printf("[Sidecar] Generated TLS certificate: %s (DER) / %s (SPKI)\n",
+           get_der_hash(session->args.cert), get_spki_hash(session->args.cert));
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
 
