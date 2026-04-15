@@ -6,13 +6,6 @@ import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
 import { useAuth } from "@/components/auth/AuthProvider"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 
 import SignInButton from "./SignInButton"
 
@@ -81,52 +74,4 @@ export default function SignInPageClient({
       </div>
     </main>
   )
-
-  // <main className='flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background via-background to-muted/20 px-4 py-16'>
-  //   <div className='flex w-full max-w-md flex-col gap-8'>
-  //     <Link
-  //       href='/'
-  //       className='flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground'
-  //     >
-  //       <ArrowLeft className='h-4 w-4' />
-  //       <span>Back to Home</span>
-  //     </Link>
-
-  //     <Card className='overflow-hidden border-border/70 bg-card/95 shadow-xl shadow-black/10 backdrop-blur'>
-  //       <CardHeader className='gap-4 border-b border-border/60 bg-muted/20'>
-  //         <div className='space-y-2'>
-  //           <p className='text-sm font-medium uppercase tracking-[0.24em] text-muted-foreground'>
-  //             Stratus Access
-  //           </p>
-  //           <CardTitle className='text-3xl font-bold tracking-tight'>
-  //             Sign in with Google
-  //           </CardTitle>
-  //           <CardDescription className='max-w-sm text-sm leading-6'>
-  //             Continue with your{" "}
-  //             <span className='font-semibold text-foreground'>
-  //               @oregonstate.edu
-  //             </span>{" "}
-  //             account to launch and manage your streaming sessions.
-  //           </CardDescription>
-  //         </div>
-  //       </CardHeader>
-
-  //       <CardContent className='space-y-5 pt-6'>
-  //         <div className='rounded-lg border border-border/60 bg-background/60 p-4 text-sm text-muted-foreground'>
-  //           Existing users will go straight to the library. New users will be
-  //           prompted to choose a username after Google sign-in.
-  //         </div>
-
-  //         <SignInButton />
-
-  //         {error && (
-  //           <div className='rounded-lg border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200'>
-  //             {error}
-  //           </div>
-  //         )}
-  //       </CardContent>
-  //     </Card>
-  //   </div>
-  // </main>
-  // )
 }
