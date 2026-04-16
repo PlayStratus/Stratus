@@ -35,7 +35,8 @@ mv "$UNZIP/SuperTuxKart-1.5-win/stk-code/data" "$SYS_DIR"
 cat << EOF > "$BIN_DIR/supertuxkart"
 #!/usr/bin/sh
 
-DISPLAY= stratus-launcher wine supertuxkart/bin/supertuxkart.exe --fullscreen \
+DISPLAY= stratus-launcher wine supertuxkart/bin/supertuxkart.exe \
+    --fullscreen --screensize=${STRATUS_DIMENSIONS:-640x480} \
     --track=sandtrack --no-start-screen
 EOF
 chmod +x "$BIN_DIR/supertuxkart"
