@@ -8,7 +8,7 @@ arch=('x86_64')
 url="https://github.com/playstratus/stratus"
 license=('MIT')
 
-depends=('cjson' 'ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'pipewire'
+depends=('cjson' 'ffmpeg'  'libdrm' 'libglvnd' 'libpipewire' 'mesa' 'opus' 'pipewire'
   'pipewire-alsa' 'pipewire-pulse' 'sway' 'wireplumber' 'xorg-xwayland')
 makedepends=('cmake' 'git')
 

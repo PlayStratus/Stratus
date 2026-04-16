@@ -8,7 +8,7 @@ cluster.
 1.  Install required dependencies:
 
     ```
-    # pacman -S cjson ffmpeg libevdev libdrm libglvnd libpipewire mesa
+    # pacman -S cjson ffmpeg libevdev libdrm libglvnd libpipewire mesa opus
     ```
 
 2.  Configure `/dev/uinput` to be user-writable (required by Input module):
