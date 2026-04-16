@@ -18,9 +18,8 @@ trap cleanup EXIT
 # Create directories
 APPDIR="$BUILD_DIR/AppDir"
 BIN_DIR="$APPDIR/usr/bin"
-SYS_DIR="$APPDIR/c/supertuxkart"
-CONFIG_DIR="$APPDIR/home/AppData/Roaming/supertuxkart/config-0.10"
-mkdir --parents "$BIN_DIR" "$SYS_DIR" "$CONFIG_DIR"
+SYS_DIR="$APPDIR/supertuxkart"
+mkdir --parents "$BIN_DIR" "$SYS_DIR"
 
 # Download and extract files
 ZIP="$BUILD_DIR/stk.zip"
@@ -31,15 +30,24 @@ unzip -q "$ZIP" 'SuperTuxKart-1.5-win/stk-code/build-x86_64/*' \
 mv "$UNZIP/SuperTuxKart-1.5-win/stk-code/build-x86_64/bin" "$SYS_DIR"
 mv "$UNZIP/SuperTuxKart-1.5-win/stk-code/data" "$SYS_DIR"
 
-# Add run script
-cat << EOF > "$BIN_DIR/supertuxkart"
+# Add run scripts
+CONFIG_DIR='~/.wine/drive_c/users/$(whoami)/AppData/Roaming/supertuxkart/config-0.10'
+cat << EOF > "$BIN_DIR/supertuxkart-stage-1"
 #!/usr/bin/sh
 
-DISPLAY= stratus-launcher wine supertuxkart/bin/supertuxkart.exe \
-    --fullscreen --screensize=${STRATUS_DIMENSIONS:-640x480} \
+stratus-launcher usr/bin/supertuxkart-stage-2
+EOF
+cat << EOF > "$BIN_DIR/supertuxkart-stage-2"
+#!/usr/bin/sh
+
+mkdir --parents $CONFIG_DIR
+cp supertuxkart/players.xml $CONFIG_DIR/players.xml
+
+DISPLAY= wine supertuxkart/bin/supertuxkart.exe \
+    --fullscreen --screensize=\${STRATUS_DIMENSIONS:-640x480} \
     --track=sandtrack --no-start-screen
 EOF
-chmod +x "$BIN_DIR/supertuxkart"
+chmod +x "$BIN_DIR/supertuxkart-stage-1" "$BIN_DIR/supertuxkart-stage-2"
 
 # Add desktop file
 cat << EOF > "$APPDIR/io.playstratus.supertuxkart.desktop"
@@ -55,7 +63,7 @@ Icon=io.playstratus.supertuxkart
 EOF
 
 # Create player config file to disable tutorial popup
-cat << EOF > $CONFIG_DIR/players.xml
+cat << EOF > $SYS_DIR/players.xml
 <?xml version="1.0"?>
 <players version="1" >
     <current player="stratus"/>
@@ -68,7 +76,7 @@ EOF
 ln -sr "$SYS_DIR/data/supertuxkart_256.png" \
     "$APPDIR/io.playstratus.supertuxkart.png"
 ln -sr "$APPDIR/io.playstratus.supertuxkart.png" "$APPDIR/.DirIcon"
-ln -sr "$BIN_DIR/supertuxkart" "$APPDIR/AppRun"
+ln -sr "$BIN_DIR/supertuxkart-stage-1" "$APPDIR/AppRun"
 
 # Build appimage
 DEFAULT_DEST="$(dirname "$0")/build/supertuxkart"
