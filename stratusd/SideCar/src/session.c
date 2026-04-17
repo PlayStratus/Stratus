@@ -64,16 +64,9 @@ void session_teardown(struct session *session) {
         pthread_join(session->transport_thread, NULL);
     }
 
-    // Check to make sure game has exited (either gracefully in response to user
-    // input, or abruptly due to the Wayland proxy socket being closed).
-    // Note: We can't just kill the game by sending a SIGKILL because it won't
-    // be passed to AppImage child processes correctly.
+    // send kill to the game's process tree
     if (session->game_pid != 0) {
-        if (waitpid(session->game_pid, NULL, WNOHANG) != session->game_pid)
-            fprintf(stderr,
-                    "[SideCar] Warning: game did not terminate "
-                    "(PID=%d)\n",
-                    session->game_pid);
+        killpg(session->game_pid, 9);
     }
 
     if (audio_context->ring_buffer != NULL)
@@ -119,7 +112,7 @@ static int session_launch_game(char *game_id) {
         return -1;
     } else if (pid == 0) {
         // Child process
-
+        setpgid(getpid(), 0);
         // Set environment variables
         if (setenv("WAYLAND_DISPLAY", "stratus", 1) < 0) {
             perror("[Sidecar] setenv");
