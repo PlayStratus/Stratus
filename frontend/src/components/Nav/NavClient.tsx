@@ -27,7 +27,11 @@ export default function NavClient({ games }: { games: GameType[] }) {
     <nav className='sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur'>
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
         <div className='flex items-center gap-4'>
-          <h1 className='text-xl font-bold'>Stratus</h1>
+          <Link href='/'>
+            <Button variant='link' className='text-xl font-bold'>
+              Stratus
+            </Button>
+          </Link>
 
           <Link href='/browse'>
             <Button variant='link'>Browse</Button>
