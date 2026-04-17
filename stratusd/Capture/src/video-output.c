@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <sys/mman.h>
 
 #include "capture-priv.h"
@@ -36,7 +37,7 @@ enum proxy_actions wl_buffer_release(struct proxy_message *msg)
     map = msg->conn->session->obj_data;
     buf = wl_map_lookup(map, id);
     if (buf != NULL)
-        // We will release buffer manually in wl_surface_commit()
+        // We will release buffer manually in _wl_buffer_release()
         return PROXY_ACTION_DROP;
     else
         return PROXY_ACTION_FWD;
@@ -58,10 +59,39 @@ static void wl_buffer_free(struct wl_buffer *buf) {
         wl_shm_buffer_free(buf->shm_buf);
 
     if (buf->dma_buf != NULL)
-        wl_dma_buffer_free(buf->dma_buf);
+        dma_buffer_free(buf->dma_buf);
 
 
     free(buf);
+}
+
+/*
+ * Send a wl_buffer@release event
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+static int _wl_buffer_release(struct wl_buffer *buf, struct wl_connection *conn)
+{
+    int ret;
+    struct wl_closure *res;
+
+    // Release buffer
+    res = wl_closure_init(&wl_buffer_interface.events[0], 0, NULL, NULL);
+    res->sender_id = buf->id;
+    res->opcode = 0; // wl_buffer event #0 is release event
+    ret = wl_closure_send(res, conn);
+    wl_closure_destroy(res);
+
+    // Free buffer if necessary
+    if (buf->id == 0 && buf->dependents == 0)
+        wl_buffer_free(buf);
+
+    if (ret < 0) {
+        perror("[Capture] wl_closure_send");
+        return -1;
+    } else {
+        return 0;
+    }
 }
 
 /*
@@ -185,6 +215,7 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     struct wl_buffer *buf;
     struct wl_closure *res;
     struct capture_session *session;
+    struct video_encode_queue_frame *frame;
 
     map = msg->conn->session->obj_data;
     id = msg->closure->sender_id;
@@ -197,28 +228,46 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
         if (buf->width == session->width && buf->height == session->height) {
             assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
 
-            if (buf->shm_buf != NULL)
-                wl_shm_surface_commit(session, surf); // Handle shm frame
-            if (buf->dma_buf != NULL)
-                wl_dmabuf_surface_commit(session, surf); // Handle dmabuf frame
-        } else if (buf->width > 64 && buf->height > 64) {
-            // A >64x64 frame probably isn't the cursor, so we might be supposed
-            // to process it
+            // Queue frame to be encoded
+            frame = malloc(sizeof(struct video_encode_queue_frame));
+            if (frame == NULL) {
+                perror("[Capture] malloc");
+                return PROXY_ACTION_ERR;
+            }
+            if (buf->shm_buf != NULL) {
+                frame->dma_data = NULL;
+                frame->shm_data = buf->shm_buf->p;
+            } else if (buf->dma_buf != NULL) {
+                frame->dma_data = buf->dma_buf;
+                frame->shm_data = NULL;
+            }
+            frame->stride = buf->width * 4;
+            frame->buf = buf;
+            frame->conn = msg->conn->session->client->wl_conn;
 
-            fprintf(stderr, "[Capture] Warning: expected %dx%d frame but "
-                    "received %dx%d frame\n", session->width, session->height,
-                    buf->width, buf->height);
-        }
+            if (rbuf_push(session->encode_queue, frame) < 0) {
+                free(frame);
+                return PROXY_ACTION_ERR;
+            }
 
-        // Release buffer
-        res = wl_closure_init(&wl_buffer_interface.events[0], 0, NULL, NULL);
-        res->sender_id = buf->id;
-        res->opcode = 0; // wl_buffer event #0 is release event
-        ret = wl_closure_send(res, msg->conn->session->client->wl_conn);
-        wl_closure_destroy(res);
-        if (ret < 0) {
-            perror("[Capture] wl_closure_send");
-            return PROXY_ACTION_ERR;
+            // Prevent buffer struct from being freed before it's released in
+            // the free_frame() handler. This may result in us sending a release
+            // event after the client sends a destroy request, but that wouldn't
+            // be a big deal.
+            buf->dependents++;
+
+        } else {
+            if (buf->width > 64 && buf->height > 64) {
+                // A >64x64 frame probably isn't the cursor, so we might be
+                // supposed to process it
+
+                fprintf(stderr, "[Capture] Warning: expected %dx%d frame but "
+                        "received %dx%d frame\n", session->width,
+                        session->height, buf->width, buf->height);
+            }
+
+            if (_wl_buffer_release(buf, msg->conn->session->client->wl_conn) < 0)
+                return PROXY_ACTION_ERR;
         }
 
         // Unattach buffer. This prevents us from sending duplicate release
@@ -228,6 +277,18 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     }
 
     return PROXY_ACTION_FWD;
+}
+
+/*
+ * Free a frame that was pushed to the encode buffer
+ */
+void free_frame(void *frame) {
+    struct video_encode_queue_frame *f = frame;
+    struct wl_buffer *buf = f->buf;
+
+    buf->dependents--;
+    _wl_buffer_release(buf, f->conn);
+    free(frame);
 }
 
 /*

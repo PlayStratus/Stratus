@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "video-encode-queue.h"
 
 /*
  * Contains data for a wl_surface object
@@ -11,6 +12,15 @@ struct wl_surface {
     uint32_t id;
     struct wl_buffer *buf;          // The currently attached buffer
     uint32_t dependents;
+};
+
+/*
+ * Contains data for a shm-backed wl_buffer object
+ */
+struct wl_shm_buffer {
+    void *p;
+    int32_t stride;
+    struct wl_shm_pool *pool;
 };
 
 /*
@@ -24,7 +34,7 @@ struct wl_buffer {
     int32_t width;
     int32_t height;
     struct wl_shm_buffer *shm_buf; // NULL if buffer is not shm-backed
-    struct wl_dma_buffer *dma_buf;
+    struct dma_buffer *dma_buf;
     uint32_t dependents;
 };
 

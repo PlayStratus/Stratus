@@ -16,6 +16,7 @@
 
 #include "session.h"
 #include "AudioEncode.h"
+#include "Encode.h"
 #include "Capture.h"
 #include "CapturePw.h"
 #include "Input.h"
@@ -56,6 +57,10 @@ void session_teardown(struct session *session) {
         pthread_cancel(session->capture_pw_thread);
         pthread_join(session->capture_pw_thread, NULL);
     }
+    if (session->encode_thread != 0) {
+        pthread_cancel(session->encode_thread);
+        pthread_join(session->encode_thread, NULL);
+    }
     if (session->input_thread != 0) {
         pthread_cancel(session->input_thread);
         pthread_join(session->input_thread, NULL);
@@ -74,8 +79,13 @@ void session_teardown(struct session *session) {
         killpg(session->game_pid, 9);
     }
 
+    // Destroy ring buffers
     if (audio_context->ring_buffer != NULL)
         ring_buffer_destroy(audio_context->ring_buffer);
+    if (session->args.video_encode_queue != NULL)
+        rbuf_destroy(session->args.video_encode_queue);
+    if (session->args.video_transport_queue != NULL)
+        rbuf_destroy(session->args.video_transport_queue );
 
     pthread_cond_destroy(&audio_context->format_cond);
     pthread_mutex_destroy(&audio_context->format_mutex);
@@ -164,12 +174,11 @@ struct session *session_start(char *session_id, char *game_id, int width,
     struct session *session;
 
     // Create session struct
-    session = malloc(sizeof(struct session));
+    session = calloc(1, sizeof(struct session));
     if (session == NULL) {
-        perror("[Sidecar] malloc");
+        perror("[Sidecar] calloc");
         goto err_malloc_1;
     }
-    memset(session, 0x00, sizeof(struct session));
 
     if (pthread_mutex_init(&session->args.audio_context.format_mutex, NULL) !=
         0) {
@@ -193,11 +202,19 @@ struct session *session_start(char *session_id, char *game_id, int width,
            get_der_hash(session->args.cert), get_spki_hash(session->args.cert));
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
+    session->args.video_encode_queue = rbuf_init(8);
+    if (session->args.video_encode_queue == NULL)
+        goto err_rbuf_1;
+    session->args.video_transport_queue = rbuf_init(8);
+    if (session->args.video_transport_queue == NULL)
+        goto err_rbuf_2;
 
     // Start modules in separate threads
     pthread_create(&session->capture_thread, NULL, (void *)&capture_main,
                    &session->args);
     pthread_create(&session->capture_pw_thread, NULL, (void *)&capture_pw_main,
+                   &session->args);
+    pthread_create(&session->encode_thread, NULL, (void *)&encode_main,
                    &session->args);
     pthread_create(&session->audio_encoder_thread, NULL,
                    (void *)&audio_encoder_main, &session->args);
@@ -216,6 +233,10 @@ struct session *session_start(char *session_id, char *game_id, int width,
     return session;
 
 err_start:
+    rbuf_destroy(session->args.video_transport_queue);
+err_rbuf_2:
+    rbuf_destroy(session->args.video_encode_queue);
+err_rbuf_1:
     free(session->args.cert);
 err_malloc_2:
     pthread_cond_destroy(&session->args.audio_context.format_cond);

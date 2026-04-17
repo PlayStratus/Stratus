@@ -130,8 +130,6 @@ static void handle_session_destroy(struct proxy_session *session) {
 static void capture_destroy(struct capture_session *session) {
     fprintf(stderr, "[Capture] Wayland proxy destroyed\n");
 
-    if (session->encoder != NULL)
-        encoder_teardown(session->encoder);
     proxy_destroy(session->proxy);
     free(session);
 }
@@ -159,6 +157,9 @@ int capture_main(struct session_args *args) {
     session->encode_output = args->encode_output;
     session->width = args->width;
     session->height = args->height;
+    session->encode_queue = args->video_encode_queue;
+
+    rbuf_set_free(session->encode_queue, &free_frame);
 
     session->proxy = proxy_init("stratus");
     if (session->proxy == NULL) {
@@ -170,24 +171,6 @@ int capture_main(struct session_args *args) {
     session->proxy->on_message          = &handle_message;
     session->proxy->on_session_destroy  = &handle_session_destroy;
     session->proxy->userdata            = session;
-
-    // TODO: EGL doesn't like being initialized in one thread and then run in
-    // a different thread. It's possible to change this, but eventually the
-    // Encode module will be running completely in its own thread anyway. So for
-    // now we will just initialize it in the Capture thread, since that's where
-    // its called from.
-    session->encoder = encoder_startup(session->encode_output, session->width,
-                                       session->height, AV_PIX_FMT_BGR0,
-                                       AV_PIX_FMT_RGBA);
-    if (session->encoder == NULL) {
-        ret = -1;
-        goto end;
-    }
-    session->encoder->egl_ctx = egl_capture_init();
-    if (session->encoder->egl_ctx == NULL) {
-        ret = -1;
-        goto end;
-    }
 
     fprintf(stderr, "[Capture] Starting Wayland proxy on $XDG_RUNTIME_DIR/%s\n",
            session->proxy->name);

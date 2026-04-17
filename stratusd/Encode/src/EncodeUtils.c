@@ -1,6 +1,7 @@
 #include "EncodeUtils.h"
 #include <unistd.h>
 #include "Common.h"
+#include "video-transport-queue.h"
 
 
 void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) {
@@ -28,6 +29,7 @@ void generate_argb_frame(uint8_t *buffer, int width, int height, int frame_num) 
 
 // set flush to 0 to send the frame in the yuv_frame buffer, or 1 to flush the encoder and receive the remaining packets
 int avcodec_send_and_receive(encoder_context *state, int flush) {
+    struct video_transport_queue_frame *frame;
 
     // If flushing the encoder, send a NULL frame, otherwise send the converted YUV frame
     AVFrame *current_frame = flush ? NULL : state->yuv_frame;
@@ -49,13 +51,25 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
             return ret;
         }
 
-        if (state->pkt->flags && AV_PKT_FLAG_KEY)
-        {
-            SendTransportMail(Stream_Video, Codec_Decsription, state->pkt->data, state->pkt->size);
+        // Queue frame to be transported
+        frame = malloc(sizeof(struct video_encode_queue_frame));
+        if (frame == NULL) {
+            perror("[Encode] malloc");
+            return -1;
         }
-        else
-        {
-            SendTransportMail(Stream_Video, Codec_Payload, state->pkt->data, state->pkt->size);
+        frame->length = state->pkt->size;
+        frame->data = malloc(frame->length);
+        if (frame->data == NULL) {
+            perror("[Encode] malloc");
+            free(frame);
+            return -1;
+        }
+        memcpy(frame->data, state->pkt->data, frame->length);
+        frame->is_description = state->pkt->flags && AV_PKT_FLAG_KEY;
+        if (rbuf_push(state->output_queue, frame) < 0) {
+            free(frame->data);
+            free(frame);
+            return -1;
         }
 
         // Write packet data
@@ -66,6 +80,13 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
 
         av_packet_unref(state->pkt);
     }
+
+    return 0;
 }
 
-
+/*
+ * Free a frame that was pushed to the transport buffer
+ */
+void encode_free_frame(void *frame) {
+    free(frame);
+}

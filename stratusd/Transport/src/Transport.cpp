@@ -4,12 +4,8 @@
 #include "StratusWebTransportSessionVisitor.cpp"
 #include <assert.h>
 #include <iostream>
-#include <vector>
 #include "TransportPriv.h"
-
-extern "C" {
-    #include "Common.h"
-}
+#include "video-transport-queue.h"
 
 namespace quic {
 
@@ -60,18 +56,19 @@ void transport_thread(struct transport_session* session)
 
     while (1) {
       server->WaitForEvents();
-
-      struct Letter* CurrentLetter = CheckMail();
-
-      if (CurrentLetter && StaticTransportSession->WebTransportSessionArray[0]) {
-        quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
-        absl::Status ret = CurrentSession->SubmitDataToStream(CurrentLetter->Stream, CurrentLetter->MessageType, CurrentLetter->Data, CurrentLetter->DataLength);
-        if (!ret.ok()) {
-          std::cerr << "[Transport] " << ret;
+      struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
+      if (frame != NULL) {
+        if (StaticTransportSession->WebTransportSessionArray[0]) {
+          quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
+          absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
+            frame->is_description ? Codec_Decsription : Codec_Payload,
+            frame->data, frame->length);
+          if (!ret.ok()) {
+            std::cerr << "[Transport] " << ret;
+          }
         }
+        rbuf_pop(session->video_queue);
       }
-
-      free(CurrentLetter);
     }
 }
 
@@ -95,6 +92,7 @@ int transport_main(struct session_args *args) {
         std::cerr << "[Transport] transport_init failed\n";
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+    session->video_queue = args->video_transport_queue;
 
     pthread_cleanup_push((void (*)(void*))transport_destroy, session);
 
