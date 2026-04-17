@@ -27,6 +27,11 @@
 #define MAX_GAME_PATH 128
 
 /*
+ * The maximum length of a dimensions string (e.g. NNNNxMMMM)
+ */
+#define MAX_DIMENSIONS_LEN 10
+
+/*
  * Forcibly stop a stream session and free its resources
  */
 void session_teardown(struct session *session) {
@@ -84,9 +89,9 @@ void session_teardown(struct session *session) {
  *
  * Returns the PID of the child game process on success and -1 on failure.
  */
-static int session_launch_game(char *game_id) {
+static int session_launch_game(char *game_id, int width, int height) {
     int pid, devnull;
-    char game_path[MAX_GAME_PATH];
+    char game_path[MAX_GAME_PATH], dimensions[MAX_DIMENSIONS_LEN];
     char *argv[2];
     char *game_dir;
 
@@ -115,6 +120,16 @@ static int session_launch_game(char *game_id) {
         setpgid(getpid(), 0);
         // Set environment variables
         if (setenv("WAYLAND_DISPLAY", "stratus", 1) < 0) {
+            perror("[Sidecar] setenv");
+            exit(1);
+        }
+        if (snprintf(dimensions, MAX_DIMENSIONS_LEN, "%dx%d", width, height) <
+            0) {
+
+            perror("[Sidecar] sprintf");
+            return -1;
+        }
+        if (setenv("STRATUS_DIMENSIONS", dimensions, 1) < 0) {
             perror("[Sidecar] setenv");
             exit(1);
         }
@@ -192,7 +207,9 @@ struct session *session_start(char *session_id, char *game_id, int width,
                    &session->args);
 
     // Start game
-    session->game_pid = session_launch_game(session->game_id);
+    session->game_pid = session_launch_game(session->game_id,
+                                            session->args.width,
+                                            session->args.height);
     if (session->game_pid < 0)
         goto err_start;
 
