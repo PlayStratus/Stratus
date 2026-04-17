@@ -1,5 +1,5 @@
 import Nav from "@/components/Nav"
-import Image from "next/image"
+import { ExpandableImage } from "@/components/ui/expandable-image"
 import {
   Card,
   CardContent,
@@ -60,15 +60,13 @@ export default function About() {
             The Stratus service is composed of three main components: the web frontend, the coordination server, and the stream servers. Each of these is described in more detail below.
           </p>
           
-          <div className="w-full relative rounded-xl overflow-hidden border border-border mb-12">
-            <Image 
-              src="/diagrams/communication-pipeline.png" 
-              alt="Overall Architecture Diagram" 
-              width={1000} 
-              height={500} 
-              className="w-full h-auto object-contain bg-muted" 
-            />
-          </div>
+          <ExpandableImage 
+            src="/diagrams/communication-pipeline.png" 
+            alt="Overall Architecture Diagram" 
+            width={1000} 
+            height={500} 
+            className="w-full md:max-w-[50%] mx-auto relative rounded-xl border border-border bg-muted mb-12 shadow-sm"
+          />
 
           <div className="space-y-16">
             <div>
@@ -76,15 +74,13 @@ export default function About() {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 The web frontend allows the user to browse the Stratus game library, select a game, and then stream game I/O to their browser.
               </p>
-              <div className="w-full relative rounded-xl overflow-hidden border border-border">
-                <Image 
-                  src="/diagrams/site-map.png" 
-                  alt="Site map diagram" 
-                  width={1000} 
-                  height={500} 
-                  className="w-full h-auto object-contain bg-muted" 
-                />
-              </div>
+              <ExpandableImage 
+                src="/diagrams/site-map.png" 
+                alt="Site map diagram" 
+                width={1000} 
+                height={500} 
+                className="w-full md:max-w-[50%] mx-auto relative rounded-xl border border-border bg-muted my-6 shadow-sm"
+              />
             </div>
 
             <div>
@@ -92,15 +88,13 @@ export default function About() {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 The Stratus coordination server runs in an AWS EC2 instance and is responsible for connecting frontend clients with stream servers for new game streaming sessions, in addition to providing the web frontend with APIs for user authentication and game library queries.
               </p>
-              <div className="w-full relative rounded-xl overflow-hidden border border-border">
-                <Image 
-                  src="/diagrams/overall-architecture.png" 
-                  alt="Backend architecture diagram" 
-                  width={1000} 
-                  height={500} 
-                  className="w-full h-auto object-contain bg-muted" 
-                />
-              </div>
+              <ExpandableImage 
+                src="/diagrams/overall-architecture.png" 
+                alt="Backend architecture diagram" 
+                width={1000} 
+                height={500} 
+                className="w-full md:max-w-[50%] mx-auto relative rounded-xl border border-border bg-muted my-6 shadow-sm"
+              />
             </div>
 
             <div>
@@ -108,15 +102,13 @@ export default function About() {
               <p className="text-muted-foreground leading-relaxed mb-6">
                 Stratus uses a cluster of 12 BC-250 stream servers running Linux to execute the games and stream game I/O. Each server runs a custom Stratus streaming software consisting of 5 modules, as shown below.
               </p>
-              <div className="w-full relative rounded-xl overflow-hidden border border-border mb-6">
-                <Image 
-                  src="/diagrams/backend-architecture.png" 
-                  alt="stratusd architecture diagram" 
-                  width={1000} 
-                  height={500} 
-                  className="w-full h-auto object-contain bg-muted" 
-                />
-              </div>
+              <ExpandableImage 
+                src="/diagrams/backend-architecture.png" 
+                alt="stratusd architecture diagram" 
+                width={1000} 
+                height={500} 
+                className="w-full md:max-w-[50%] mx-auto relative rounded-xl border border-border bg-muted mb-8 mt-2 shadow-sm"
+              />
               <p className="text-muted-foreground leading-relaxed">
                 The SideCar module handles communication with the coordination server over a persistent WebSockets connection. When a request to start a new stream is received, the SideCar module is responsible for initializing every other module and then launching the game itself. The game’s video output is then captured by the Capture module via the Wayland protocol, encoded by the Encode module using ffmpeg, and finally sent to the client by the Transport module over Google’s QUICHE transport layer. The Transport module also receives game controller input sent by the client and forwards it to the Input module, which injects the input into the game via a virtual controller device.
               </p>

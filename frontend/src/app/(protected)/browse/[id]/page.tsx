@@ -1,13 +1,7 @@
 import Link from "next/link"
 
 import { buttonVariants } from "@/components/ui/button"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+import { GameGallery } from "@/components/game/game-gallery"
 
 import { getGameById } from "@/lib/actions/games"
 
@@ -33,26 +27,8 @@ export default async function Service({ params }: Props) {
       </Link>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-12'>
-        <div className='space-y-4'>
-          <div className='aspect-video bg-muted rounded-lg flex items-center justify-center'>
-            <img src={game.s3[0]} alt="Game image" />
-          </div>
-
-          <Carousel className='w-full'>
-            <CarouselContent>
-              {game.s3.slice(1).map((s3) => (
-                <CarouselItem key={s3} className='basis-1/4'>
-                  <div className='aspect-video bg-muted rounded flex items-center justify-center cursor-pointer hover:bg-muted/80 transition-colors'>
-                    <span className='text-xs text-muted-foreground'>
-                      <img src={s3} alt="Game image" />
-                    </span>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
+        <div className='max-w-full overflow-hidden'>
+          <GameGallery images={game.s3} />
         </div>
 
         <div className='space-y-6'>
