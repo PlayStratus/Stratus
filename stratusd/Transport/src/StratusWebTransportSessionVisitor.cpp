@@ -9,12 +9,8 @@ StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTranspor
     InputStream = nullptr;
     VideoStream = nullptr;
 
-    assert(StaticTransportSession->WebTransportSessionCount < 10);
-    if (StaticTransportSession->WebTransportSessionCount > 0) {
-      std::cerr << "[Transport] Warning: multiple sessions established, but only the first will receive data" << std::endl;
-    }
-    StaticTransportSession->WebTransportSessionArray[StaticTransportSession->WebTransportSessionCount] = this;
-    StaticTransportSession->WebTransportSessionCount++;
+    assert(StaticTransportSession->WebTransportSession == NULL);
+    StaticTransportSession->WebTransportSession = this;
 }
 
 void StratusWebTransportSessionVisitor::OnSessionReady()

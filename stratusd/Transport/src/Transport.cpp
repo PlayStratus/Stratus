@@ -17,7 +17,12 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
   }
 
   if (url.path() == "/") {
-    return std::make_unique<StratusWebTransportSessionVisitor>(session);
+    if (!StaticTransportSession->WebTransportSession) {
+      return std::make_unique<StratusWebTransportSessionVisitor>(session);
+    } else {
+      std::cerr << "[Transport] Warning: A client attempted to establish a connection but was rejected." << std::endl;
+      return absl::AlreadyExistsError("[Transport] Error: A client has already established a connection to this node.");
+    }
   }
 
 
@@ -34,8 +39,7 @@ transport_session* transport_init(int port, struct StratusCertificate *cert)
 
     session->port = port;
 
-    memset(session->WebTransportSessionArray, 0, sizeof(session->WebTransportSessionArray));
-    session->WebTransportSessionCount = 0;
+    session->WebTransportSession = NULL;
 
     // Storing as void PTRs for C Backwards Compat.
     session->WebTransportBackend = new quic::WebTransportOnlyBackend(quic::ProcessRequest);
@@ -58,8 +62,8 @@ void transport_thread(struct transport_session* session)
       server->WaitForEvents();
       struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
       if (frame != NULL) {
-        if (StaticTransportSession->WebTransportSessionArray[0]) {
-          quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
+        if (StaticTransportSession->WebTransportSession != NULL) {
+          quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSession;
           absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
             frame->is_description ? Codec_Decsription : Codec_Payload,
             frame->data, frame->length);

@@ -8,8 +8,7 @@ struct transport_session
     void* QuicAddr;
     void* QuicServer;
     void* WebTransportBackend;
-    void* WebTransportSessionArray[10];
-    int   WebTransportSessionCount;
+    void* WebTransportSession;
     struct rbuf *video_queue;
 };
 
