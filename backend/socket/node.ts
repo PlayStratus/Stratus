@@ -4,6 +4,7 @@ interface NodePayload {
   hostname: string
   games: string[]
   sessions: string[]
+  ip: string
   [key: string]: any
 }
 
@@ -77,9 +78,10 @@ function clearUnresponsive() {
 }
 
 function isValidPayload(payload: any): payload is NodePayload {             //Checks to ensure payload is valid
-  return (                                                                  //we require games and sessions otherwise we could have an ungraceful exit. Hostname is important but would not cause a crash if left out. Can add more if required
+  return (                                                                  //we require games, sessions, and ip otherwise we could have an ungraceful exit. Hostname is important but would not cause a crash if left out. Can add more if required
     typeof payload.hostname === "string" &&
     Array.isArray(payload.games) &&
-    Array.isArray(payload.sessions)
+    Array.isArray(payload.sessions)&&
+    typeof payload.ip === "string"
   )
 }

@@ -1,6 +1,6 @@
 import { WebSocket } from "ws"
 import { v4 as uuidv4 } from "uuid"
-import { findNodeByGame } from "./node.js"
+import { findNodeByGame, getAllNodes } from "./node.js"
 
 const pendingStarts = new Map<string, (confirm: ConfirmStart | null) => void>()
 
@@ -11,7 +11,7 @@ interface ConfirmStart {
   payload: {
     session_id: string
     tls_fingerprint: string
-    ip: string
+    ip: string                          
   }
 }
 
@@ -22,6 +22,8 @@ export function startGameSession(gameId: string, userId: string, userName: strin
     console.error("No node available for game:", gameId)
     return Promise.resolve(null);
   }
+  const nodeInfo = getAllNodes().get(ws)
+  const nodeIp = nodeInfo?.node_payload.ip ?? ""
   let request_id = uuidv4()
   const startMessage = {                                                                    //build message
     type: "start_session",
@@ -37,7 +39,7 @@ export function startGameSession(gameId: string, userId: string, userName: strin
     },
   }
 
-  return new Promise((resolve) => {                       //wait for start return
+ return new Promise<ConfirmStart | null>((resolve) => {                       //wait for start return
     pendingStarts.set(request_id, resolve)                //store id in map
 
     setTimeout(() => {                                    // timeout if node never responds
@@ -48,6 +50,11 @@ export function startGameSession(gameId: string, userId: string, userName: strin
     }, 10_000)                                             //wait 10 seconds
 
     ws.send(JSON.stringify(startMessage))                 //send message
+  }).then((result: ConfirmStart | null) => {
+    if (result) {
+      result.payload.ip = nodeIp
+    }
+    return result
   })
 }
 
@@ -55,6 +62,6 @@ export function resolveStart(message: ConfirmStart) {           //called to upda
   const resolve = pendingStarts.get(message.request_id)         //match id
   if (resolve) {
     pendingStarts.delete(message.request_id)                    //remove from map
-    resolve(message)                                            //return message
+    resolve(message)                                            //return message **add ip here
   }
 }
