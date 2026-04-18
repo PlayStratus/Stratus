@@ -1,14 +1,15 @@
-
+# Start a new game session
+# - Using Nathen's token for authentication (Expires April 23, 2026)
+# - Starts supertuxkart with the game ID "c3770c11-ecaf-4852-96b0-37269736a6fc"
+# - Sets the game window size to 640x480
 POST http://localhost:4000/play/session HTTP/1.1
 Content-Type: application/json
-Authorization: Bearer keyHere
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMTY3OTE1NDY5ODUyMTk0MDE0NTEiLCJlbWFpbCI6ImRlbGF0b3JuQG9yZWdvbnN0YXRlLmVkdSIsImlhdCI6MTc3NjM5MjM1MiwiZXhwIjoxNzc2OTk3MTUyfQ.DFGy8MxcBqEZ1PLj6x_WbxbsQeUbCvMCxHOcnhKKlPA
 
 {
-  "game_id": "test1",
-  "user_id": "107813993643631197127",
-  "user_name": "carolrang",
-  "width": "123",
-  "height": "123"
+  "game_id": "c3770c11-ecaf-4852-96b0-37269736a6fc",
+  "width": 640,
+  "height": 480
 }
 
 ###
