@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react"
 
 import { useLogs } from "./logs"
-import { StatusType } from "./page"
+import { StatusType } from "../ClientPage"
 
 const MAX_CHUNK_BATCH_COUNT = 8
 const MAX_CHUNK_BATCH_BYTES = 128 * 1024
@@ -28,18 +28,18 @@ export function useVideoStream(
     }
 
     if (typeof Worker === "undefined") {
-      addLogEvent("Worker API not available in this browser", "error")
+      addLogEvent("VIDEO", "Worker API not available in this browser", "error")
       return null
     }
 
     const canvas = canvasRef.current
     if (!canvas) {
-      addLogEvent("Canvas not ready for worker rendering", "error")
+      addLogEvent("VIDEO", "Canvas not ready for worker rendering", "error")
       return null
     }
 
     if (typeof canvas.transferControlToOffscreen !== "function") {
-      addLogEvent("OffscreenCanvas transfer is not available", "error")
+      addLogEvent("VIDEO", "OffscreenCanvas transfer is not available", "error")
       return null
     }
 
@@ -54,7 +54,7 @@ export function useVideoStream(
       const message = event.data
 
       if (message.type === "log") {
-        addLogEvent(message.message, message.severity)
+        addLogEvent("VIDEO", message.message, message.severity)
         return
       }
 
@@ -66,6 +66,7 @@ export function useVideoStream(
     worker.onerror = (event) => {
       if (isUnmountedRef.current) return
       addLogEvent(
+        "VIDEO",
         `Video worker error: ${event.message || "Unknown worker error"}`,
         "error",
       )
@@ -84,7 +85,11 @@ export function useVideoStream(
     async (stream: ReadableStream<Uint8Array>, number: number) => {
       const worker = getWorker()
       if (!worker) {
-        addLogEvent("No video worker available; cannot read stream", "error")
+        addLogEvent(
+          "VIDEO",
+          "No video worker available; cannot read stream",
+          "error",
+        )
         return
       }
 
@@ -120,7 +125,7 @@ export function useVideoStream(
             } else if (pendingChunks.length > 0) {
               flushPendingChunks()
             }
-            addLogEvent("Stream #" + number + " closed")
+            addLogEvent("VIDEO", "Stream #" + number + " closed")
             worker.postMessage({ type: "stream-end", stream: number })
             return
           }
@@ -151,6 +156,7 @@ export function useVideoStream(
         if (isUnmountedRef.current) return
         const errorMessage = e instanceof Error ? e.message : String(e)
         addLogEvent(
+          "VIDEO",
           "Error while reading from stream #" + number + ": " + errorMessage,
           "error",
         )
@@ -180,19 +186,23 @@ export function useVideoStream(
           const { value, done } = await reader.read()
           if (done) {
             incomingStreamReaderRef.current = null
-            addLogEvent("Done accepting unidirectional streams!")
+            addLogEvent("VIDEO", "Done accepting unidirectional streams!")
             return
           }
 
           const stream = value
           const number = streamNumberRef.current++
-          addLogEvent("New incoming unidirectional stream #" + number)
+          addLogEvent("VIDEO", "New incoming unidirectional stream #" + number)
           void readFromIncomingStream(stream, number)
         }
       } catch (e) {
         if (isUnmountedRef.current) return
         const errorMessage = e instanceof Error ? e.message : String(e)
-        addLogEvent("Error while accepting streams: " + errorMessage, "error")
+        addLogEvent(
+          "VIDEO",
+          "Error while accepting streams: " + errorMessage,
+          "error",
+        )
       } finally {
         incomingStreamReaderRef.current = null
         reader.releaseLock()
