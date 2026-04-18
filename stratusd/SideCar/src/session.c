@@ -90,7 +90,7 @@ void session_teardown(struct session *session) {
     pthread_cond_destroy(&audio_context->format_cond);
     pthread_mutex_destroy(&audio_context->format_mutex);
 
-    free(session->args.cert);
+    destroy_certificate(session->args.cert);
     free(session);
 }
 
@@ -237,7 +237,7 @@ err_start:
 err_rbuf_2:
     rbuf_destroy(session->args.video_encode_queue);
 err_rbuf_1:
-    free(session->args.cert);
+    destroy_certificate(session->args.cert);
 err_malloc_2:
     pthread_cond_destroy(&session->args.audio_context.format_cond);
 err_cond_init:

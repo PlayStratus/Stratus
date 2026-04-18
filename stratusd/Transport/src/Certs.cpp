@@ -75,10 +75,14 @@ struct StratusCertificate *create_certificate() {
     chain(new quic::ProofSource::Chain({ der_cert }));
 
     // Construct ProofSource
-    struct StratusCertificate *cert = (struct StratusCertificate*)
-        malloc(sizeof(struct StratusCertificate));
-    cert->proof_source = quic::ProofSourceX509::Create(chain,
-                                                      std::move(private_key));
+    auto proof_source =
+        quic::ProofSourceX509::Create(chain, std::move(private_key));
+    if (proof_source == nullptr) {
+        return nullptr;
+    }
+
+    StratusCertificate *cert = new StratusCertificate();
+    cert->proof_source = std::move(proof_source);
 
     // Dump fingerprints
     std::string raw_der_hash = quic::RawSha256(der_cert);
@@ -89,6 +93,10 @@ struct StratusCertificate *create_certificate() {
     base64_encode((uint8_t*)raw_spki_hash.c_str(), 32, cert->spki_hash);
 
     return cert;
+}
+
+void destroy_certificate(struct StratusCertificate *cert) {
+    delete cert;
 }
 
 char *get_der_hash(struct StratusCertificate *cert) {
