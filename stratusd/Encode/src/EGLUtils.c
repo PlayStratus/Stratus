@@ -8,6 +8,17 @@ static PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = NULL;
 static PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = NULL;
 static PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES = NULL;
 
+void egl_capture_destroy(struct egl_capture_context *ctx) {
+    if (!ctx) return;
+
+    glDeleteFramebuffers(1, &ctx->fbo);
+
+    eglMakeCurrent(ctx->display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroyContext(ctx->display, ctx->context);
+    eglTerminate(ctx->display);
+
+    free(ctx);
+}
 
 /*
  * Initialize EGL context for dmabuf capture
@@ -184,7 +195,6 @@ int egl_capture_dmabuf_frame(struct egl_capture_context *ctx,
 
 
 cleanup:
-    free(pixel_data);
     glDeleteTextures(1, &texture);
     eglDestroyImageKHR(ctx->display, egl_image);
 

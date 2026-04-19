@@ -216,6 +216,9 @@ void encoder_teardown(encoder_context *state) {
     av_freep(&state->yuv_frame->data[0]);
     av_frame_free(&state->yuv_frame);
     avcodec_free_context(&state->codec_ctx);
+
+    egl_capture_destroy(state->egl_ctx);
+
     fclose(state->output_file);
     free(state);
 }
