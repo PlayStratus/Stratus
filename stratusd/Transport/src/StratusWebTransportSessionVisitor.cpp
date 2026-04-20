@@ -1,14 +1,17 @@
 #include "StratusWebTransportSessionVisitor.h"
+#include "InputStreamVisitor.h"
 #include "TransportPriv.h"
 
 namespace quic {
 
-StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTransportSession* session)
+StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTransportSession* session,
+        rbuf *input_queue)
 {
     session_ = session;
     ControlStream = nullptr;
     InputStream = nullptr;
     VideoStream = nullptr;
+    this->input_queue = input_queue;
 
     assert(StaticTransportSession->WebTransportSession == NULL);
     StaticTransportSession->WebTransportSession = this;
@@ -47,6 +50,8 @@ void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable(
 
     if (!InputStream){
         InputStream = session_->AcceptIncomingUnidirectionalStream();
+        InputStream->SetVisitor(std::make_unique<InputStreamVisitor>(InputStream, input_queue));
+
     }
     else
     {

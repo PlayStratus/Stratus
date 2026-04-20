@@ -1,12 +1,9 @@
 #pragma once
 
 #include <arpa/inet.h>
-#include <cstdlib>
-#include <iostream>
 
 #include "quiche/quic/core/web_transport_interface.h"
-#include "quiche/web_transport/web_transport.h"
-#include "Common.h"
+#include "rbuf2.h"
 
 enum TransportStreamType
 {
@@ -27,7 +24,8 @@ namespace quic {
 
 class StratusWebTransportSessionVisitor : public WebTransportVisitor {
  public:
-  StratusWebTransportSessionVisitor(WebTransportSession* session);
+  StratusWebTransportSessionVisitor(WebTransportSession* session,
+          rbuf *input_queue);
 
   void OnSessionReady() override;
 
@@ -52,6 +50,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
   WebTransportStream* ControlStream;
   WebTransportStream* InputStream;
   WebTransportStream* VideoStream;
+  rbuf *input_queue;
 };
 
 }

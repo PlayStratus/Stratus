@@ -6,12 +6,14 @@
 
 #include "Input.h"
 #include "gamepad.h"
+#include "input-queue.h"
 
 /*
  * Contains data associated with an instance of the Input module
  */
 struct input_session {
     struct gamepad *gamepad;
+    struct rbuf *input_queue;
 };
 
 /*
@@ -87,6 +89,8 @@ int input_main(struct session_args *args) {
         perror("[Input] malloc");
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+    session->input_queue = args->input_queue;
+
 
     pthread_cleanup_push((void (*)(void*))input_destroy, session);
 
@@ -99,7 +103,12 @@ int input_main(struct session_args *args) {
 
     usleep(10000);  // Wait 10ms for gamepad device to be detected
 
-    gamepad_stk_console(session->gamepad);
+    while (1) {
+        struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
+        printf("[Input] Received msg: %s\n", msg->c_str);
+        rbuf_pop(session->input_queue);
+    }
+
 
 end:
     pthread_cleanup_pop(1);

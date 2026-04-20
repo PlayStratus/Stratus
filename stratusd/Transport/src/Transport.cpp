@@ -6,27 +6,22 @@
 #include <iostream>
 #include "TransportPriv.h"
 #include "video-transport-queue.h"
+#include "input-queue.h"
+
 
 namespace quic {
 
-absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(absl::string_view path, WebTransportSession* session) {
-  GURL url(absl::StrCat("https://localhost", path));
+absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(
+    absl::string_view path, WebTransportSession* wt_session) {
 
-  if (!url.is_valid()) {
-    return absl::InvalidArgumentError("Unable to parse the :path");
-  }
-
-  if (url.path() == "/") {
-    if (!StaticTransportSession->WebTransportSession) {
-      return std::make_unique<StratusWebTransportSessionVisitor>(session);
+    if (StaticTransportSession->WebTransportSession == NULL) {
+        return std::make_unique<StratusWebTransportSessionVisitor>
+            (wt_session, StaticTransportSession->input_queue);
     } else {
-      std::cerr << "[Transport] Warning: A client attempted to establish a connection but was rejected." << std::endl;
-      return absl::AlreadyExistsError("[Transport] Error: A client has already established a connection to this node.");
+        std::cerr << "[Transport] Warning: A client attempted to establish a "
+            << "connection but was rejected." << std::endl;
+        return absl::AlreadyExistsError("Client already connected");
     }
-  }
-
-
-  return absl::NotFoundError("Path not found");
 }
 
 }
@@ -60,6 +55,7 @@ void transport_thread(struct transport_session* session)
 
     while (1) {
       server->WaitForEvents();
+
       struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
       if (frame != NULL) {
         if (StaticTransportSession->WebTransportSession != NULL) {
@@ -86,6 +82,11 @@ void transport_destroy(struct transport_session* session)
   return;
 }
 
+static void transport_free_input_msg(void *msg) {
+    delete (std::string*)(((input_queue_msg*)msg)->cpp_str);
+    delete (input_queue_msg*)msg;
+}
+
 int transport_main(struct session_args *args) {
     int ret = 0;
     struct transport_session *session;
@@ -96,6 +97,8 @@ int transport_main(struct session_args *args) {
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
     session->video_queue = args->video_transport_queue;
+    session->input_queue = args->input_queue;
+    rbuf_set_free(session->input_queue, &transport_free_input_msg);
 
     pthread_cleanup_push((void (*)(void*))transport_destroy, session);
 
