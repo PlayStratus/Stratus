@@ -65,7 +65,7 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
 
   return res.status(201).json({
     session_id: result.payload.session_id,
-    TLSFingerprint: result.payload.tls_fingerprint,
+    tls_fingerprint: result.payload.tls_fingerprint,
     ip: result.payload.ip,
   })
 }
@@ -74,8 +74,7 @@ export function ControllerGetNodes(req: Request, res: Response) {
   const nodesArray = Array.from(getAllNodes().entries()).map(([, info]) => ({
     name: info.name,
     last_heartbeat: info.last_heartbeat,
-    payload: info.node_payload
+    payload: info.node_payload,
   }))
   res.json(nodesArray)
 }
-

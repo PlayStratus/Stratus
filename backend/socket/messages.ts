@@ -1,12 +1,13 @@
 import { WebSocket } from "ws"
-import { updateHeartbeat, getAllNodes } from "./node.js"
+import { updateHeartbeat, getNodeInfo } from "./node.js"
 import { resolveStart } from "./send.js"
+import { loadSession } from "./sessions.js"
 
-export function handleMessage(ws: WebSocket, message: any) {        //most functions here are currently placeholder to build out
+export function handleMessage(ws: WebSocket, message: any) {
+  //most functions here are currently placeholder to build out
   switch (message.type) {
     case "heartbeat":
       updateHeartbeat(ws, message.payload)
-      console.log(getAllNodes());
       break
 
     case "start_confirmed":
@@ -26,14 +27,25 @@ export function handleMessage(ws: WebSocket, message: any) {        //most funct
   }
 }
 
-
 function start_confirmed(ws: WebSocket, message: any) {
-  const { session_id, tls_fingerprint} = message.payload
-  //console.log(`Session started. session: ${session_id} | TLS: ${tls_fingerprint} | ip: ${ip}`)
+  const { session_id, tls_fingerprint } = message.payload
+  console.log(
+    `Session started. session: ${session_id} | TLS: ${tls_fingerprint}`,
+  )
   if (!session_id || !tls_fingerprint) {
     throw new Error("Missing required fields: session_id, tls_fingerprint")
   }
-  resolveStart(message);
+
+  loadSession(session_id, ws)
+
+  const nodeInfo = getNodeInfo(ws)
+  if (nodeInfo) {
+    const ip = nodeInfo.node_payload.ip
+
+    message.payload.ip = ip
+  }
+
+  resolveStart(message)
 }
 
 function stop_session(ws: WebSocket) {
@@ -43,4 +55,3 @@ function stop_session(ws: WebSocket) {
 function session_error(ws: WebSocket) {
   console.log("error")
 }
-
