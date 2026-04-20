@@ -1,3 +1,5 @@
+#pragma once
+
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <iostream>
@@ -5,7 +7,21 @@
 #include "quiche/quic/core/web_transport_interface.h"
 #include "quiche/web_transport/web_transport.h"
 #include "Common.h"
-#include "TransportPriv.h"
+
+enum TransportStreamType
+{
+    Stream_Control,
+    Stream_Video,
+    Stream_Audio,
+    Stream_Input
+};
+
+enum VideoMessageType
+{
+    Codec_Decsription,
+    Codec_Payload
+};
+
 
 namespace quic {
 
@@ -25,7 +41,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
 
   void OnCanCreateNewOutgoingBidirectionalStream() override;
 
-  void OnCanCreateNewOutgoingUnidirectionalStream() override; 
+  void OnCanCreateNewOutgoingUnidirectionalStream() override;
 
   absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length);
 

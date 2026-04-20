@@ -1,4 +1,5 @@
 #include "StratusWebTransportSessionVisitor.h"
+#include "TransportPriv.h"
 
 namespace quic {
 
