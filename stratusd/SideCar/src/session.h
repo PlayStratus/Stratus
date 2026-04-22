@@ -7,6 +7,20 @@
 #include "sidecar-priv.h"
 
 /*
+ * Used to index arrays of per-thread data
+ */
+enum threads {
+    THREAD_CAPTURE = 0,
+    THREAD_CAPTURE_PW,
+    THREAD_AUDIO_ENCODER,
+    THREAD_ENCODER,
+    THREAD_INPUT,
+    THREAD_TRANSPORT,
+
+    THREAD_COUNT,
+};
+
+/*
  * Contains data for a single stream session
  */
 struct session {
@@ -17,12 +31,8 @@ struct session {
     char game_id[UUID_LEN];
     int game_pid;
 
-    pthread_t capture_thread;
-    pthread_t capture_pw_thread;
-    pthread_t audio_encoder_thread;
-    pthread_t encode_thread;
-    pthread_t input_thread;
-    pthread_t transport_thread;
+    pthread_t threads[THREAD_COUNT];
+    char thread_states[THREAD_COUNT]; // 1 for running, 0 for not
 };
 
 struct session *session_start(char *session_id, char *game_uuid, int width,
