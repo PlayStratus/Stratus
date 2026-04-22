@@ -168,11 +168,15 @@ int input_main(struct session_args *args) {
 
     usleep(10000);  // Wait 10ms for gamepad device to be detected
 
-    while (1) {
+    while (args->is_active) {
         struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
         input_recv(session, msg->c_str);
         rbuf_pop(session->input_queue);
     }
+
+    // Wait to be killed by SideCar
+    while (1)
+        sleep(1);
 
 end:
     pthread_cleanup_pop(1);

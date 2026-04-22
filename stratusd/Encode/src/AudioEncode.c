@@ -169,12 +169,12 @@ int audio_encoder_main(void *userdata) {
     audio_context = &args->audio_context;
 
     pthread_mutex_lock(&audio_context->format_mutex);
-    while (!audio_context->format_ready && !audio_context->shutdown_requested) {
+    while (!audio_context->format_ready && args->is_active) {
         pthread_cond_wait(&audio_context->format_cond,
                           &audio_context->format_mutex);
     }
 
-    if (audio_context->shutdown_requested) {
+    if (!args->is_active) {
         pthread_mutex_unlock(&audio_context->format_mutex);
         return 0;
     }

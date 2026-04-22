@@ -41,12 +41,15 @@ void session_teardown(struct session *session) {
     if (session == NULL)
         return;
 
+    // Notify threads of session teardown
+    session->args.is_active = false;
     audio_context = &session->args.audio_context;
-
     pthread_mutex_lock(&audio_context->format_mutex);
-    audio_context->shutdown_requested = 1;
     pthread_cond_broadcast(&audio_context->format_cond);
     pthread_mutex_unlock(&audio_context->format_mutex);
+
+    // Give threads 100ms to get to a good stopping point before we kill them
+    usleep(100000);
 
     // Kill module threads and make sure they're dead
     if (session->capture_thread != 0) {
@@ -193,6 +196,7 @@ struct session *session_start(char *session_id, char *game_id, int width,
         goto err_cond_init;
     }
 
+    session->args.is_active = true;
     session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;

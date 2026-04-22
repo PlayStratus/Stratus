@@ -236,7 +236,7 @@ int encode_main(struct session_args *args) {
 
     pthread_cleanup_push((void (*)(void*))encoder_teardown, ctx);
 
-    while (1) {
+    while (args->is_active) {
         struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
         if (frame != NULL) {
             if (frame->shm_data != NULL) {
@@ -247,6 +247,10 @@ int encode_main(struct session_args *args) {
             rbuf_pop(ctx->input_queue);
         }
     }
+
+    // Wait to be killed by SideCar
+    while (1)
+        sleep(1);
 
 end:
     pthread_cleanup_pop(1);
