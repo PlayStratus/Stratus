@@ -72,15 +72,18 @@ static void wl_buffer_free(struct wl_buffer *buf) {
  */
 static int _wl_buffer_release(struct wl_buffer *buf, struct wl_connection *conn)
 {
-    int ret;
+    int ret = 0;
     struct wl_closure *res;
 
-    // Release buffer
-    res = wl_closure_init(&wl_buffer_interface.events[0], 0, NULL, NULL);
-    res->sender_id = buf->id;
-    res->opcode = 0; // wl_buffer event #0 is release event
-    ret = wl_closure_send(res, conn);
-    wl_closure_destroy(res);
+    // If the ID is zero, the buffer has been destroyed, so we don't need to
+    // release it. But we might still need to free it if called from free_frame.
+    if (buf->id != 0) {
+        res = wl_closure_init(&wl_buffer_interface.events[0], 0, NULL, NULL);
+        res->sender_id = buf->id;
+        res->opcode = 0; // wl_buffer event #0 is release event
+        ret = wl_closure_send(res, conn);
+        wl_closure_destroy(res);
+    }
 
     // Free buffer if necessary
     if (buf->id == 0 && buf->dependents == 0)
@@ -285,6 +288,14 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
 void free_frame(void *frame) {
     struct video_encode_queue_frame *f = frame;
     struct wl_buffer *buf = f->buf;
+
+    // This function is only called by rbuf_push, rbuf_free_expired, and
+    // rbuf_destroy. The first two are only called from the Capture thread, and
+    // the last one is called from the SideCar thread, but after the capture
+    // thread has been destroyed. So there shouldn't be any concurrency issues.
+    // We just need to ensure that we check to make sure the current buffer
+    // hasn't been destroyed since it was added to the encode queue.
+    // (This is done in _wl_buffer_release.)
 
     buf->dependents--;
     _wl_buffer_release(buf, f->conn);
