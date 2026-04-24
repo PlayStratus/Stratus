@@ -1,9 +1,9 @@
 # Stratus Games
 
-Stratusd games are packaged as AppImages. However, these AppImages do not
-contain any common dependencies shared between games (e.g. wine). These are
-expected to be installed on the host system, along with a common launcher script
-that sets up a non-persistent environment for each game instance.
+All games that run on Stratus are packaged as AppImages via scripts in this
+directory. These AppImages require Wine to be installed on the host system and
+also depend on a common launcher script that configures non-persistent
+environments for each game instance.
 
 
 ## Development Setup
