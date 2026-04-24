@@ -1,3 +1,4 @@
+import Link from "next/link"
 import Nav from "@/components/Nav"
 import { ExpandableImage } from "@/components/ui/expandable-image"
 import {
@@ -68,6 +69,44 @@ export default function About() {
             height={500} 
             className="w-full md:max-w-[40%] mx-auto relative rounded-xl border border-border bg-muted mb-12 shadow-sm"
           />
+        </section>
+
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold mb-8">Our Team</h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {aboutUs.map((info, index) => (
+            <Card
+              key={index}
+              className="group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1"
+            >
+              <CardContent className="flex flex-col h-full pt-6">
+                <CardTitle className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
+                  {info.name}
+                </CardTitle>
+
+                <CardDescription className="grow">
+                  {info.description}
+                </CardDescription>
+              </CardContent>
+            </Card>
+          ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-3xl font-bold mb-8">Getting Started</h2>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-12">
+            Click <Link
+              href='/signin'
+              className='underline hover:text-primary/80 transition-colors font-medium'
+            >here</Link> to create an account and try it out. You can also send
+            us questions or feedback via <Link
+              href='https://github.com/PlayStratus/Stratus'
+              className='underline hover:text-primary/80 transition-colors font-medium'
+            >GitHub</Link>. And if you're interested, continue reading for the
+            technical implementation details.
+          </p>
 
           <h2 className="text-2xl font-semibold mb-4">Stratus Architecture</h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-6">
@@ -127,29 +166,6 @@ export default function About() {
                 The SideCar module handles communication with the coordination server over a persistent WebSockets connection. When a request to start a new stream is received, the SideCar module is responsible for initializing every other module and then launching the game itself. The game’s video output is then captured by the Capture module via the Wayland protocol, encoded by the Encode module using ffmpeg, and finally sent to the client by the Transport module over Google’s QUICHE transport layer. The Transport module also receives game controller input sent by the client and forwards it to the Input module, which injects the input into the game via a virtual controller device.
               </p>
             </div>
-          </div>
-        </section>
-
-        <section>
-          <h2 className="text-3xl font-bold mb-8">Our Team</h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {aboutUs.map((info, index) => (
-            <Card
-              key={index}
-              className="group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1"
-            >
-              <CardContent className="flex flex-col h-full pt-6">
-                <CardTitle className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
-                  {info.name}
-                </CardTitle>
-
-                <CardDescription className="grow">
-                  {info.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
           </div>
         </section>
       </div>
