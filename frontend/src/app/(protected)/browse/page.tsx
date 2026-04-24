@@ -33,26 +33,28 @@ export default async function Browse() {
             {shuffledGames.map((game, index) => (
               <CarouselItem
                 key={index}
-                className='md:basis-1/2 lg:basis-1/3 aspect-square'
+                className='md:basis-1/2 lg:basis-1/3 pl-4'
               >
                 <Link href={"/browse/" + game.GameID}>
-                  <Card className='transition-all hover:shadow-lg hover:border-primary/50 h-full flex flex-col'>
-                    <CardContent className='p-2'>
-                      <div className='aspect-video bg-muted flex items-center justify-center '>
-                        <img src={game.s3[0]} alt="Game image" className="w-full h-full object-cover"/>
-                      </div>
-
-                      {/* Game info */}
-                      <div className='p-4'>
-                        <h3 className='font-semibold text-lg mb-2'>
-                          {game.title}
-                        </h3>
-                        <p className='text-sm text-muted-foreground line-clamp-3'>
-                          {game.sDescript}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="group flex flex-col h-full hover:-translate-y-1 transition-all cursor-pointer rounded-lg shadow-md shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40">
+                    <div className="w-full aspect-[16/9] overflow-hidden rounded-t-lg bg-muted relative">
+                      {game.s3 && game.s3[0] ? (
+                        <img src={game.s3[0]} alt={game.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+                      )}
+                    </div>
+                    
+                    {/* Game info */}
+                    <div className="bg-card text-card-foreground px-4 py-3 rounded-b-lg border border-t-0 border-border flex flex-col flex-grow">
+                      <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1">
+                        {game.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {game.sDescript}
+                      </p>
+                    </div>
+                  </div>
                 </Link>
               </CarouselItem>
             ))}
