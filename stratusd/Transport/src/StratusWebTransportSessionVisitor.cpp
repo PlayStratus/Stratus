@@ -1,48 +1,37 @@
-#include <arpa/inet.h>
-#include <cstdlib>
-#include <iostream>
-
-#include "quiche/quic/core/web_transport_interface.h"
-#include "quiche/web_transport/web_transport.h"
-
+#include "StratusWebTransportSessionVisitor.h"
+#include "InputStreamVisitor.h"
 #include "TransportPriv.h"
-
-void FreeBuffer(absl::string_view test)
-{
-  free((void*)test.data());
-}
-
 
 namespace quic {
 
-class StratusWebTransportSessionVisitor : public WebTransportVisitor {
- public:
-  StratusWebTransportSessionVisitor(WebTransportSession* session)
-  {
+StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTransportSession* session,
+        rbuf *input_queue)
+{
     session_ = session;
     ControlStream = nullptr;
     InputStream = nullptr;
     VideoStream = nullptr;
+    this->input_queue = input_queue;
 
-    assert(StaticTransportSession->WebTransportSessionCount < 10);
-    if (StaticTransportSession->WebTransportSessionCount > 0) {
-      std::cerr << "[Transport] Warning: multiple sessions established, but only the first will receive data" << std::endl;
-    }
-    StaticTransportSession->WebTransportSessionArray[StaticTransportSession->WebTransportSessionCount] = this;
-    StaticTransportSession->WebTransportSessionCount++;
-  }
+    assert(StaticTransportSession->WebTransportSession == NULL);
+    StaticTransportSession->WebTransportSession = this;
+}
 
-  void OnSessionReady() override {
+void StratusWebTransportSessionVisitor::OnSessionReady()
+{
     if (session_->CanOpenNextOutgoingUnidirectionalStream()) {
       OnCanCreateNewOutgoingUnidirectionalStream();
     }
-  }
+}
 
-  void OnSessionClosed(WebTransportSessionError error_code, const std::string& error_message) override {
+void StratusWebTransportSessionVisitor::OnSessionClosed(WebTransportSessionError error_code, const std::string& error_message)
+{
     std::cerr << "[Transport] Session closed with Error Code " << error_code << " " << error_message << std::endl;
-  }
+}
 
-  void OnIncomingBidirectionalStreamAvailable() override {
+
+void StratusWebTransportSessionVisitor::OnIncomingBidirectionalStreamAvailable()
+{
     std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
 
     if (!ControlStream){
@@ -53,29 +42,35 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
         std::cerr << "[Transport] ControlStream is Already Open!" << std::endl;
     }
 
-  }
+}
 
-  void OnIncomingUnidirectionalStreamAvailable() override {
+void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable()
+{
     std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
 
     if (!InputStream){
         InputStream = session_->AcceptIncomingUnidirectionalStream();
+        InputStream->SetVisitor(std::make_unique<InputStreamVisitor>(InputStream, input_queue));
+
     }
     else
     {
         std::cerr << "[Transport] InputStream is Already Open!" << std::endl;
     }
-  }
+}
 
-  void OnDatagramReceived(absl::string_view datagram) override {
+void StratusWebTransportSessionVisitor::OnDatagramReceived(absl::string_view datagram)
+{
     std::cerr << "[Transport] OnDatagramReceived()" << std::endl;
-  }
+}
 
-  void OnCanCreateNewOutgoingBidirectionalStream() override {
+void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingBidirectionalStream()
+{
     std::cerr << "[Transport] OnCanCreateNewOutgoingBidirectionalStream()" << std::endl;
-  }
+}
 
-  void OnCanCreateNewOutgoingUnidirectionalStream() override {
+void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStream()
+{
     std::cerr << "[Transport] OnCanCreateNewOutgoingUnidirectionalStream()" << std::endl;
 
     VideoStream = session_->OpenOutgoingUnidirectionalStream();
@@ -83,9 +78,10 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
     webtransport::SessionStats SessionStats = session_->GetSessionStats();
 
     std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
-  }
+}
 
-  absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length) {
+absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length)
+{
     if (VideoStream && VideoStream->CanWrite())
     {
       // Huuge Mem leak will fix.
@@ -109,16 +105,14 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
       delete Data;
       if (!ret.ok()) return ret;
 
-    }
+}
 
     return absl::OkStatus();
   }
 
- private:
-  WebTransportSession* session_;
-  WebTransportStream* ControlStream;
-  WebTransportStream* InputStream;
-  WebTransportStream* VideoStream;
-};
+void StratusWebTransportSessionVisitor::FreeBuffer(absl::string_view test)
+{
+  free((void*)test.data());
+}
 
 }

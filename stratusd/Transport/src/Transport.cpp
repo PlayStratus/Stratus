@@ -6,22 +6,22 @@
 #include <iostream>
 #include "TransportPriv.h"
 #include "video-transport-queue.h"
+#include "input-queue.h"
+
 
 namespace quic {
 
-absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(absl::string_view path, WebTransportSession* session) {
-  GURL url(absl::StrCat("https://localhost", path));
+absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(
+    absl::string_view path, WebTransportSession* wt_session) {
 
-  if (!url.is_valid()) {
-    return absl::InvalidArgumentError("Unable to parse the :path");
-  }
-
-  if (url.path() == "/") {
-    return std::make_unique<StratusWebTransportSessionVisitor>(session);
-  }
-
-
-  return absl::NotFoundError("Path not found");
+    if (StaticTransportSession->WebTransportSession == NULL) {
+        return std::make_unique<StratusWebTransportSessionVisitor>
+            (wt_session, StaticTransportSession->input_queue);
+    } else {
+        std::cerr << "[Transport] Warning: A client attempted to establish a "
+            << "connection but was rejected." << std::endl;
+        return absl::AlreadyExistsError("Client already connected");
+    }
 }
 
 }
@@ -29,17 +29,16 @@ absl::StatusOr<std::unique_ptr<webtransport::SessionVisitor>> ProcessRequest(abs
 transport_session* transport_init(int port, struct StratusCertificate *cert)
 {
     // Session init
-    transport_session* session = (transport_session*)malloc(sizeof(transport_session));
+    transport_session* session = new transport_session();
     StaticTransportSession = session;
 
     session->port = port;
 
-    memset(session->WebTransportSessionArray, 0, sizeof(session->WebTransportSessionArray));
-    session->WebTransportSessionCount = 0;
+    session->WebTransportSession = NULL;
 
     // Storing as void PTRs for C Backwards Compat.
     session->WebTransportBackend = new quic::WebTransportOnlyBackend(quic::ProcessRequest);
-    session->QuicServer = new quic::QuicServer(std::move(cert->proof_source), nullptr, (quic::QuicSimpleServerBackend*)session->WebTransportBackend);
+    session->QuicServer = new quic::QuicServer(std::move(cert->proof_source), nullptr, session->WebTransportBackend);
     session->QuicAddr = new quic::QuicSocketAddress(quic::QuicIpAddress::Any6(), port);
 
     return session;
@@ -47,8 +46,8 @@ transport_session* transport_init(int port, struct StratusCertificate *cert)
 
 void transport_thread(struct transport_session* session)
 {
-    quic::QuicServer* server = (quic::QuicServer*)session->QuicServer;
-    if (!server->CreateUDPSocketAndListen(*(quic::QuicSocketAddress*)session->QuicAddr)) {
+    quic::QuicServer* server = session->QuicServer;
+    if (!server->CreateUDPSocketAndListen(*session->QuicAddr)) {
         std::cerr << "[transport] Failed to create UDP socket" << std::endl;
     }
 
@@ -56,10 +55,11 @@ void transport_thread(struct transport_session* session)
 
     while (1) {
       server->WaitForEvents();
+
       struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
       if (frame != NULL) {
-        if (StaticTransportSession->WebTransportSessionArray[0]) {
-          quic::StratusWebTransportSessionVisitor* CurrentSession = (quic::StratusWebTransportSessionVisitor*)StaticTransportSession->WebTransportSessionArray[0];
+        if (StaticTransportSession->WebTransportSession != NULL) {
+          quic::StratusWebTransportSessionVisitor* CurrentSession = StaticTransportSession->WebTransportSession;
           absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
             frame->is_description ? Codec_Decsription : Codec_Payload,
             frame->data, frame->length);
@@ -74,13 +74,17 @@ void transport_thread(struct transport_session* session)
 
 void transport_destroy(struct transport_session* session)
 {
-  ((quic::QuicServer*)session->QuicServer)->Shutdown();
-  delete (quic::QuicServer*)session->QuicServer;
-  delete (quic::QuicSimpleServerBackend*)session->WebTransportBackend;
-  delete (quic::QuicSocketAddress*)session->QuicAddr;
-
-  free(session);
+  session->QuicServer->Shutdown();
+  delete session->QuicServer;
+  delete session->WebTransportBackend;
+  delete session->QuicAddr;
+  delete session;
   return;
+}
+
+static void transport_free_input_msg(void *msg) {
+    delete (std::string*)(((input_queue_msg*)msg)->cpp_str);
+    delete (input_queue_msg*)msg;
 }
 
 int transport_main(struct session_args *args) {
@@ -93,6 +97,8 @@ int transport_main(struct session_args *args) {
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
     session->video_queue = args->video_transport_queue;
+    session->input_queue = args->input_queue;
+    rbuf_set_free(session->input_queue, &transport_free_input_msg);
 
     pthread_cleanup_push((void (*)(void*))transport_destroy, session);
 
