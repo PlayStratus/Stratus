@@ -111,8 +111,14 @@ export function useTransport(handleError: (errorMessage: string) => void) {
     if (transportRef.current) {
       transportRef.current.close()
       transportRef.current = null
+
+      addLogEvent(
+        "TRANSPORT",
+        "Component unmounted, closing active transport connection.",
+        "log",
+      )
     }
-  }, [])
+  }, [addLogEvent])
 
   return { handleConnecting, handleDisconnect }
 }

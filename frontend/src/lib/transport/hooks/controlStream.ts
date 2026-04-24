@@ -1,23 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useLogs } from "./logs"
-
-function isReleasedWriterError(error: unknown) {
-  const message = (error as Error)?.message ?? ""
-  return (
-    message.toLowerCase().includes("writer") &&
-    message.toLowerCase().includes("released")
-  )
-}
-
-function isAlreadyClosingWriterError(error: unknown) {
-  const message = ((error as Error)?.message ?? "").toLowerCase()
-  return (
-    message.includes("already been requested to be closed") ||
-    message.includes("cannot close a writable stream that is closed") ||
-    message.includes("cannot close a closed writable stream")
-  )
-}
+import { closeWriterSafely } from "./writer"
 
 export function useControlStream() {
   const { addLogEvent } = useLogs()
@@ -29,24 +13,13 @@ export function useControlStream() {
 
   const closeWriter = useCallback(
     async (writer: WritableStreamDefaultWriter<Uint8Array> | null) => {
-      if (!writer) return
-      try {
-        await writer.close()
-      } catch (error) {
-        if (
-          isReleasedWriterError(error) ||
-          isAlreadyClosingWriterError(error)
-        ) {
-          return
-        }
+      await closeWriterSafely(writer, (error) => {
         addLogEvent(
           "CONTROL",
           `Control writer close warning: ${(error as Error).message}`,
           "error",
         )
-      } finally {
-        writer.releaseLock()
-      }
+      })
     },
     [addLogEvent],
   )

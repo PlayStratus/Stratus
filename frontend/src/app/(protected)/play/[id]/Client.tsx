@@ -145,10 +145,6 @@ function Client({ id, title }: Readonly<Props>) {
     ;(globalThis as any).dumpLogs = () => dumpLogs(logs)
   }, [logs])
 
-  useEffect(() => {
-    console.log("Session status changed:", status)
-  }, [status])
-
   const handleStart = async () => {
     if (status === "STREAMING" || status === "LOADING") {
       return

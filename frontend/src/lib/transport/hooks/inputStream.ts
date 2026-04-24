@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useLogs } from "./logs"
+import { closeWriterSafely, releaseWriterLock } from "./writer"
 
 type ManualAxisXValue = -1 | 0 | 1
 
@@ -17,20 +18,25 @@ export function useInputStream() {
 
   const closeWriter = useCallback(
     async (writer: WritableStreamDefaultWriter<Uint8Array> | null) => {
-      if (!writer) return
-      try {
-        await writer.close()
-      } catch (error) {
+      await closeWriterSafely(writer, (error) => {
         addLogEvent(
           "INPUT",
           `Input writer close warning: ${(error as Error).message}`,
           "warn",
         )
-      } finally {
-        writer.releaseLock()
-      }
+      })
     },
     [addLogEvent],
+  )
+
+  const clearWriter = useCallback(
+    (writer: WritableStreamDefaultWriter<Uint8Array> | null) => {
+      if (writer && writerRef.current === writer) {
+        writerRef.current = null
+      }
+      setIsInputReady(false)
+    },
+    [],
   )
 
   const handleInputStream = useCallback(
@@ -114,6 +120,10 @@ export function useInputStream() {
               `Input write error: ${(error as Error).message}`,
               "error",
             )
+            clearWriter(writer)
+            releaseWriterLock(writer)
+            disposed = true
+            return
           }
         }
       }
@@ -126,12 +136,14 @@ export function useInputStream() {
       disposed = true
       cancelAnimationFrame(rafId)
     }
-  }, [addLogEvent, isInputReady])
+  }, [addLogEvent, clearWriter, isInputReady])
 
   useEffect(() => {
     return () => {
-      void closeWriter(writerRef.current)
+      const writer = writerRef.current
       writerRef.current = null
+      setIsInputReady(false)
+      void closeWriter(writer)
       manualAxisXRef.current = 0
     }
   }, [closeWriter])
