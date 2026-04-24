@@ -144,20 +144,23 @@ export default function Home() {
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
           {(games ?? []).map((game, index) => (
-            <Card
-              key={index}
-              className='group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1'
-            >
-              <CardContent className='flex flex-col h-full'>
-                <CardTitle className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>
+            <Link key={index} href={"/browse/" + game.GameID} className="group flex flex-col h-full hover:-translate-y-1 transition-all cursor-pointer rounded-lg shadow-md shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40">
+              <div className="w-full aspect-[16/9] overflow-hidden rounded-t-lg bg-muted relative">
+                {game.s3 && game.s3[0] ? (
+                  <img src={game.s3[0]} alt={game.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+                )}
+              </div>
+              <div className="bg-card text-card-foreground px-4 py-3 rounded-b-lg border border-t-0 border-border flex flex-col flex-grow">
+                <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1">
                   {game.title}
-                </CardTitle>
-
-                <CardDescription className='grow'>
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">
                   {game.sDescript}
-                </CardDescription>
-              </CardContent>
-            </Card>
+                </p>
+              </div>
+            </Link>
           ))}
         </div>
       </div>
