@@ -1,7 +1,16 @@
 # stratusd
 
-`stratusd` is the software that will run on each node in the streaming server
-cluster.
+stratusd is the service that runs on each streaming node to execute games and
+stream game I/O. It is composed of seven modules:
+
+- **Capture**: responsible for capturing video frames via Wayland
+- **CapturePw**: responsible for capturing audio frames via PipeWire
+- **Common**: contains shared headers and ring buffer implementations
+- **Encode**: responsible for encoding video and audio frames using ffmpeg
+- **Input**: responsible for injecting controller input via libevdev
+- **SideCar**: responsible for session lifecycle and managing the other modules
+- **Transport**: responsible for communication with client using QUICHE
+
 
 ## Development Setup
 
@@ -19,17 +28,11 @@ cluster.
     # reboot
     ```
 
-3.  Generate dev certificates for Transport module
+3.  Generate CMake build files with `cmake -DCMAKE_BUILD_TYPE=Debug -B ./build`
 
-    ```
-    $ ./libs/libquiche/scripts/GenerateCerts.sh
-    ```
+4.  Build project with `cmake --build ./build`
 
-4.  Generate CMake build files with `cmake -DCMAKE_BUILD_TYPE=Debug -B ./build`
-
-5.  Build project with `cmake --build ./build`
-
-6.  Set applicable options via environment variables (you may find it useful to
+5.  Set applicable options via environment variables (you may find it useful to
     `export` these in a `.env` file that you source before running stratusd):
 
     - `STRATUSD_API_DEBUG`: Set to log sent and received API messages
@@ -53,10 +56,4 @@ cluster.
     - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first
       session is stopped
 
-7.  Run binary located at `./build/src/stratusd`
-
-8.  If connected to the stream locally, use the following chromium flags:
-
-    ```
-    chromium -origin-to-force-quic-on=localhost:4433 --ignore-certificate-errors-spki-list=<base64 SPKI fingerprint>
-    ```
+6.  Run binary located at `./build/src/stratusd`
