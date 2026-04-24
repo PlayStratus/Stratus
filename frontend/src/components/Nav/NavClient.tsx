@@ -2,6 +2,10 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
+import { Menu } from "lucide-react"
+
+import Logo from "./stratus-logo.png"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -28,25 +32,25 @@ export default function NavClient({ games }: { games: GameType[] }) {
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
         <div className='flex items-center gap-4'>
           <Link href='/'>
-            <Button variant='link' className='text-xl font-bold'>
-              Stratus
-            </Button>
+            <Image src={Logo} alt='Stratus' height={34} />
           </Link>
 
-          <Link href='/browse'>
-            <Button variant='link'>Browse</Button>
-          </Link>
+          <div className='hidden md:flex items-center'>
+            <Link href='/browse'>
+              <Button variant='link'>Browse</Button>
+            </Link>
 
-          <Link href='/about'>
-            <Button variant='link'>About</Button>
-          </Link>
+            <Link href='/about'>
+              <Button variant='link'>About</Button>
+            </Link>
+          </div>
         </div>
 
-        <div className='flex-1 max-w-xl mx-4'>
+        <div className='flex-1 max-w-xl mx-0 md:mx-4'>
           <SearchBar games={games} />
         </div>
 
-        <div className='flex items-center'>
+        <div className='flex items-center gap-2'>
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -55,11 +59,17 @@ export default function NavClient({ games }: { games: GameType[] }) {
 
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem asChild>
-                  <Link href='/settings'>Settings</Link>
+                  <Link href='/settings' className='w-full cursor-pointer'>
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
-                  <button type='button' onClick={handleLogout}>
+                  <button
+                    type='button'
+                    onClick={handleLogout}
+                    className='w-full cursor-pointer text-left'
+                  >
                     Log Out
                   </button>
                 </DropdownMenuItem>
@@ -70,6 +80,30 @@ export default function NavClient({ games }: { games: GameType[] }) {
               <Button>Log In</Button>
             </Link>
           )}
+
+          <div className='md:hidden'>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant='ghost' size='icon' aria-label='Menu'>
+                  <Menu className='h-5 w-5' />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem asChild>
+                  <Link href='/browse' className='w-full cursor-pointer'>
+                    Browse
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href='/about' className='w-full cursor-pointer'>
+                    About
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
     </nav>
