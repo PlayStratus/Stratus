@@ -20,6 +20,12 @@ echo -n 'Enter installation disk: '
 read disk < /dev/tty
 echo -n 'Enter hostname: '
 read hostname < /dev/tty
+echo 'Available IPs:'
+ip a | grep '(?<=inet ).*' -oP | sed -E -e 's|/([^ ]* )*| (|' \
+    -e 's/^/    /' -e 's/$/)/'
+ curl -s http://checkip.amazonaws.com | sed -e 's/^/    /' -e 's/$/ (public)/'
+echo -n 'Enter IP address: '
+read ip < /dev/tty
 echo '================================================================'
 
 # Partition disk
@@ -84,6 +90,9 @@ arch-chroot /mnt ln -s \
     /usr/lib/systemd/user/default.target.wants/stratusd.service \
     /var/lib/stratusd/.config/systemd/user/default.target.wants/stratusd.service
 
+# Set stratusd IP address
+sed --in-place "s|#STRATUSD_IP=.*|STRATUSD_IP=$ip|" /mnt/etc/stratusd.conf
+
 # Configure systemd-boot
 arch-chroot /mnt bootctl install
 echo 'default stratus' > /mnt/boot/loader/loader.conf
@@ -128,7 +137,7 @@ echo 'Installation log:'
 echo "    $LOG"
 echo 'Password for stratusd user:'
 echo "    $password"
-echo 'A reboot is required. Please also review /etc/stratusd.conf.'
+echo 'A reboot is required.'
 echo '================================================================'
 
 # Copy install log to /var/log/ in the chroot
