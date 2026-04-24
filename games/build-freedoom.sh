@@ -16,9 +16,8 @@ trap cleanup EXIT
 # Create directories
 APPDIR=$BUILD_DIR/AppDir
 BIN_DIR=$APPDIR/usr/bin
-SYS_DIR=$APPDIR/c/freedoom
-HOME_DIR=$APPDIR/home
-mkdir --parents $BIN_DIR $SYS_DIR $HOME_DIR
+SYS_DIR=$APPDIR/freedoom
+mkdir --parents $BIN_DIR $SYS_DIR
 
 # Download and extract files
 ZIP_CD=$BUILD_DIR/crispydoom.zip

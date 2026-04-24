@@ -6,8 +6,8 @@
 # and $APPDIR/home into ~/.wine and ensures that all writes are non-persistant.
 # It must be called from the AppRun script of an AppImage.
 
-if [ -z "$APPDIR" -o ! -d "$APPDIR/c" -o ! -d "$APPDIR/home" ]; then
-    echo 'Error: Not called from an AppImage with /c and /home directories'
+if [ -z "$APPDIR" ]; then
+    echo 'Error: Not called from an AppImage'
     exit 1
 fi
 
@@ -30,21 +30,20 @@ bwrap_args+=(--symlink /usr/lib /lib)
 bwrap_args+=(--symlink /usr/lib /lib64)
 bwrap_args+=(--dir /var)
 
-# Construct ~/.wine directory
+# Bind ~/.wine directory
 bwrap_args+=(
     --overlay-src ~/.wine
     --tmp-overlay ~/.wine
 )
 bwrap_args+=(
-    --overlay-src ~/.wine/drive_c
-    --overlay-src "$APPDIR/c"
-    --tmp-overlay ~/.wine/drive_c
+    # Prevent $HOME from being exposed and make user changes non-persistant
+    --tmpfs "$HOME/.wine/drive_c/users/$(whoami)"
 )
+
+# Bind $APPDIR directory
 bwrap_args+=(
-    # We don't overlay ~/.wine/drive_c/users/<user> here, so $HOME isn't exposed
-    --overlay-src "$APPDIR/home"
-    --tmp-overlay "$HOME/.wine/drive_c/users/$(whoami)"
+    --ro-bind "$APPDIR" "$APPDIR"
 )
-bwrap_args+=(--chdir ~/.wine/drive_c)
+bwrap_args+=(--chdir "$APPDIR")
 
 bwrap "${bwrap_args[@]}" $@

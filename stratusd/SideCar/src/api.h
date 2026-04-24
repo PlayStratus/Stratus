@@ -62,6 +62,7 @@ struct api_client {
 
     CURL *curl;
     int fd;
+    time_t last_reconnect;
 };
 
 struct api_client *api_init();

@@ -92,6 +92,16 @@ function processFrames() {
       break
     }
 
+    postLog(
+      [
+        `Received video message header on stream #${activeStream ?? "unknown"}`,
+        `type=${header.isKey ? "key" : "delta"}`,
+        `payloadBytes=${header.payloadLen}`,
+        `bufferedBytes=${frameBuffer.byteLength}`,
+        `decodeQueueSize=${currentDecoder.decodeQueueSize}`,
+      ].join(" "),
+    )
+
     if (
       !droppingUntilKeyframe &&
       (currentDecoder.decodeQueueSize > MAX_DECODE_QUEUE_SIZE ||

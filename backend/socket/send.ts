@@ -1,8 +1,9 @@
 import { WebSocket } from "ws"
 import { v4 as uuidv4 } from "uuid"
-import { findNodeByGame } from "./node.js"
+import { findNodeByGame, getAllNodes } from "./node.js"
 
 const pendingStarts = new Map<string, (confirm: ConfirmStart | null) => void>()
+const pendingStartSessions = new Map<string, string>()
 
 interface ConfirmStart {
   type: string
@@ -15,15 +16,26 @@ interface ConfirmStart {
   }
 }
 
-export function startGameSession(gameId: string, userId: string, userName: string, width: number, height: number): Promise<ConfirmStart | null> {        //pass in value from request
+export function startGameSession(
+  gameId: string,
+  userId: string,
+  userName: string,
+  width: number,
+  height: number,
+): Promise<ConfirmStart | null> {
+  //pass in value from request
   let session_id = uuidv4()
-  const ws = findNodeByGame(gameId, session_id)                                                         //find game
-  if (!ws) {                                                                                //no game found return null
+  const ws = findNodeByGame(gameId, session_id) //find game
+  if (!ws) {
+    //no game found return null
     console.error("No node available for game:", gameId)
-    return Promise.resolve(null);
+    return Promise.resolve(null)
   }
+  const nodeInfo = getAllNodes().get(ws)
+  const nodeIp = nodeInfo?.node_payload.ip ?? ""
   let request_id = uuidv4()
-  const startMessage = {                                                                    //build message
+  const startMessage = {
+    //build message
     type: "start_session",
     request_id,
     timestamp: new Date().toISOString(),
@@ -37,24 +49,42 @@ export function startGameSession(gameId: string, userId: string, userName: strin
     },
   }
 
-  return new Promise((resolve) => {                       //wait for start return
-    pendingStarts.set(request_id, resolve)                //store id in map
+  return new Promise((resolve) => {
+    //wait for start return
+    pendingStarts.set(request_id, resolve) //store id in map
+    pendingStartSessions.set(session_id, request_id)
 
-    setTimeout(() => {                                    // timeout if node never responds
+    setTimeout(() => {
+      // timeout if node never responds
       if (pendingStarts.has(request_id)) {
-        pendingStarts.delete(request_id)                  //delete request
-        resolve(null)                                     //return null if unable
+        pendingStarts.delete(request_id) //delete request
+        pendingStartSessions.delete(session_id)
+        resolve(null) //return null if unable
       }
-    }, 10_000)                                             //wait 10 seconds
+    }, 10_000) //wait 10 seconds
 
-    ws.send(JSON.stringify(startMessage))                 //send message
+    ws.send(JSON.stringify(startMessage)) //send message
   })
 }
 
-export function resolveStart(message: ConfirmStart) {           //called to update var
-  const resolve = pendingStarts.get(message.request_id)         //match id
+export function resolveStart(message: ConfirmStart) {
+  //called to update var
+  const requestId = pendingStarts.has(message.request_id)
+    ? message.request_id
+    : pendingStartSessions.get(message.payload.session_id)
+
+  if (!requestId) {
+    console.warn(
+      "Received start confirmation for unknown session:",
+      message.payload.session_id,
+    )
+    return
+  }
+
+  const resolve = pendingStarts.get(requestId) //match id
   if (resolve) {
-    pendingStarts.delete(message.request_id)                    //remove from map
-    resolve(message)                                            //return message
+    pendingStarts.delete(requestId) //remove from map
+    pendingStartSessions.delete(message.payload.session_id)
+    resolve(message) //return message
   }
 }

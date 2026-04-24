@@ -6,4 +6,4 @@ file(GLOB_RECURSE sourcefiles CONFIGURE_DEPENDS "src/*.h" "src/*.c" "include/*.h
 
 add_library(Capture STATIC ${sourcefiles})
 target_include_directories(Capture PUBLIC include /usr/include/libdrm)
-target_link_libraries(Capture PRIVATE PipeWire::PipeWire Wayland SideCar Encode OpenGL::GLES3 OpenGL::EGL)
+target_link_libraries(Capture PRIVATE Common PipeWire::PipeWire Wayland SideCar)
