@@ -19,7 +19,7 @@ export default async function PlayPage({ params }: Readonly<Props>) {
 
   return (
     <div className='flex-1 flex'>
-      <Client title={game.title} />
+      <Client id={id} title={game.title} />
     </div>
   )
 }

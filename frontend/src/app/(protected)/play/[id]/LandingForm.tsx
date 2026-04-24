@@ -1,64 +1,152 @@
 "use client"
-import { getBackendPath } from "@/lib/backend/getBackendPath"
 
-import { useAuth } from "@/components/auth/AuthProvider"
+import { useEffect, useState } from "react"
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { TriangleAlert } from "lucide-react"
+
+import {
+  checkPlayPageBrowserSupport,
+  createPendingBrowserSupportReport,
+} from "../utils/browserSupport"
 
 type Props = {
   title: string
-  wrapperRef: React.RefObject<HTMLDivElement | null>
+  errorMessage: string | null
+  isStarting: boolean
+  onStart: () => Promise<void>
 }
 
-export default function LandingForm({ title, wrapperRef }: Readonly<Props>) {
-  const { token } = useAuth()
+const requirementStatusLabels = {
+  checking: "Checking",
+  supported: "Ready",
+  unsupported: "Unavailable",
+} as const
 
-  const enterFullscreen = async () => {
-    const el = wrapperRef.current as any
-    if (!el) return
+export default function LandingForm({
+  title,
+  errorMessage,
+  isStarting,
+  onStart,
+}: Readonly<Props>) {
+  const [browserSupport, setBrowserSupport] = useState(
+    createPendingBrowserSupportReport(),
+  )
 
-    if (el.requestFullscreen) {
-      await el.requestFullscreen()
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      const report = await checkPlayPageBrowserSupport()
+      if (!cancelled) {
+        setBrowserSupport(report)
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }
+  }, [])
 
-  const exitFullscreen = async () => {
-    if (document.exitFullscreen) {
-      await document.exitFullscreen()
-    }
-  }
-
-  const handleClick = async () => {
-    enterFullscreen()
-
-    const response = await fetch(getBackendPath("/play/session"), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        game_id: title,
-        width: 1280,
-        height: 720,
-      }),
-    })
-
-    if (!response.ok) {
-      console.log("Failed to create session:", await response.json())
-      exitFullscreen()
-
-      return
-    }
-  }
+  const isCheckingSupport = browserSupport.requirements.some(
+    (requirement) => requirement.status === "checking",
+  )
+  const hasUnsupportedRequirement = browserSupport.requirements.some(
+    (requirement) => requirement.status === "unsupported",
+  )
 
   return (
-    <Card className='flex items-center justify-center p-8 m-auto'>
-      <h1 className='text-2xl font-bold mb-4'>{title}</h1>
-      <p className='text-muted-foreground mb-6'>
-        This is where the game will be rendered.
-      </p>
-      <Button onClick={handleClick}>Start Game</Button>
+    <Card className='m-auto w-full max-w-xl'>
+      <CardHeader>
+        <CardTitle className='text-2xl'>{title}</CardTitle>
+      </CardHeader>
+
+      <CardContent className='space-y-4'>
+        {errorMessage && (
+          <Alert variant='destructive'>
+            <TriangleAlert />
+            <AlertTitle>Unable to start session</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {hasUnsupportedRequirement && (
+          <Alert variant='destructive'>
+            <TriangleAlert />
+            <AlertTitle>Browser requirements not met</AlertTitle>
+            <AlertDescription>
+              {browserSupport.requirements
+                .filter((requirement) => requirement.status === "unsupported")
+                .map((requirement) => requirement.detail)
+                .join(" ")}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className='space-y-3 rounded-lg border p-4'>
+          <div>
+            <p className='font-medium'>Browser compatibility</p>
+            <p className='text-sm text-muted-foreground'>
+              The play page needs these features before it can launch.
+            </p>
+          </div>
+
+          <ul className='space-y-3'>
+            {browserSupport.requirements.map((requirement) => (
+              <li
+                key={requirement.key}
+                className='flex items-start justify-between gap-4'
+              >
+                <div className='space-y-1'>
+                  <p className='font-medium'>{requirement.label}</p>
+                  <p className='text-sm text-muted-foreground'>
+                    {requirement.detail}
+                  </p>
+                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
+                    requirement.status === "supported" && "bg-emerald-500/12",
+                    requirement.status === "checking" && "bg-amber-500/12",
+                    requirement.status === "unsupported" &&
+                      "bg-destructive/12 text-destructive",
+                  )}
+                >
+                  {requirementStatusLabels[requirement.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+
+      <CardFooter className='justify-end'>
+        <Button
+          disabled={
+            isStarting || isCheckingSupport || hasUnsupportedRequirement
+          }
+          onClick={() => {
+            void onStart()
+          }}
+        >
+          {isStarting
+            ? "Launching..."
+            : isCheckingSupport
+              ? "Checking Browser..."
+              : hasUnsupportedRequirement
+                ? "Browser Unsupported"
+                : "Start Game"}
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

@@ -3,21 +3,16 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
-import { dumpLogs, LogsProvider, useLogs } from "./hooks/logs"
-import { useTransport } from "./hooks/transport"
-import { useVideoStream } from "./hooks/videoStream"
-import { useControlStream } from "./hooks/controlStream"
-import { useInputStream } from "./hooks/inputStream"
+import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
+import { useTransport } from "@/lib/transport/hooks/transport"
+import { useVideoStream } from "@/lib/transport/hooks/videoStream"
+import { useControlStream } from "@/lib/transport/hooks/controlStream"
+import { useInputStream } from "@/lib/transport/hooks/inputStream"
 
 import Loading from "./Loading"
 import InputButtons from "./InputButtons"
 
-export type StatusType =
-  | "loading"
-  | "connected"
-  | "streaming"
-  | "disconnected"
-  | "error"
+import { StatusType } from "@/lib/transport/types"
 
 type MVPPageProps = {
   url: string
@@ -25,7 +20,7 @@ type MVPPageProps = {
 }
 
 function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
-  const [status, setStatus] = useState<StatusType>("loading")
+  const [status, setStatus] = useState<StatusType>("LOADING")
 
   const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -34,26 +29,21 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
 
   const { logs } = useLogs()
 
-  const { handleConnecting } = useTransport(
-    url,
-    tlsCert,
-    setStatus,
-    (errorMessage) => {
-      if (hasRedirectedRef.current) {
-        return
-      }
+  const { handleConnecting } = useTransport((errorMessage: string) => {
+    if (hasRedirectedRef.current) {
+      return
+    }
 
-      hasRedirectedRef.current = true
+    hasRedirectedRef.current = true
 
-      const params = new URLSearchParams({
-        url,
-        tls_cert: tlsCert,
-        error: errorMessage,
-      })
+    const params = new URLSearchParams({
+      url,
+      tls_cert: tlsCert,
+      error: errorMessage,
+    })
 
-      router.replace(`/mvp?${params.toString()}`)
-    },
-  )
+    router.replace(`/mvp?${params.toString()}`)
+  })
   const { handleControlStream } = useControlStream()
   const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
   const { handleInputStream, setManualAxisX } = useInputStream()
@@ -65,12 +55,12 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     hasStartedRef.current = true
 
     const handleMount = async () => {
-      const connectedTransport = await handleConnecting()
-      if (!connectedTransport) return
+      const transport = await handleConnecting(url, tlsCert)
+      if (!transport) return
 
-      await handleControlStream(connectedTransport)
-      await handleInputStream(connectedTransport)
-      await handleVideoStreams(connectedTransport)
+      await handleControlStream(transport)
+      await handleInputStream(transport)
+      await handleVideoStreams(transport)
     }
 
     void handleMount()
@@ -85,7 +75,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     ;(globalThis as any).dumpLogs = () => dumpLogs(logs)
   }, [logs])
 
-  const shouldShowLoading = status === "loading" || status === "connected"
+  const shouldShowLoading = status === "LOADING"
 
   return (
     <>
