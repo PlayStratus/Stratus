@@ -45,7 +45,7 @@ cp supertuxkart/players.xml $CONFIG_DIR/players.xml
 
 DISPLAY= wine supertuxkart/bin/supertuxkart.exe \
     --fullscreen --screensize=\${STRATUS_DIMENSIONS:-640x480} \
-    --track=sandtrack --no-start-screen
+    --track=sandtrack --no-start-screen --use-gamepad=0
 EOF
 chmod +x "$BIN_DIR/supertuxkart-stage-1" "$BIN_DIR/supertuxkart-stage-2"
 
