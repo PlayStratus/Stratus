@@ -55,7 +55,21 @@ export default function About() {
         </section>
 
         <section className="mb-16">
-          <h2 className="text-3xl font-bold mb-6">Stratus Architecture</h2>
+
+          <h2 className="text-2xl font-semibold mb-4">Stratus Key Features</h2>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-6">
+            Our project has several features that stand out. We were able to successfully implement a low latency video service which is a huge task in itself. This was our MVP and the primary feature. Additionally we successfully implemented user input and audio. User input currently has little delay, and audio lines up with the frames that are shown on screen. This is all hosted on a machine that does not have to be located near you. Meaning you can play games you want on any device without having to install or need to have a great computer to run intense games.
+          </p>
+            
+          <ExpandableImage 
+            src="/Gaming.jpg" 
+            alt="Active User" 
+            width={1000} 
+            height={500} 
+            className="w-full md:max-w-[40%] mx-auto relative rounded-xl border border-border bg-muted mb-12 shadow-sm"
+          />
+
+          <h2 className="text-2xl font-semibold mb-4">Stratus Architecture</h2>
           <p className="text-lg text-muted-foreground leading-relaxed mb-6">
             The Stratus service is composed of three main components: the web frontend, the coordination server, and the stream servers. Each of these is described in more detail below.
           </p>
