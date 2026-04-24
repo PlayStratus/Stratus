@@ -1,70 +1,119 @@
-import { Card, CardContent } from "@/components/ui/card"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
-
 import { getGames } from "@/lib/actions/games"
+import { GameType } from "@/lib/types"
 import Link from "next/link"
 
 export default async function Browse() {
   const games = await getGames()
-  const shuffledGames = [...(games ?? [])].sort(() => Math.random() - 0.5)
+
+  const featuredGame = games
+    ? games[Math.floor(Math.random() * games.length)]
+    : null
 
   return (
     <>
-      <div className='h-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-24 bg-accent/50'>
-        <h1 className='text-4xl font-bold mb-8'>Featured Game</h1>
-      </div>
+      <FeaturedGame game={featuredGame} />
 
-      <main className='container mx-auto py-16'>
+      <main className='container mx-auto px-4 py-14 md:px-6 md:py-16'>
         <h2 className='text-3xl font-bold mb-6'>Browse Games</h2>
 
-        <Carousel
-          opts={{
-            align: "start",
-          }}
-          className='mx-15'
-        >
-          <CarouselContent>
-            {shuffledGames.map((game, index) => (
-              <CarouselItem
-                key={index}
-                className='md:basis-1/2 lg:basis-1/3 pl-4'
-              >
-                <Link href={"/browse/" + game.GameID}>
-                  <div className="group flex flex-col h-full hover:-translate-y-1 transition-all cursor-pointer rounded-lg shadow-md shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40">
-                    <div className="w-full aspect-[16/9] overflow-hidden rounded-t-lg bg-muted relative">
-                      {game.s3 && game.s3[0] ? (
-                        <img src={game.s3[0]} alt={game.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
-                      )}
+        <section className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'>
+          {games?.map((game) => (
+            <Link
+              href={"/browse/" + game.GameID}
+              className='group'
+              key={game.GameID}
+            >
+              <div className='flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-md shadow-blue-400/20 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-blue-400/30'>
+                <div className='relative aspect-video w-full overflow-hidden bg-muted'>
+                  {game.s3?.[0] ? (
+                    <img
+                      src={game.s3[0]}
+                      alt={game.title}
+                      className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+                    />
+                  ) : (
+                    <div className='flex h-full w-full items-center justify-center text-muted-foreground'>
+                      No image
                     </div>
-                    
-                    {/* Game info */}
-                    <div className="bg-card text-card-foreground px-4 py-3 rounded-b-lg border border-t-0 border-border flex flex-col flex-grow">
-                      <h3 className="font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1">
-                        {game.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {game.sDescript}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext />
-        </Carousel>
+                  )}
+                </div>
+
+                <div className='flex flex-1 flex-col px-4 py-3'>
+                  <h3 className='mb-1 line-clamp-1 text-lg font-semibold transition-colors group-hover:text-primary'>
+                    {game.title}
+                  </h3>
+                  <p className='line-clamp-2 text-sm text-muted-foreground'>
+                    {game.sDescript}
+                  </p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </section>
       </main>
     </>
   )
 }
 
+function FeaturedGame({ game }: Readonly<{ game: GameType | null }>) {
+  if (!game) {
+    return null
+  }
 
+  const featuredGenres = game.genres?.slice(0, 3) ?? []
+  const description = game.lDescript || game.sDescript
+
+  return (
+    <section className='px-4 pt-6 md:px-6 md:pt-8'>
+      <Link
+        href={`/browse/${game.GameID}`}
+        className='group relative isolate block overflow-hidden rounded-4xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/15'
+      >
+        <img
+          src={game.s3[0]}
+          alt={`${game.title} featured cover`}
+          className='absolute inset-0 h-full w-full object-cover object-center transition duration-700 group-hover:scale-105 group-hover:saturate-125'
+        />
+
+        <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.16),transparent_35%)]' />
+        <div className='absolute inset-0 bg-linear-to-r from-black via-black/80 to-black/20 md:to-transparent' />
+        <div className='absolute inset-0 bg-linear-to-t from-black/90 via-transparent to-black/10' />
+
+        <div className='relative mx-auto flex min-h-120 max-w-7xl flex-col justify-between px-6 py-7 text-white md:min-h-136 md:px-10 md:py-10 lg:px-14'>
+          <div className='flex items-start justify-between gap-4'>
+            <div className='inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/85 backdrop-blur-md'>
+              Featured
+            </div>
+          </div>
+
+          <div className='grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end'>
+            <div className='max-w-3xl'>
+              <div className='mb-4 flex flex-wrap gap-2'>
+                {featuredGenres.map((genre) => (
+                  <span
+                    key={genre}
+                    className='rounded-full border border-white/15 bg-black/25 px-3 py-1 text-xs font-medium tracking-[0.16em] text-white/80 uppercase backdrop-blur-sm'
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+
+              <h2 className='max-w-2xl text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl'>
+                {game.title}
+              </h2>
+
+              <p className='mt-3 text-sm uppercase tracking-[0.28em] text-white/65'>
+                By {game.developer}
+              </p>
+
+              <p className='mt-5 max-w-2xl text-sm leading-7 text-white/85 md:text-base line-clamp-4'>
+                {description}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </section>
+  )
+}
