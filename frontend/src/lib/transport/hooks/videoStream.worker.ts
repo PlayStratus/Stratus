@@ -2,8 +2,11 @@
 
 import RingBuffer from "ringbufferjs"
 
+import { TransportStreamType, VideoMessageType } from "../types"
+
 const FRAME_DURATION_US = Math.round(1_000_000 / 15)
 const INITIAL_CHUNK_CAPACITY = 128
+const VIDEO_MESSAGE_HEADER_BYTES = 6
 const MAX_DECODE_QUEUE_SIZE = 2
 const MAX_BUFFERED_VIDEO_BYTES = 512 * 1024
 const VIDEO_DECODER_CONFIG: VideoDecoderConfig = {
@@ -84,18 +87,20 @@ function processFrames() {
     return
   }
 
-  while (frameBuffer.byteLength >= 5) {
+  while (frameBuffer.byteLength >= VIDEO_MESSAGE_HEADER_BYTES) {
     const header = frameBuffer.peekHeader()
     if (!header) break
 
-    if (frameBuffer.byteLength < 5 + header.payloadLen) {
+    if (frameBuffer.byteLength < VIDEO_MESSAGE_HEADER_BYTES + header.payloadLen) {
       break
     }
 
     postLog(
       [
         `Received video message header on stream #${activeStream ?? "unknown"}`,
-        `type=${header.isKey ? "key" : "delta"}`,
+        `streamType=${header.streamTypeLabel}`,
+        `messageType=${header.messageTypeLabel}`,
+        `chunkType=${header.chunkType}`,
         `payloadBytes=${header.payloadLen}`,
         `bufferedBytes=${frameBuffer.byteLength}`,
         `decodeQueueSize=${currentDecoder.decodeQueueSize}`,
@@ -117,13 +122,13 @@ function processFrames() {
       }
     }
 
-    frameBuffer.discard(5)
+    frameBuffer.discard(VIDEO_MESSAGE_HEADER_BYTES)
 
     if (header.payloadLen < 1) {
       continue
     }
 
-    if (droppingUntilKeyframe && !header.isKey) {
+    if (droppingUntilKeyframe && header.chunkType !== "key") {
       frameBuffer.discard(header.payloadLen)
       continue
     }
@@ -138,7 +143,7 @@ function processFrames() {
     }
 
     const chunk = new EncodedVideoChunk({
-      type: header.isKey ? "key" : "delta",
+      type: header.chunkType,
       timestamp: timestampUs,
       data: frameData,
     })
@@ -256,7 +261,7 @@ class ChunkRingBuffer {
   private chunks = new RingBuffer<Uint8Array>(INITIAL_CHUNK_CAPACITY)
   private bufferedBytes = 0
   private headOffset = 0
-  private readonly headerScratch = new Uint8Array(5)
+  private readonly headerScratch = new Uint8Array(VIDEO_MESSAGE_HEADER_BYTES)
 
   get byteLength() {
     return this.bufferedBytes
@@ -274,15 +279,29 @@ class ChunkRingBuffer {
   }
 
   peekHeader() {
-    if (this.bufferedBytes < 5) {
+    if (this.bufferedBytes < VIDEO_MESSAGE_HEADER_BYTES) {
       return null
     }
 
-    this.copyInto(this.headerScratch, 5)
+    this.copyInto(this.headerScratch, VIDEO_MESSAGE_HEADER_BYTES)
+    const streamType = this.headerScratch[0] as TransportStreamType
+    const messageType = this.headerScratch[1] as VideoMessageType
 
     return {
-      isKey: this.headerScratch[0] === 0x00,
-      payloadLen: readU32BE(this.headerScratch, 1),
+      streamType,
+      streamTypeLabel: TransportStreamType[streamType] ?? streamType,
+      messageType,
+      messageTypeLabel: VideoMessageType[messageType] ?? messageType,
+      chunkType:
+        messageType === VideoMessageType.Codec_Description ? "key" : "delta",
+      payloadLen: readU32BE(this.headerScratch, 2),
+    } satisfies {
+      streamType: TransportStreamType
+      streamTypeLabel: string | number
+      messageType: VideoMessageType
+      messageTypeLabel: string | number
+      chunkType: EncodedVideoChunkType
+      payloadLen: number
     }
   }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 
 import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
+import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
 import { useVideoStream } from "@/lib/transport/hooks/videoStream"
 import { useControlStream } from "@/lib/transport/hooks/controlStream"
 import { useInputStream } from "@/lib/transport/hooks/inputStream"
@@ -44,6 +45,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
 
     router.replace(`/mvp?${params.toString()}`)
   })
+  const { handleStream } = useStreamRouter()
   const { handleControlStream } = useControlStream()
   const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
   const { handleInputStream, setManualAxisX } = useInputStream()
@@ -58,15 +60,18 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
       const transport = await handleConnecting(url, tlsCert)
       if (!transport) return
 
-      await handleControlStream(transport)
-      await handleInputStream(transport)
-      await handleVideoStreams(transport)
+      await handleStream(transport, {
+        handleControlStream,
+        handleVideoStreams,
+        handleInputStream,
+      })
     }
 
     void handleMount()
   }, [
     handleConnecting,
     handleControlStream,
+    handleStream,
     handleInputStream,
     handleVideoStreams,
   ])

@@ -17,7 +17,7 @@ export function useControlStream() {
         addLogEvent(
           "CONTROL",
           `Control writer close warning: ${(error as Error).message}`,
-          "error",
+          "warn",
         )
       })
     },

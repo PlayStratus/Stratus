@@ -81,7 +81,7 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
     std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
 }
 
-absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length)
+absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType StreamType, enum VideoMessageType MessageType, void* Buffer, int Length)
 {
     if (VideoStream && VideoStream->CanWrite())
     {
@@ -89,9 +89,15 @@ absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum Transpor
 
       webtransport::StreamWriteOptions CurrentWriteOptions;
 
+      uint8_t NetStreamType = StreamType;
+      quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
+      absl::Status ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
+      delete StreamTypeData;
+      if (!ret.ok()) return ret;
+
       uint8_t NetMessageType = MessageType;
       quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
-      absl::Status ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+      ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
       delete MessageTypeData;
       if (!ret.ok()) return ret;
 
