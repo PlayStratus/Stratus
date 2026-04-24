@@ -51,18 +51,20 @@ struct StratusCertificate *create_certificate() {
     options.subject = "CN=subject";
     options.serial_number = 0x12345678;
 
-    time_t tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    tm utc_tm = *gmtime(&tt);
+    time_t tt_start = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    time_t tt_end = tt_start + 7 * 24*60*60; // Cert valid for 7 days
+    tm tm_start = *gmtime(&tt_start);
+    tm tm_end = *gmtime(&tt_end);
 
-    options.validity_start.year = utc_tm.tm_year + 1900;
-    options.validity_start.month = utc_tm.tm_mon + 1;
-    options.validity_start.day = utc_tm.tm_mday;
+    options.validity_start.year = tm_start.tm_year + 1900;
+    options.validity_start.month = tm_start.tm_mon + 1;
+    options.validity_start.day = tm_start.tm_mday;
     options.validity_start.hour = options.validity_start.minute =
         options.validity_start.minute = 0;
 
-    options.validity_end.year = utc_tm.tm_year + 1900;
-    options.validity_end.month = utc_tm.tm_mon + 1;
-    options.validity_end.day = utc_tm.tm_mday + 7; // Cert valid for 7 days
+    options.validity_end.year = tm_end.tm_year + 1900;
+    options.validity_end.month = tm_end.tm_mon + 1;
+    options.validity_end.day = tm_end.tm_mday;
     options.validity_end.hour = options.validity_end.minute =
         options.validity_end.minute = 0;
 
