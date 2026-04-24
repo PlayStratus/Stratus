@@ -25,6 +25,7 @@ struct egl_capture_context {
     GLuint fbo;
 };
 
+void egl_capture_destroy(struct egl_capture_context *ctx);
 struct egl_capture_context *egl_capture_init(void);
 int egl_capture_dmabuf_frame(struct egl_capture_context *ctx,
                              struct dma_buffer *dma_buf,
