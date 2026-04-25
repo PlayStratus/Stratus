@@ -5,6 +5,9 @@
  * each stream session.
  */
 
+#define _GNU_SOURCE
+
+#include <asm-generic/errno-base.h>
 #include <assert.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -33,6 +36,22 @@
 #define MAX_DIMENSIONS_LEN 10
 
 /*
+ * Per-thread constant data, including a human-readable module name and the
+ * module entry function.
+ */
+const struct {
+    const char *name;
+    void *entry;
+} thread_data[THREAD_COUNT] = {
+    [THREAD_CAPTURE]        = { "capture",      (void *)&capture_main       },
+    [THREAD_CAPTURE_PW]     = { "capture_pw",   (void *)&capture_pw_main    },
+    [THREAD_AUDIO_ENCODER]  = { "audio_encode", (void *)&audio_encoder_main },
+    [THREAD_ENCODER]        = { "encode",       (void *)&encode_main        },
+    [THREAD_INPUT]          = { "input",        (void *)&input_main         },
+    [THREAD_TRANSPORT]      = { "transport",    (void *)&transport_main     },
+};
+
+/*
  * Forcibly stop a stream session and free its resources
  */
 void session_teardown(struct session *session) {
@@ -41,37 +60,25 @@ void session_teardown(struct session *session) {
     if (session == NULL)
         return;
 
+    // Notify threads of session teardown
+    session->args.is_active = false;
     audio_context = &session->args.audio_context;
-
     pthread_mutex_lock(&audio_context->format_mutex);
-    audio_context->shutdown_requested = 1;
     pthread_cond_broadcast(&audio_context->format_cond);
     pthread_mutex_unlock(&audio_context->format_mutex);
 
-    // Kill module threads and make sure they're dead
-    if (session->capture_thread != 0) {
-        pthread_cancel(session->capture_thread);
-        pthread_join(session->capture_thread, NULL);
-    }
-    if (session->capture_pw_thread != 0) {
-        pthread_cancel(session->capture_pw_thread);
-        pthread_join(session->capture_pw_thread, NULL);
-    }
-    if (session->encode_thread != 0) {
-        pthread_cancel(session->encode_thread);
-        pthread_join(session->encode_thread, NULL);
-    }
-    if (session->input_thread != 0) {
-        pthread_cancel(session->input_thread);
-        pthread_join(session->input_thread, NULL);
-    }
+    // Give threads 100ms to get to a good stopping point before we kill them
+    usleep(100000);
+
     if (audio_context->ring_buffer != NULL)
         ring_buffer_close(audio_context->ring_buffer);
-    if (session->audio_encoder_thread != 0)
-        pthread_join(session->audio_encoder_thread, NULL);
-    if (session->transport_thread != 0) {
-        pthread_cancel(session->transport_thread);
-        pthread_join(session->transport_thread, NULL);
+
+    // Kill module threads and make sure they're dead
+    for (int thread = 0; thread < THREAD_COUNT; thread++) {
+        if (session->thread_states[thread]) {
+            pthread_cancel(session->threads[thread]);
+            pthread_join(session->threads[thread], NULL);
+        }
     }
 
     // send kill to the game's process tree
@@ -193,6 +200,7 @@ struct session *session_start(char *session_id, char *game_id, int width,
         goto err_cond_init;
     }
 
+    session->args.is_active = true;
     session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;
@@ -215,18 +223,17 @@ struct session *session_start(char *session_id, char *game_id, int width,
         goto err_rbuf_3;
 
     // Start modules in separate threads
-    pthread_create(&session->capture_thread, NULL, (void *)&capture_main,
-                   &session->args);
-    pthread_create(&session->capture_pw_thread, NULL, (void *)&capture_pw_main,
-                   &session->args);
-    pthread_create(&session->encode_thread, NULL, (void *)&encode_main,
-                   &session->args);
-    pthread_create(&session->audio_encoder_thread, NULL,
-                   (void *)&audio_encoder_main, &session->args);
-    pthread_create(&session->input_thread, NULL, (void *)&input_main,
-                   &session->args);
-    pthread_create(&session->transport_thread, NULL, (void *)&transport_main,
-                   &session->args);
+    for (int thread = 0; thread < THREAD_COUNT; thread++) {
+        if (pthread_create(&session->threads[thread], NULL,
+                           thread_data[thread].entry, &session->args) < 0) {
+            perror("[Sidecar] pthread_create");
+            goto err_start;
+        }
+        session->thread_states[thread] = 1;
+
+        assert(pthread_setname_np(session->threads[thread],
+                                  thread_data[thread].name) == 0);
+    }
 
     // Start game
     session->game_pid = session_launch_game(session->game_id,
@@ -256,24 +263,51 @@ err_malloc_1:
 }
 
 /*
- * Check to see if game has exited
+ * Poll the status of a session
  *
- * Returns 1 if the game has exited, 0 if it has not, and -1 on failure.
+ * Returns 1 if the game exited or the user disconnected, -1 if a module has
+ * crashed, and 0 otherwise.
  */
 int session_poll(struct session *session) {
-    if (session->game_pid == 0) {
-        // Game has already exited
-        return 1;
-    }
+    int ret;
 
-    int ret = waitpid(session->game_pid, NULL, WNOHANG);
-    if (ret < 0) {
+    // Check if game has exited
+    if (session->game_pid == 0 ||
+        (ret = waitpid(session->game_pid, NULL, WNOHANG)) > 0) {
+
+        fprintf(stderr, "[Sidecar] Detected game exit\n");
+
+        // Clear game_pid so we don't try to wait on the process again
+        session->game_pid = 0;
+
+        return 1;
+    } else if (ret < 0) {
         perror("[Sidecar] waitpid");
         return -1;
-    } else if (ret > 0) {
-        // Game has exited - clear game_pid so we don't try to wait on it again
-        session->game_pid = 0;
-        return 1;
+    }
+
+    // Check if module threads have exited
+    for (int thread = 0; thread < THREAD_COUNT; thread++) {
+        if (session->thread_states[thread] == 0 ||
+            (ret = pthread_tryjoin_np(session->threads[thread], NULL)) == 0) {
+
+            fprintf(stderr, "[Sidecar] Detected %s module exit\n",
+                    thread_data[thread].name);
+
+            // Unset thread_states[thread] to avoid joining to the thread again
+            session->thread_states[thread] = 0;
+
+            if (thread == THREAD_TRANSPORT) {
+                // If the Transport thread exited, we'll assume it's because the
+                // user disconnected.
+                return 1;
+            } else {
+                return -1;
+            }
+        } else if (ret != EBUSY) {
+            perror("[Sidecar] pthread_tryjoin_np");
+            return -1;
+        }
     }
 
     return 0;

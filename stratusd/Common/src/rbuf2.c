@@ -96,6 +96,27 @@ void rbuf_destroy(struct rbuf *buf) {
 }
 
 /*
+ * Free expired ring buffer entries
+ */
+void rbuf_free_expired(struct rbuf *buf) {
+    int i, idx;
+
+    assert(buf->free != NULL);
+
+    if (buf->entries[buf->tail] != NULL) {
+        // There are expired entries to be freed
+
+        for (i = 1; i < buf->capacity - rbuf_size(buf); i++) {
+            idx = (buf->head + i) % buf->capacity;
+            if (buf->entries[idx] != NULL) {
+                buf->free(buf->entries[idx]);
+                buf->entries[idx] = NULL;
+            }
+        }
+    }
+}
+
+/*
  * Push a non-NULL entry to the ring buffer
  *
  * Returns 0 on success and -1 on failure.
@@ -108,6 +129,8 @@ int rbuf_push(struct rbuf *buf, void *data) {
         fprintf(stderr, "[Common] ring buffer full\n");
         return -1;
     }
+
+    rbuf_free_expired(buf);
 
     // Update head ptr after inserting data to avoid consumer reading NULL
     buf->entries[buf->head] = data;
@@ -170,9 +193,6 @@ void rbuf_pop(struct rbuf *buf) {
     assert(rbuf_size(buf) > 0);
 
     buf->tail = (buf->tail + 1) % buf->capacity;
-    assert(buf->free != NULL);
-    buf->free(buf->entries[buf->tail]);
-    buf->entries[buf->tail] = NULL;
 }
 
 /*

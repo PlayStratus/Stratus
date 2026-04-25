@@ -58,6 +58,15 @@ static int handle_session_create(struct proxy_session *session) {
  */
 static enum proxy_actions handle_message(struct proxy_message *msg) {
     int i, j, count;
+    struct capture_session *session;
+
+    // Ideally we would release buffers after the Encode module pops them, but
+    // being able to release them from the Capture thread better avoids race
+    // conditions. So instead we will just release buffers as often as we can
+    // here. We are assuming that the game will always be sending Wayland
+    // messages semi-frequently.
+    session = msg->conn->session->proxy->userdata;
+    rbuf_free_expired(session->encode_queue);
 
     // Call the appropriate Wayland message handler
     count = sizeof(message_handlers) / sizeof(struct message_handler*);

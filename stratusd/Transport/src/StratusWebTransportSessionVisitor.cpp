@@ -27,6 +27,7 @@ void StratusWebTransportSessionVisitor::OnSessionReady()
 void StratusWebTransportSessionVisitor::OnSessionClosed(WebTransportSessionError error_code, const std::string& error_message)
 {
     std::cerr << "[Transport] Session closed with Error Code " << error_code << " " << error_message << std::endl;
+    StaticTransportSession->is_thread_active = false;
 }
 
 

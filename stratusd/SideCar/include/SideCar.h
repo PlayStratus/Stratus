@@ -2,6 +2,7 @@
 #define SIDECAR_H
 
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "Common.h"
@@ -20,10 +21,10 @@ struct audio_context {
     pthread_mutex_t format_mutex;
     pthread_cond_t format_cond;
     int format_ready;
-    int shutdown_requested;
 };
 
 struct session_args {
+    bool is_active;
     char *encode_output;
     uint32_t width;
     uint32_t height;

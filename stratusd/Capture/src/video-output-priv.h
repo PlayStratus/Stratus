@@ -25,16 +25,13 @@ struct wl_shm_buffer {
 
 /*
  * Contains data for a wl_buffer object
- *
- * Note: we do not process all methods that create buffers, so not every
- * wl_buffer object will correspond to an instance of the wl_buffer struct.
  */
 struct wl_buffer {
     uint32_t id;
     int32_t width;
     int32_t height;
-    struct wl_shm_buffer *shm_buf; // NULL if buffer is not shm-backed
-    struct dma_buffer *dma_buf;
+    struct wl_shm_buffer *shm_buf; // NULL if buffer is dma-backed
+    struct dma_buffer *dma_buf;    // NULL if buffer is shm-backed
     uint32_t dependents;
 };
 

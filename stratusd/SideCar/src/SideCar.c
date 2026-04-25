@@ -206,6 +206,7 @@ int sidecar_on_stop_session(struct sidecar_context *ctx, char *session_id) {
  * Returns 0 on success and -1 on failure.
  */
 int sidecar_main() {
+    int ret;
     struct sidecar_context ctx;
     time_t last_heartbeat;
     char *test_api_msg;
@@ -237,10 +238,21 @@ int sidecar_main() {
             last_heartbeat = time(NULL);
         }
 
-        if (ctx.active_session != NULL && session_poll(ctx.active_session) != 0)
-        {
-            if (api_send_stop_session(ctx.api_client, ctx.active_session->id) < 0)
-                break;
+        if (ctx.active_session != NULL &&
+            (ret = session_poll(ctx.active_session)) != 0) {
+
+            // Session ended or crashed
+
+            if (ret == -1) {
+                if (api_send_session_error(ctx.api_client,
+                                           ctx.active_session->id,
+                                           "Session crashed") < 0)
+                    break;
+            } else if (ret == 1) {
+                if (api_send_stop_session(ctx.api_client,
+                                          ctx.active_session->id) < 0)
+                    break;
+            }
             if (sidecar_on_stop_session(&ctx, ctx.active_session->id) < 0)
                 break;
             if (getenv("STRATUSD_SIDECAR_ONESHOT") != NULL)

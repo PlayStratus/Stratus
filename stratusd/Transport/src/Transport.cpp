@@ -53,7 +53,7 @@ void transport_thread(struct transport_session* session)
 
     std::cerr << "[transport] Starting WebTransport on port: " << (int)session->port;
 
-    while (1) {
+    while (*session->is_session_active && session->is_thread_active) {
       server->WaitForEvents();
 
       struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
@@ -96,6 +96,8 @@ int transport_main(struct session_args *args) {
         std::cerr << "[Transport] transport_init failed\n";
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+    session->is_session_active = &args->is_active;
+    session->is_thread_active = true;
     session->video_queue = args->video_transport_queue;
     session->input_queue = args->input_queue;
     rbuf_set_free(session->input_queue, &transport_free_input_msg);
@@ -103,6 +105,13 @@ int transport_main(struct session_args *args) {
     pthread_cleanup_push((void (*)(void*))transport_destroy, session);
 
     transport_thread(session);
+
+    // If is_thread_active was set to zero, then we should exit immediately so
+    // the SideCar detects that the client has disconnected. Otherwise, we must
+    // have exited due to the is_session_active flag and so we should wait to be
+    // killed by the SideCar.
+    while (session->is_thread_active)
+        sleep(1);
 
 end:
     pthread_cleanup_pop(1);
