@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Menu } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import Logo from "./stratus-logo.png"
 
@@ -18,9 +19,36 @@ import type { GameType } from "@/lib/types"
 import SearchBar from "./SearchBar"
 import { useAuth } from "@/components/auth/AuthProvider"
 
-export default function NavClient({ games }: { games: GameType[] }) {
+type Props = {
+  games: GameType[]
+  revealOnScroll?: boolean
+}
+
+export default function NavClient({
+  games,
+  revealOnScroll = false,
+}: Readonly<Props>) {
   const { user, logout } = useAuth()
   const router = useRouter()
+  const [isRevealed, setIsRevealed] = useState(!revealOnScroll)
+
+  useEffect(() => {
+    if (!revealOnScroll) {
+      setIsRevealed(true)
+      return
+    }
+
+    const updateNavVisibility = () => {
+      setIsRevealed(window.scrollY > 96)
+    }
+
+    updateNavVisibility()
+    window.addEventListener("scroll", updateNavVisibility, { passive: true })
+
+    return () => {
+      window.removeEventListener("scroll", updateNavVisibility)
+    }
+  }, [revealOnScroll])
 
   const handleLogout = async () => {
     await logout()
@@ -28,11 +56,26 @@ export default function NavClient({ games }: { games: GameType[] }) {
   }
 
   return (
-    <nav className='sticky top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur'>
+    <nav
+      className={
+        (revealOnScroll
+          ? "fixed transition-all duration-300 ease-out "
+          : "sticky ") +
+        "top-0 left-0 right-0 z-40 border-b bg-background/95 backdrop-blur " +
+        (isRevealed
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-full opacity-0")
+      }
+    >
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
         <div className='flex items-center gap-4'>
           <Link href='/'>
-            <Image src={Logo} alt='Stratus' height={34} />
+            <Image
+              src={Logo}
+              alt='Stratus'
+              height={34}
+              style={{ width: "auto" }}
+            />
           </Link>
 
           <div className='hidden md:flex items-center'>
@@ -40,8 +83,12 @@ export default function NavClient({ games }: { games: GameType[] }) {
               <Button variant='link'>Browse</Button>
             </Link>
 
-            <Link href='/about'>
+            <Link href='/#About'>
               <Button variant='link'>About</Button>
+            </Link>
+
+            <Link href='/#Blogs'>
+              <Button variant='link'>Blogs</Button>
             </Link>
           </div>
         </div>
@@ -97,8 +144,14 @@ export default function NavClient({ games }: { games: GameType[] }) {
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
-                  <Link href='/about' className='w-full cursor-pointer'>
+                  <Link href='/#About' className='w-full cursor-pointer'>
                     About
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href='/#Blogs' className='w-full cursor-pointer'>
+                    Blogs
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
