@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, useEffect, useRef } from "react"
 
+import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
 import { useControlStream } from "@/lib/transport/hooks/controlStream"
 import { useVideoStream } from "@/lib/transport/hooks/videoStream"
 import { useInputStream } from "@/lib/transport/hooks/inputStream"
@@ -29,6 +30,8 @@ export default function Streaming({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hasStartedRef = useRef(false)
   const isMountedRef = useRef(true)
+
+  const { handleStream } = useStreamRouter()
 
   const { handleControlStream } = useControlStream()
   const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
@@ -63,9 +66,11 @@ export default function Streaming({
         return
       }
 
-      await handleControlStream(transport)
-      await handleInputStream(transport)
-      await handleVideoStreams(transport)
+      await handleStream(transport, {
+        handleControlStream,
+        handleVideoStreams,
+        handleInputStream,
+      })
 
       setStatus((previousStatus) =>
         previousStatus === "LOADING" ? "STREAMING" : previousStatus,
@@ -80,6 +85,7 @@ export default function Streaming({
   }, [
     handleConnecting,
     handleControlStream,
+    handleStream,
     handleInputStream,
     handleVideoStreams,
     tlsFingerprint,

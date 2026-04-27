@@ -14,9 +14,8 @@ export function useVideoStream(
   const { addLogEvent } = useLogs()
   const streamNumberRef = useRef<number>(1)
   const workerRef = useRef<Worker | null>(null)
-  const incomingStreamReaderRef = useRef<ReadableStreamDefaultReader<
-    ReadableStream<Uint8Array>
-  > | null>(null)
+  const incomingStreamReaderRef =
+    useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
   const streamReadersRef = useRef<Set<ReadableStreamDefaultReader<Uint8Array>>>(
     new Set(),
   )
@@ -82,7 +81,11 @@ export function useVideoStream(
   }, [addLogEvent, canvasRef, setStatus])
 
   const readFromIncomingStream = useCallback(
-    async (stream: ReadableStream<Uint8Array>, number: number) => {
+    async (
+      reader: ReadableStreamDefaultReader<Uint8Array>,
+      number: number,
+      initialChunk: Uint8Array,
+    ) => {
       const worker = getWorker()
       if (!worker) {
         addLogEvent(
@@ -90,10 +93,11 @@ export function useVideoStream(
           "No video worker available; cannot read stream",
           "error",
         )
+        await reader.cancel().catch(() => undefined)
+        reader.releaseLock()
         return
       }
 
-      const reader = stream.getReader()
       streamReadersRef.current.add(reader)
       worker.postMessage({ type: "stream-start", stream: number })
       let pendingChunks: ArrayBuffer[] = []
@@ -115,7 +119,36 @@ export function useVideoStream(
         )
       }
 
+      const queueChunk = (value: Uint8Array) => {
+        if (value.length === 0) {
+          return
+        }
+
+        const chunk = toTransferableBuffer(value)
+        pendingChunks.push(chunk)
+        pendingChunkBytes += chunk.byteLength
+
+        if (
+          pendingChunks.length >= MAX_CHUNK_BATCH_COUNT ||
+          pendingChunkBytes >= MAX_CHUNK_BATCH_BYTES
+        ) {
+          if (flushTimeoutId) {
+            clearTimeout(flushTimeoutId)
+          }
+          flushPendingChunks()
+          return
+        }
+
+        if (!flushTimeoutId) {
+          flushTimeoutId = setTimeout(() => {
+            flushPendingChunks()
+          }, CHUNK_BATCH_DELAY_MS)
+        }
+      }
+
       try {
+        queueChunk(initialChunk)
+
         while (true) {
           const { value, done } = await reader.read()
           if (done) {
@@ -131,26 +164,7 @@ export function useVideoStream(
           }
           if (!value || value.length === 0) continue
 
-          const chunk = toTransferableBuffer(value)
-          pendingChunks.push(chunk)
-          pendingChunkBytes += chunk.byteLength
-
-          if (
-            pendingChunks.length >= MAX_CHUNK_BATCH_COUNT ||
-            pendingChunkBytes >= MAX_CHUNK_BATCH_BYTES
-          ) {
-            if (flushTimeoutId) {
-              clearTimeout(flushTimeoutId)
-            }
-            flushPendingChunks()
-            continue
-          }
-
-          if (!flushTimeoutId) {
-            flushTimeoutId = setTimeout(() => {
-              flushPendingChunks()
-            }, CHUNK_BATCH_DELAY_MS)
-          }
+          queueChunk(value)
         }
       } catch (e) {
         if (isUnmountedRef.current) return
@@ -173,28 +187,22 @@ export function useVideoStream(
   )
 
   const handleVideoStreams = useCallback(
-    async (transport: WebTransport) => {
+    async (
+      reader: ReadableStreamDefaultReader<Uint8Array>,
+      initialChunk: Uint8Array,
+    ) => {
       if (incomingStreamReaderRef.current) {
+        await reader.cancel().catch(() => undefined)
+        reader.releaseLock()
         return
       }
 
-      const reader = transport.incomingUnidirectionalStreams.getReader()
       incomingStreamReaderRef.current = reader
+      const number = streamNumberRef.current++
 
       try {
-        while (true) {
-          const { value, done } = await reader.read()
-          if (done) {
-            incomingStreamReaderRef.current = null
-            addLogEvent("VIDEO", "Done accepting unidirectional streams!")
-            return
-          }
-
-          const stream = value
-          const number = streamNumberRef.current++
-          addLogEvent("VIDEO", "New incoming unidirectional stream #" + number)
-          void readFromIncomingStream(stream, number)
-        }
+        addLogEvent("VIDEO", "New incoming video stream #" + number)
+        await readFromIncomingStream(reader, number, initialChunk)
       } catch (e) {
         if (isUnmountedRef.current) return
         const errorMessage = e instanceof Error ? e.message : String(e)
@@ -205,7 +213,6 @@ export function useVideoStream(
         )
       } finally {
         incomingStreamReaderRef.current = null
-        reader.releaseLock()
       }
     },
     [addLogEvent, readFromIncomingStream],
