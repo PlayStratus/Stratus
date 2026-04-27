@@ -10,6 +10,8 @@ const CHUNK_BATCH_DELAY_MS = 8
 export function useVideoStream(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   setStatus: React.Dispatch<React.SetStateAction<StatusType>>,
+  setAverageRenderTimeMs?: React.Dispatch<React.SetStateAction<number>>,
+  setFps?: React.Dispatch<React.SetStateAction<number>>,
 ) {
   const { addLogEvent } = useLogs()
   const streamNumberRef = useRef<number>(1)
@@ -59,6 +61,11 @@ export function useVideoStream(
 
       if (message.type === "status") {
         setStatus(message.status)
+      } else if (message.type === "metrics") {
+        setAverageRenderTimeMs?.(message.averageRenderTimeMs)
+        setFps?.(message.fps)
+      } else if (message.type === "error") {
+        addLogEvent("VIDEO", message.message, "error")
       }
     }
 
@@ -78,7 +85,7 @@ export function useVideoStream(
 
     workerRef.current = worker
     return worker
-  }, [addLogEvent, canvasRef, setStatus])
+  }, [addLogEvent, canvasRef, setAverageRenderTimeMs, setFps, setStatus])
 
   const readFromIncomingStream = useCallback(
     async (

@@ -23,6 +23,10 @@ let timestampUs = 0
 let droppingUntilKeyframe = false
 let hasLoggedDrop = false
 let hasSentStreamingStatus = false
+let totalRenderLatencyMs = 0
+let renderedFrameCount = 0
+let firstFrameRenderedAtMs: number | null = null
+const chunkReceivedAtByTimestamp = new Map<number, number>()
 let isClosed = false
 
 globalThis.onmessage = (event: MessageEvent<any>) => {
@@ -142,13 +146,15 @@ function processFrames() {
       droppingUntilKeyframe = false
     }
 
+    const frameTimestampUs = timestampUs
     const chunk = new EncodedVideoChunk({
       type: header.chunkType,
-      timestamp: timestampUs,
+      timestamp: frameTimestampUs,
       data: frameData,
     })
     timestampUs += FRAME_DURATION_US
 
+    chunkReceivedAtByTimestamp.set(frameTimestampUs, nowMs())
     currentDecoder.decode(chunk)
   }
 }
@@ -193,6 +199,7 @@ function ensureDecoder() {
         } else {
           ctx.drawImage(frame, 0, 0)
         }
+        updateMetrics(frame.timestamp)
 
         if (!hasSentStreamingStatus) {
           globalThis.postMessage({ type: "status", status: "STREAMING" })
@@ -222,6 +229,7 @@ function resetStreamState() {
   droppingUntilKeyframe = false
   hasLoggedDrop = false
   hasSentStreamingStatus = false
+  resetMetrics()
 
   if (decoder) {
     decoder.reset()
@@ -241,6 +249,48 @@ function closeWorker() {
   activeStream = null
   frameBuffer = new ChunkRingBuffer()
   globalThis.close()
+}
+
+function updateMetrics(frameTimestamp: number) {
+  const receivedAtMs = chunkReceivedAtByTimestamp.get(frameTimestamp)
+  chunkReceivedAtByTimestamp.delete(frameTimestamp)
+
+  if (receivedAtMs === undefined) {
+    return
+  }
+
+  const renderedAtMs = nowMs()
+  firstFrameRenderedAtMs ??= renderedAtMs
+  renderedFrameCount += 1
+  totalRenderLatencyMs += renderedAtMs - receivedAtMs
+
+  const elapsedSeconds = Math.max(
+    (renderedAtMs - firstFrameRenderedAtMs) / 1000,
+    1 / 1000,
+  )
+
+  globalThis.postMessage({
+    type: "metrics",
+    averageRenderTimeMs: totalRenderLatencyMs / renderedFrameCount,
+    fps: renderedFrameCount / elapsedSeconds,
+  })
+}
+
+function resetMetrics() {
+  totalRenderLatencyMs = 0
+  renderedFrameCount = 0
+  firstFrameRenderedAtMs = null
+  chunkReceivedAtByTimestamp.clear()
+
+  globalThis.postMessage({
+    type: "metrics",
+    averageRenderTimeMs: 0,
+    fps: 0,
+  })
+}
+
+function nowMs() {
+  return performance.timeOrigin + performance.now()
 }
 
 function postLog(message: string, severity: "info" | "error" = "info") {

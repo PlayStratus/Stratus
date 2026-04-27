@@ -22,6 +22,8 @@ type MVPPageProps = {
 
 function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   const [status, setStatus] = useState<StatusType>("LOADING")
+  const [averageRenderTimeMs, setAverageRenderTimeMs] = useState(0)
+  const [fps, setFps] = useState(0)
 
   const router = useRouter()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -47,7 +49,12 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   })
   const { handleStream } = useStreamRouter()
   const { handleControlStream } = useControlStream()
-  const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
+  const { handleVideoStreams } = useVideoStream(
+    canvasRef,
+    setStatus,
+    setAverageRenderTimeMs,
+    setFps,
+  )
   const { handleInputStream, setManualAxisX } = useInputStream()
 
   useEffect(() => {
@@ -84,7 +91,17 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
 
   return (
     <>
-      <canvas ref={canvasRef} className='h-screen w-screen bg-black' />
+      <canvas
+        ref={canvasRef}
+        className='h-screen w-screen bg-black'
+        data-average-render-time-ms={averageRenderTimeMs}
+        data-fps={fps}
+      />
+
+      <div className='fixed right-3 top-3 z-20 rounded bg-black/45 px-3 py-2 font-mono text-xs text-white/80'>
+        <div>FPS: {fps.toFixed(1)}</div>
+        <div>Avg render: {averageRenderTimeMs.toFixed(1)}ms</div>
+      </div>
 
       <InputButtons onAxisXChange={setManualAxisX} />
 
