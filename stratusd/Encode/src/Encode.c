@@ -239,10 +239,14 @@ int encode_main(struct session_args *args) {
     while (args->is_active) {
         struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
         if (frame != NULL) {
-            if (frame->shm_data != NULL) {
-                assert(encode_video_frame(ctx, frame->shm_data, frame->stride, 0) == 0);
-            } else if (frame->dma_data != NULL) {
-                assert(dma_encode_video_frame(ctx, frame->dma_data, frame->stride) == 0);
+            if (args->client_connected) {
+                if (frame->shm_data != NULL) {
+                    assert(encode_video_frame(ctx, frame->shm_data,
+                                              frame->stride, 0) == 0);
+                } else if (frame->dma_data != NULL) {
+                    assert(dma_encode_video_frame(ctx, frame->dma_data,
+                                                  frame->stride) == 0);
+                }
             }
             rbuf_pop(ctx->input_queue);
         }

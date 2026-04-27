@@ -32,8 +32,10 @@ void rbuf_set_free(struct rbuf *buf, rbuf_entry_free *free);
 void rbuf_free_expired(struct rbuf *buf);
 
 // Consumer-only functions
-void *rbuf_wait_peak_latest(struct rbuf *buf);
+void *rbuf_try_peak(struct rbuf *buf);
 void *rbuf_try_peak_latest(struct rbuf *buf);
+void *rbuf_wait_peak(struct rbuf *buf);
+void *rbuf_wait_peak_latest(struct rbuf *buf);
 void rbuf_pop(struct rbuf *buf);
 
 // Shared functions

@@ -141,17 +141,53 @@ int rbuf_push(struct rbuf *buf, void *data) {
 }
 
 /*
- * Pop all older entries and then return the latest entry without popping it
- *
- * The ring buffer must not be empty.
+ * Wait for the ring buffer to become non-empty
  */
-static void *_rbuf_peak(struct rbuf *buf) {
-    assert(rbuf_size(buf) > 0);
+static void _rbuf_wait(struct rbuf *buf) {
+    sem_wait(&buf->sem);
+    sem_post(&buf->sem); // sem_wait decrements buf->sem, so we must reset it
+}
+
+/*
+ * Pop all entries in the ring buffer except the latest one
+ */
+static void _rbuf_pop_old(struct rbuf *buf) {
     while (rbuf_size(buf) > 1)
         rbuf_pop(buf);
+}
 
-    // Return next entry
+/*
+ * Return the latest entry in the ring buffer after poping all older entries
+ *
+ * If the ring buffer is empty, a NULL pointer will be returned.
+ */
+static void *_rbuf_peak(struct rbuf *buf) {
+    if (rbuf_size(buf) == 0)
+        return NULL;
+
     void *data = buf->entries[(buf->tail + 1) % buf->capacity];
+    assert(data != NULL);
+    return data;
+}
+
+
+/*
+ * Return the next entry in the ring buffer
+ *
+ * If no such entry is available, a NULL pointer will be returned.
+ */
+void *rbuf_try_peak(struct rbuf *buf) {
+    return _rbuf_peak(buf);
+}
+
+/*
+ * Return the next entry in the ring buffer
+ *
+ * This function will block until the ring buffer is non empty.
+ */
+void *rbuf_wait_peak(struct rbuf *buf) {
+    _rbuf_wait(buf);
+    void *data = _rbuf_peak(buf);
     assert(data != NULL);
     return data;
 }
@@ -162,24 +198,21 @@ static void *_rbuf_peak(struct rbuf *buf) {
  * If no such entry is available, a NULL pointer will be returned.
  */
 void *rbuf_try_peak_latest(struct rbuf *buf) {
-    if (rbuf_size(buf) == 0)
-        return NULL;
-    else
-        return _rbuf_peak(buf);
+    _rbuf_pop_old(buf);
+    return _rbuf_peak(buf);
 }
 
 /*
  * Pop all older entries and then return the latest entry without popping it
  *
- * Note that this will block until the ring buffer is not empty.
+ * This function will block until the ring buffer is non empty.
  */
 void *rbuf_wait_peak_latest(struct rbuf *buf) {
-    // Wait for ring buffer to be non-empty
-    sem_wait(&buf->sem);
-    sem_post(&buf->sem); // sem_wait decrements buf->sem, so we must reset it
-    assert(rbuf_size(buf) > 0);
-
-    return _rbuf_peak(buf);
+    _rbuf_wait(buf);
+    _rbuf_pop_old(buf);
+    void *data = _rbuf_peak(buf);
+    assert(data != NULL);
+    return data;
 }
 
 /*

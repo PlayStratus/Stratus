@@ -56,7 +56,8 @@ void transport_thread(struct transport_session* session)
     while (*session->is_session_active && session->is_thread_active) {
       server->WaitForEvents();
 
-      struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)rbuf_try_peak_latest(session->video_queue);
+      struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)
+          rbuf_try_peak(session->video_queue);
       if (frame != NULL) {
         if (StaticTransportSession->WebTransportSession != NULL) {
           quic::StratusWebTransportSessionVisitor* CurrentSession = StaticTransportSession->WebTransportSession;
@@ -106,6 +107,7 @@ int transport_main(struct session_args *args) {
     }
     session->is_session_active = &args->is_active;
     session->is_thread_active = true;
+    session->client_connected = &args->client_connected;
     session->video_queue = args->video_transport_queue;
     session->input_queue = args->input_queue;
     rbuf_set_free(session->input_queue, &transport_free_input_msg);
