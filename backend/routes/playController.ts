@@ -13,12 +13,6 @@ import { getUserById } from "./authController.js"
 export const ControllerCreateSession = async (req: Request, res: Response) => {
   const { game_id, height, width } = req.body
 
-  console.log("Received request to create session with data:", {
-    game_id,
-    height,
-    width,
-  })
-
   if (!game_id || !height || !width) {
     return res
       .status(400)
@@ -45,10 +39,6 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
   if (!user) {
     return res.status(403).json({ error: "User not found" })
   }
-
-  console.log(
-    `Starting session for user ${user.Username} (ID: ${user_id}) and game ${game_id} with resolution ${width}x${height}`,
-  )
 
   const result = await startGameSession(
     game_id,

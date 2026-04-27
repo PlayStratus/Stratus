@@ -29,9 +29,7 @@ export function handleMessage(ws: WebSocket, message: any) {
 
 function start_confirmed(ws: WebSocket, message: any) {
   const { session_id, tls_fingerprint } = message.payload
-  console.log(
-    `Session started. session: ${session_id} | TLS: ${tls_fingerprint}`,
-  )
+
   if (!session_id || !tls_fingerprint) {
     throw new Error("Missing required fields: session_id, tls_fingerprint")
   }
