@@ -99,6 +99,7 @@ int transport_main(struct session_args *args) {
     }
     session->is_session_active = &args->is_active;
     session->is_thread_active = true;
+    session->client_connected = &args->client_connected;
     session->video_queue = args->video_transport_queue;
     session->input_queue = args->input_queue;
     rbuf_set_free(session->input_queue, &transport_free_input_msg);

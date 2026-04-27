@@ -15,6 +15,8 @@ StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTranspor
 
     assert(StaticTransportSession->WebTransportSession == NULL);
     StaticTransportSession->WebTransportSession = this;
+    *StaticTransportSession->client_connected = true;
+    std::cerr << "[Transport] Client connected" << std::endl;
 }
 
 void StratusWebTransportSessionVisitor::OnSessionReady()

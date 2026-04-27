@@ -201,6 +201,7 @@ struct session *session_start(char *session_id, char *game_id, int width,
     }
 
     session->args.is_active = true;
+    session->args.client_connected = false;
     session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;

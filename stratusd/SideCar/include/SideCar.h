@@ -25,6 +25,7 @@ struct audio_context {
 
 struct session_args {
     bool is_active;
+    bool client_connected; // Owned by Transport
     char *encode_output;
     uint32_t width;
     uint32_t height;

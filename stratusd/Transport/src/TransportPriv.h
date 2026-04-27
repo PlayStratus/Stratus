@@ -10,6 +10,7 @@ struct transport_session
 {
     const bool *is_session_active; // used to shutdown in response to SideCar
     bool is_thread_active;         // used to shutdown in response to client
+    bool *client_connected;
     int port;
     quic::QuicSocketAddress* QuicAddr;
     quic::QuicServer* QuicServer;
