@@ -53,6 +53,8 @@ stream game I/O. It is composed of seven modules:
       (defaults to `127.0.0.1`)
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
+    - `STRATUSD_PORT`: The port to listen for WebTransport connections on
+      (defaults to 4433)
     - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first
       session is stopped
 
