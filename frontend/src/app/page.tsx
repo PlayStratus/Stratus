@@ -19,7 +19,7 @@ export default async function Home() {
   const posts = await getAllBlogSummaries()
   return (
     <main className='min-h-screen'>
-      <Nav revealOnScroll />
+      <Nav revealOnScroll hideSearchBar />
 
       <section className='relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden'>
         <video

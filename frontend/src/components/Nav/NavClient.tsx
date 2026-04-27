@@ -22,11 +22,13 @@ import { useAuth } from "@/components/auth/AuthProvider"
 type Props = {
   games: GameType[]
   revealOnScroll?: boolean
+  hideSearchBar?: boolean
 }
 
 export default function NavClient({
   games,
   revealOnScroll = false,
+  hideSearchBar = false,
 }: Readonly<Props>) {
   const { user, logout } = useAuth()
   const router = useRouter()
@@ -93,9 +95,11 @@ export default function NavClient({
           </div>
         </div>
 
-        <div className='flex-1 max-w-xl mx-0 md:mx-4'>
-          <SearchBar games={games} />
-        </div>
+        {!hideSearchBar && (
+          <div className='flex-1 max-w-xl mx-0 md:mx-4'>
+            <SearchBar games={games} />
+          </div>
+        )}
 
         <div className='flex items-center gap-2'>
           {user ? (
