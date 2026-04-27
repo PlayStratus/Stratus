@@ -16,6 +16,7 @@ provides=('stratusd')
 
 backup=('etc/stratusd.conf')
 options=('!debug')
+install=stratusd.install
 
 source=(
   # TODO: This isn't quite best-practice, we should just download a release
