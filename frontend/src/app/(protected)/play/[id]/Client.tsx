@@ -206,14 +206,16 @@ function Client({ id, title }: Readonly<Props>) {
           setStatus={setStatus}
           setErrorMessage={handleErrorMessage}
         />
-      ) : (
+      ) : null}
+
+      {status === "NOT_STARTED" || status === "ERROR" ? (
         <LandingForm
           title={title}
           errorMessage={errorMessage}
           isStarting={isStarting}
           onStart={handleStart}
         />
-      )}
+      ) : null}
     </div>
   )
 }

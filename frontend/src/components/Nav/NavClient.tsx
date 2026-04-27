@@ -59,12 +59,6 @@ export default function NavClient({ games }: { games: GameType[] }) {
 
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem asChild>
-                  <Link href='/settings' className='w-full cursor-pointer'>
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
                   <button
                     type='button'
                     onClick={handleLogout}
