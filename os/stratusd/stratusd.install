@@ -1,0 +1,6 @@
+post_install() {
+    setcap 'cap_net_bind_service=ep' /usr/bin/stratusd
+}
+post_upgrade() {
+    setcap 'cap_net_bind_service=ep' /usr/bin/stratusd
+}

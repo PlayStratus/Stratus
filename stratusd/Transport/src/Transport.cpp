@@ -88,10 +88,18 @@ static void transport_free_input_msg(void *msg) {
 }
 
 int transport_main(struct session_args *args) {
-    int ret = 0;
+    char *raw_port;
+    int ret = 0, port;
     struct transport_session *session;
 
-    session = transport_init(4433, args->cert);
+    // Get WebTransport port
+    raw_port = getenv("STRATUSD_PORT");
+    if (raw_port == NULL)
+        port = 4433;
+    else
+        port = std::stoi(raw_port);
+
+    session = transport_init(port, args->cert);
     if (session == NULL) {
         std::cerr << "[Transport] transport_init failed\n";
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
