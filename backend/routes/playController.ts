@@ -61,10 +61,24 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
 }
 
 export function ControllerGetNodes(req: Request, res: Response) {
-  const nodesArray = Array.from(getAllNodes().entries()).map(([, info]) => ({
-    name: info.name,
-    last_heartbeat: info.last_heartbeat,
-    payload: info.node_payload,
-  }))
-  res.json(nodesArray)
+  const nodesByIdentity = new Map<
+    string,
+    { name: string; last_heartbeat: number; payload: any }
+  >()
+
+  for (const info of getAllNodes().values()) {
+    const node = {
+      name: info.name,
+      last_heartbeat: info.last_heartbeat,
+      payload: info.node_payload,
+    }
+    const identity = `${info.node_payload.hostname}:${info.node_payload.ip}`
+    const existing = nodesByIdentity.get(identity)
+
+    if (!existing || node.last_heartbeat > existing.last_heartbeat) {
+      nodesByIdentity.set(identity, node)
+    }
+  }
+
+  res.json(Array.from(nodesByIdentity.values()))
 }

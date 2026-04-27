@@ -1,5 +1,5 @@
 import { WebSocket } from "ws"
-import { updateHeartbeat, getNodeInfo } from "./node.js"
+import { deleteNode, updateHeartbeat, getNodeInfo } from "./node.js"
 import { resolveStart } from "./send.js"
 import { loadSession } from "./sessions.js"
 
@@ -16,6 +16,10 @@ export function handleMessage(ws: WebSocket, message: any) {
 
     case "stop_session":
       stop_session(message)
+      break
+
+    case "node_disconnect":
+      deleteNode(ws)
       break
 
     case "session_error":
