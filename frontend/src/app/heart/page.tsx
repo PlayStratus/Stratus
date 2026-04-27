@@ -67,19 +67,22 @@ export default function NodeHeartbeats() {
                 <div>
                   <dt className='text-muted-foreground'>CPU load</dt>
                   <dd>
-                    {node.payload.cpu_load} / {node.payload.cpu_count} cores
+                    {node.payload.cpu_load.toFixed(3)} /{" "}
+                    {node.payload.cpu_count.toFixed(3)} cores
                   </dd>
                 </div>
                 <div>
                   <dt className='text-muted-foreground'>RAM</dt>
                   <dd>
-                    {node.payload.ram_used} / {node.payload.ram_total} bytes
+                    {formatBytes(node.payload.ram_used)} /{" "}
+                    {formatBytes(node.payload.ram_total)} GB
                   </dd>
                 </div>
                 <div>
                   <dt className='text-muted-foreground'>Disk</dt>
                   <dd>
-                    {node.payload.disk_used} / {node.payload.disk_total} bytes
+                    {formatBytes(node.payload.disk_used)} /{" "}
+                    {formatBytes(node.payload.disk_total)} GB
                   </dd>
                 </div>
                 <div>
@@ -127,4 +130,8 @@ function formatDuration(totalSeconds: number) {
   return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds
     .toString()
     .padStart(2, "0")}`
+}
+
+function formatBytes(bytes: number) {
+  return (bytes / 10 ** 9).toFixed(3)
 }
