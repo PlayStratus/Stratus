@@ -14,13 +14,8 @@ export function useVideoStream(
   setFps?: React.Dispatch<React.SetStateAction<number>>,
 ) {
   const { addLogEvent } = useLogs()
-  const streamNumberRef = useRef<number>(1)
   const workerRef = useRef<Worker | null>(null)
-  const incomingStreamReaderRef =
-    useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
-  const streamReadersRef = useRef<Set<ReadableStreamDefaultReader<Uint8Array>>>(
-    new Set(),
-  )
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
   const isUnmountedRef = useRef(false)
 
   const getWorker = useCallback(() => {
@@ -28,88 +23,66 @@ export function useVideoStream(
       return workerRef.current
     }
 
-    if (typeof Worker === "undefined") {
-      addLogEvent("VIDEO", "Worker API not available in this browser", "error")
-      return null
-    }
-
     const canvas = canvasRef.current
-    if (!canvas) {
-      addLogEvent("VIDEO", "Canvas not ready for worker rendering", "error")
-      return null
-    }
-
-    if (typeof canvas.transferControlToOffscreen !== "function") {
-      addLogEvent("VIDEO", "OffscreenCanvas transfer is not available", "error")
+    if (!canvas?.transferControlToOffscreen) {
+      addLogEvent("VIDEO", "OffscreenCanvas is not available", "error")
       return null
     }
 
     const worker = new Worker(
       new URL("./videoStream.worker.ts", import.meta.url),
-      {
-        type: "module",
-      },
+      { type: "module" },
     )
 
     worker.onmessage = (event: MessageEvent<any>) => {
       const message = event.data
-
-      if (message.type === "log") {
-        addLogEvent("VIDEO", message.message, message.severity)
-        return
-      }
 
       if (message.type === "status") {
         setStatus(message.status)
       } else if (message.type === "metrics") {
         setAverageRenderTimeMs?.(message.averageRenderTimeMs)
         setFps?.(message.fps)
+      } else if (message.type === "log") {
+        addLogEvent("VIDEO", message.message, message.severity)
       } else if (message.type === "error") {
         addLogEvent("VIDEO", message.message, "error")
       }
     }
 
     worker.onerror = (event) => {
-      if (isUnmountedRef.current) return
-      addLogEvent(
-        "VIDEO",
-        `Video worker error: ${event.message || "Unknown worker error"}`,
-        "error",
-      )
+      if (!isUnmountedRef.current) {
+        addLogEvent("VIDEO", event.message || "Video worker error", "error")
+      }
     }
 
     const offscreenCanvas = canvas.transferControlToOffscreen()
     worker.postMessage({ type: "init", canvas: offscreenCanvas }, [
       offscreenCanvas,
     ])
-
     workerRef.current = worker
+    addLogEvent("VIDEO", "Video worker started")
+
     return worker
   }, [addLogEvent, canvasRef, setAverageRenderTimeMs, setFps, setStatus])
 
-  const readFromIncomingStream = useCallback(
+  const handleVideoStreams = useCallback(
     async (
       reader: ReadableStreamDefaultReader<Uint8Array>,
-      number: number,
       initialChunk: Uint8Array,
     ) => {
       const worker = getWorker()
-      if (!worker) {
-        addLogEvent(
-          "VIDEO",
-          "No video worker available; cannot read stream",
-          "error",
-        )
+      if (!worker || readerRef.current) {
         await reader.cancel().catch(() => undefined)
         reader.releaseLock()
         return
       }
 
-      streamReadersRef.current.add(reader)
-      worker.postMessage({ type: "stream-start", stream: number })
+      readerRef.current = reader
+
       let pendingChunks: ArrayBuffer[] = []
       let pendingChunkBytes = 0
       let flushTimeoutId: ReturnType<typeof setTimeout> | null = null
+
       const flushPendingChunks = () => {
         flushTimeoutId = null
 
@@ -120,10 +93,7 @@ export function useVideoStream(
         const chunks = pendingChunks
         pendingChunks = []
         pendingChunkBytes = 0
-        worker.postMessage(
-          { type: "chunk-batch", stream: number, chunks },
-          chunks,
-        )
+        worker.postMessage({ type: "chunk-batch", chunks }, chunks)
       }
 
       const queueChunk = (value: Uint8Array) => {
@@ -154,6 +124,8 @@ export function useVideoStream(
       }
 
       try {
+        addLogEvent("VIDEO", "Video stream opened")
+
         queueChunk(initialChunk)
 
         while (true) {
@@ -165,86 +137,40 @@ export function useVideoStream(
             } else if (pendingChunks.length > 0) {
               flushPendingChunks()
             }
-            addLogEvent("VIDEO", "Stream #" + number + " closed")
-            worker.postMessage({ type: "stream-end", stream: number })
+            addLogEvent("VIDEO", "Video stream closed")
             return
           }
-          if (!value || value.length === 0) continue
+          if (!value?.length) continue
 
           queueChunk(value)
         }
-      } catch (e) {
-        if (isUnmountedRef.current) return
-        const errorMessage = e instanceof Error ? e.message : String(e)
-        addLogEvent(
-          "VIDEO",
-          "Error while reading from stream #" + number + ": " + errorMessage,
-          "error",
-        )
+      } catch (error) {
+        if (!isUnmountedRef.current) {
+          addLogEvent(
+            "VIDEO",
+            `Video stream error: ${(error as Error).message}`,
+            "error",
+          )
+        }
       } finally {
         if (flushTimeoutId) {
           clearTimeout(flushTimeoutId)
           flushPendingChunks()
         }
-        streamReadersRef.current.delete(reader)
+        readerRef.current = null
         reader.releaseLock()
       }
     },
     [addLogEvent, getWorker],
   )
 
-  const handleVideoStreams = useCallback(
-    async (
-      reader: ReadableStreamDefaultReader<Uint8Array>,
-      initialChunk: Uint8Array,
-    ) => {
-      if (incomingStreamReaderRef.current) {
-        await reader.cancel().catch(() => undefined)
-        reader.releaseLock()
-        return
-      }
-
-      incomingStreamReaderRef.current = reader
-      const number = streamNumberRef.current++
-
-      try {
-        addLogEvent("VIDEO", "New incoming video stream #" + number)
-        await readFromIncomingStream(reader, number, initialChunk)
-      } catch (e) {
-        if (isUnmountedRef.current) return
-        const errorMessage = e instanceof Error ? e.message : String(e)
-        addLogEvent(
-          "VIDEO",
-          "Error while accepting streams: " + errorMessage,
-          "error",
-        )
-      } finally {
-        incomingStreamReaderRef.current = null
-      }
-    },
-    [addLogEvent, readFromIncomingStream],
-  )
-
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true
-
-      const incomingReader = incomingStreamReaderRef.current
-      if (incomingReader) {
-        void incomingReader.cancel().catch(() => undefined)
-      }
-
-      streamReadersRef.current.forEach((reader) => {
-        void reader.cancel().catch(() => undefined)
-      })
-      streamReadersRef.current.clear()
-
-      const worker = workerRef.current
+      void readerRef.current?.cancel().catch(() => undefined)
+      workerRef.current?.postMessage({ type: "close" })
+      workerRef.current?.terminate()
       workerRef.current = null
-      if (worker) {
-        worker.postMessage({ type: "close" })
-        worker.terminate()
-      }
     }
   }, [])
 

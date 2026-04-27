@@ -14,11 +14,24 @@ const VIDEO_DECODER_CONFIG: VideoDecoderConfig = {
   optimizeForLatency: true,
 }
 
+type VideoWorkerMessage =
+  | { type: "init"; canvas: OffscreenCanvas }
+  | { type: "chunk-batch"; chunks: ArrayBuffer[] }
+  | { type: "close" }
+
+type VideoMessageHeader = {
+  streamType: TransportStreamType
+  streamTypeLabel: string | number
+  messageType: VideoMessageType
+  messageTypeLabel: string | number
+  chunkType: EncodedVideoChunkType
+  payloadLen: number
+}
+
 let canvas: OffscreenCanvas | null = null
 let ctx: OffscreenCanvasRenderingContext2D | null = null
 let decoder: VideoDecoder | null = null
 let frameBuffer!: ChunkRingBuffer
-let activeStream: number | null = null
 let timestampUs = 0
 let droppingUntilKeyframe = false
 let hasLoggedDrop = false
@@ -29,7 +42,7 @@ let firstFrameRenderedAtMs: number | null = null
 const chunkReceivedAtByTimestamp = new Map<number, number>()
 let isClosed = false
 
-globalThis.onmessage = (event: MessageEvent<any>) => {
+globalThis.onmessage = (event: MessageEvent<VideoWorkerMessage>) => {
   if (isClosed) return
 
   const message = event.data
@@ -39,25 +52,8 @@ globalThis.onmessage = (event: MessageEvent<any>) => {
       handleInit(message.canvas)
       return
 
-    case "stream-start":
-      handleStreamStart(message.stream)
-      return
-
-    case "stream-end":
-      if (message.stream === activeStream) {
-        resetStreamState()
-      }
-      return
-
     case "chunk-batch":
-      if (message.stream !== activeStream) {
-        return
-      }
-
-      for (const chunk of message.chunks) {
-        frameBuffer.push(new Uint8Array(chunk))
-      }
-      processFrames()
+      handleChunkBatch(message.chunks)
       return
 
     case "close":
@@ -76,13 +72,16 @@ function handleInit(nextCanvas: OffscreenCanvas) {
   }
 }
 
-function handleStreamStart(stream: number) {
-  if (activeStream === stream) {
+function handleChunkBatch(chunks: ArrayBuffer[]) {
+  if (!frameBuffer) {
     return
   }
 
-  activeStream = stream
-  resetStreamState()
+  for (const chunk of chunks) {
+    frameBuffer.push(new Uint8Array(chunk))
+  }
+
+  processFrames()
 }
 
 function processFrames() {
@@ -95,13 +94,16 @@ function processFrames() {
     const header = frameBuffer.peekHeader()
     if (!header) break
 
-    if (frameBuffer.byteLength < VIDEO_MESSAGE_HEADER_BYTES + header.payloadLen) {
+    if (
+      frameBuffer.byteLength <
+      VIDEO_MESSAGE_HEADER_BYTES + header.payloadLen
+    ) {
       break
     }
 
     postLog(
       [
-        `Received video message header on stream #${activeStream ?? "unknown"}`,
+        "Received video message header",
         `streamType=${header.streamTypeLabel}`,
         `messageType=${header.messageTypeLabel}`,
         `chunkType=${header.chunkType}`,
@@ -246,7 +248,6 @@ function closeWorker() {
 
   canvas = null
   ctx = null
-  activeStream = null
   frameBuffer = new ChunkRingBuffer()
   globalThis.close()
 }
@@ -345,14 +346,7 @@ class ChunkRingBuffer {
       chunkType:
         messageType === VideoMessageType.Codec_Description ? "key" : "delta",
       payloadLen: readU32BE(this.headerScratch, 2),
-    } satisfies {
-      streamType: TransportStreamType
-      streamTypeLabel: string | number
-      messageType: VideoMessageType
-      messageTypeLabel: string | number
-      chunkType: EncodedVideoChunkType
-      payloadLen: number
-    }
+    } satisfies VideoMessageHeader
   }
 
   discard(length: number) {
