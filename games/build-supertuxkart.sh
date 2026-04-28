@@ -24,11 +24,11 @@ mkdir --parents "$BIN_DIR" "$SYS_DIR"
 # Download and extract files
 ZIP="$BUILD_DIR/stk.zip"
 UNZIP="$BUILD_DIR/stk"
-wget https://github.com/supertuxkart/stk-code/releases/download/1.5/SuperTuxKart-1.5-win.zip -O "$ZIP"
-unzip -q "$ZIP" 'SuperTuxKart-1.5-win/stk-code/build-x86_64/*' \
-    'SuperTuxKart-1.5-win/stk-code/data/*' -d "$UNZIP"
-mv "$UNZIP/SuperTuxKart-1.5-win/stk-code/build-x86_64/bin" "$SYS_DIR"
-mv "$UNZIP/SuperTuxKart-1.5-win/stk-code/data" "$SYS_DIR"
+wget https://github.com/PlayStratus/stk-code/releases/download/1.5/SuperTuxKart-1.5-win-ForceXInput.zip -O "$ZIP"
+unzip -q "$ZIP" 'SuperTuxKart-1.5-win-ForceXInput/stk-code/build-x86_64/*' \
+    'SuperTuxKart-1.5-win-ForceXInput/stk-code/data/*' -d "$UNZIP"
+mv "$UNZIP/SuperTuxKart-1.5-win-ForceXInput/stk-code/build-x86_64/bin" "$SYS_DIR"
+mv "$UNZIP/SuperTuxKart-1.5-win-ForceXInput/stk-code/data" "$SYS_DIR"
 
 # Add run scripts
 CONFIG_DIR='~/.wine/drive_c/users/$(whoami)/AppData/Roaming/supertuxkart/config-0.10'
