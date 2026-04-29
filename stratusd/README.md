@@ -40,6 +40,8 @@ stream game I/O. It is composed of seven modules:
       for testing purposes (e.g.
       `'{ "type": "start_session", "timestamp": "2026-02-27 18:00:00", "request_id": "b50e8400-e29b-41d4-a716-446655440000", "payload": { "session_id": "550e8400-e29b-41d4-a716-446655440001", "game_id": "sleep", "width": 640, "height": 480, "session_token": "b020ea96-83c0-46a8-aac0-0954abd1c8ac", "user_id": "7341faed-f80e-457e-a71e-789214869c04", "user_name": "Alice" } }'`)
     - `STRATUSD_AUDIO_ENCODE_DEBUG`: Set to log encoded audio frames
+    - `STRATUSD_BACKEND_PASSWORD`: The password used to authenticate with
+      the backend WebSocket API (if left undefined, authentication is disabled)
     - `STRATUSD_BACKEND_URL`: The URL of the backend WebSocket API
       (**required**, e.g. `ws://localhost:4000` or `wss://api.playstratus.io`)
     - `STRATUSD_CAPTURE_DEBUG`: Set to log proxied Wayland messages

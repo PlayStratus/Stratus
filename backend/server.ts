@@ -69,6 +69,26 @@ socket.on("connection", (ws) => {
   })
 })
 
+server.on("upgrade", (request, socket, head) => {
+  if (process.env.STRATUSD_PASSWORD) {
+    // Enforce basic authentication for stratusd nodes if STRATUSD_PASSWORD is set
+    try {
+      const ws_pw = `stratusd:${process.env.STRATUSD_PASSWORD}`
+      if (!request.headers.authorization) {
+        throw new Error("No stratusd password provided")
+      }
+      if (atob(request.headers.authorization.replace(/Basic /, '')) !== ws_pw) {
+        throw new Error("Incorrect stratusd password")
+      }
+    } catch {
+      console.warn(`Failed stratusd authentication from ${request.socket.remoteAddress}`)
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+      socket.destroy()
+      return
+    }
+  }
+})
+
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)
 })
