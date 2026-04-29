@@ -49,8 +49,6 @@ const server = http.createServer(app)
 socket = new WebSocketServer({ server })
 
 socket.on("connection", (ws) => {
-  console.log("New WebSocket connection")
-
   ws.on("message", (message) => {
     try {
       const parsed = JSON.parse(message.toString()) //parse message
