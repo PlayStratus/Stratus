@@ -1,12 +1,19 @@
+---
+title: Audio Capture Pipeline
+author: Nathen dela Torre
+image: ./images/audio_capture_pipeline.png
+tags: [Streaming Node, Audio]
+---
+
 # Audio Capture Pipeline
 
 ## Implementation
 
-![Audio Capture Pipeline](/stratusd/CapturePw/docs/pipeline.png)
+![Audio Capture Pipeline](./images/audio_capture_pipeline.png)
 
 In the sidecar process, there are two threads: the audio capture thread and the audio encoder thread. The audio capture thread captures audio frames from the desktop and produces them to a ring buffer. The audio encoder thread consumes audio frames from the ring buffer, encodes them, and send them to transport via a common mailbox, where it will be sent to the client.
 
-### [Audio Capture Thread](/stratusd/CapturePw/src/CapturePw.c)
+### Audio Capture Thread
 
 > Used [Pipewire Audio Capture Example](https://docs.pipewire.org/audio-capture_8c-example.html) as a reference to capture audio from the desktop.
 
@@ -26,7 +33,7 @@ In the sidecar process, there are two threads: the audio capture thread and the 
 - Stops the audio capture loop
 - Cleans up resources used for audio capture
 
-### [Audio Encoder Thread](/stratusd/Encode/src/EncodeAudio.c)
+### Audio Encoder Thread
 
 > Copied layout of Encoder.
 

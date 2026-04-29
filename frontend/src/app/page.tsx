@@ -1,54 +1,26 @@
 import Link from "next/link"
 import Image from "next/image"
-import { buttonVariants } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+
 import { getGames } from "@/lib/actions/games"
+import { getAllBlogSummaries } from "@/lib/blogs"
+
+import About from "@/components/About"
+import BlogIndexClient from "@/components/blogs/BlogIndexClient"
+import { buttonVariants } from "@/components/ui/button"
+import Nav from "@/components/Nav"
+
 import wordmarkLogo from "@/assets/wordmark-logo.png"
 
-const games = await getGames()
+export const dynamic = "force-dynamic"
 
-// Test
-const aboutUs = [
-  {
-    name: "Asher",
-    description:
-      "I am a CS major with a background in Linux, and I’m excited to work on the custom OS and Wayland compositor for this project.",
-  },
-  {
-    name: "John",
-    description:
-      "My name is John Polasek, I am pursuing a bachelor’s degree in Computer Science with a certificate in Cybersecurity. I primarily have front-end development experience and I am excited to learn more about the backend developer role. For this project I am working as a full-stack developer.",
-  },
-  {
-    name: "Carol",
-    description:
-      "I am a Graphic Design and CS double-major, and I was invited onto this project as a designer.",
-  },
-  {
-    name: "Izzy",
-    description:
-      "I am an applied CS senior. I have some experience with full stack applications, so I’m looking forward to working on a few components of the project, trying to achieve a seamless experience streaming from the compositor to the web client.",
-  },
-  {
-    name: "Amin",
-    description:
-      "I am a Computer science major with a focus in Cyber Security. I have experience with Systems Engineering and Unreal Engine. I am looking forward to getting this project up and running and doing whatever is possible to reduce latency.",
-  },
-  {
-    name: "Nathen",
-    description:
-      "I am a CS major. Through personal projects, I have gained experience with full-stack web development, and through internships, I have also gained experience with audio processing.",
-  },
-]
+export default async function Home() {
+  const games = await getGames()
 
-export default function Home() {
+  const posts = await getAllBlogSummaries()
   return (
     <main className='min-h-screen'>
+      <Nav revealOnScroll hideSearchBar />
+
       <section className='relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden'>
         <video
           autoPlay
@@ -73,7 +45,7 @@ export default function Home() {
           </div>
 
           <p className='text-xl md:text-2xl text-muted-foreground mb-4 max-w-2xl'>
-            The Beaver's Game Streaming Service
+            Low-latency Linux-based Game Streaming Service
           </p>
 
           <div className='flex flex-col sm:flex-row gap-4'>
@@ -164,35 +136,12 @@ export default function Home() {
         </div>
       </div>
 
-      <div className='container mx-auto px-4 py-16'>
-        <div className='flex items-baseline gap-4 mb-4'>
-          <h2 className='text-3xl md:text-4xl font-bold'>About Us</h2>
-          <Link
-            href='/about'
-            className='text-primary hover:underline hover:text-primary/80 transition-colors font-medium'
-          >
-            See more
-          </Link>
-        </div>
+      <About />
 
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {aboutUs.map((info, index) => (
-            <Card
-              key={index}
-              className='group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1'
-            >
-              <CardContent className='flex flex-col h-full'>
-                <CardTitle className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>
-                  {info.name}
-                </CardTitle>
+      <div id='Blogs' className='container mx-auto px-4 py-8 scroll-mt-20'>
+        <h1 className='text-4xl md:text-5xl font-bold mb-12'>Blogs</h1>
 
-                <CardDescription className='grow'>
-                  {info.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <BlogIndexClient posts={posts} />
       </div>
     </main>
   )
