@@ -8,10 +8,10 @@ environments for each game instance.
 
 ## Development Setup
 
-1.  Install dependencies: [`appimagetool`][appimagetool-releases], `bubblewrap`,
-    `wine`, and `wine-mono`
+1.  Install the required dependencies: [`appimagetool`][appimagetool-releases],
+    `bubblewrap`, `wine`, and `wine-mono`
 
-2.  Copy or link the `stratus-launcher` script to a directory in `$PATH`: e.g.
+2.  Copy or link the `stratus-launcher` script to a directory in `$PATH`:
     `ln -srf ./stratus-launcher.sh ~/bin/stratus-launcher`
 
 3.  Build and run a game: `./build-supertuxkart.sh && ./build/supertuxkart`

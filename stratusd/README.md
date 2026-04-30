@@ -1,15 +1,21 @@
 # stratusd
 
 stratusd is the service that runs on each streaming node to execute games and
-stream game I/O. It is composed of seven modules:
+stream game I/O. It a C/C++ project built with CMake and is composed of seven
+modules:
 
 - **Capture**: responsible for capturing video frames via Wayland
 - **CapturePw**: responsible for capturing audio frames via PipeWire
 - **Common**: contains shared headers and ring buffer implementations
-- **Encode**: responsible for encoding video and audio frames using ffmpeg
+- **Encode**: responsible for encoding video and audio frames using FFmpeg and
+  OpenGL
 - **Input**: responsible for injecting controller input via libevdev
-- **SideCar**: responsible for session lifecycle and managing the other modules
+- **SideCar**: responsible for session lifecycle and running the other modules
+  in separate threads
 - **Transport**: responsible for communication with client using QUICHE
+
+Note that at the moment, each instance of stratusd only supports a single
+concurrent stream session.
 
 
 ## Development Setup
@@ -55,7 +61,7 @@ stream game I/O. It is composed of seven modules:
       (defaults to `127.0.0.1`)
     - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
       `encode_output.h264`)
-    - `STRATUSD_PORT`: The port to listen for WebTransport connections on
+    - `STRATUSD_PORT`: The UDP port to listen for WebTransport connections on
       (defaults to 4433)
     - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first
       session is stopped
