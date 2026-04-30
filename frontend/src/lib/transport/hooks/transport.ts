@@ -20,7 +20,6 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         transportUrl = normalizeWebTransportUrl(url)
       } catch (error) {
         const errorMessage = `Invalid URL: ${(error as Error).message}`
-        addLogEvent("TRANSPORT", errorMessage, "error")
         handleError(errorMessage)
         return
       }
@@ -40,7 +39,6 @@ export function useTransport(handleError: (errorMessage: string) => void) {
           ]
         } catch (error) {
           const errorMessage = `Invalid TLS hash: ${(error as Error).message}`
-          addLogEvent("TRANSPORT", errorMessage, "error")
           handleError(errorMessage)
           return
         }
@@ -57,7 +55,6 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         )
       } catch (error) {
         const errorMessage = `Connection Object Error: ${(error as Error).message}`
-        addLogEvent("TRANSPORT", errorMessage, "error")
         handleError(errorMessage)
         return
       }
@@ -67,7 +64,6 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         addLogEvent("TRANSPORT", "Connection ready.", "info")
       } catch (error) {
         const errorMessage = `Connection failed: ${(error as Error).message}`
-        addLogEvent("TRANSPORT", errorMessage, "error")
         handleError(errorMessage)
         return
       }
@@ -76,14 +72,12 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         () => {
           if (!isMountedRef.current) return
           const errorMessage = "Connection closed."
-          addLogEvent("TRANSPORT", errorMessage, "info")
           handleError(errorMessage)
           transportRef.current = null
         },
         (error) => {
           if (!isMountedRef.current) return
           const errorMessage = `Connection closed with error: ${(error as Error).message}`
-          addLogEvent("TRANSPORT", errorMessage, "error")
           handleError(errorMessage)
           transportRef.current = null
         },

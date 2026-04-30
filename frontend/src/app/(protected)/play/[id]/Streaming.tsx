@@ -16,7 +16,7 @@ type Props = {
   tlsFingerprint: string | null
   status: Exclude<StatusType, "NOT_STARTED" | "ERROR">
   setStatus: Dispatch<SetStateAction<StatusType>>
-  setErrorMessage: (message: string | null) => void
+  setErrorMessage: (message: string | null) => Promise<void> | void
 }
 
 export default function Streaming({
@@ -72,6 +72,12 @@ export default function Streaming({
         handleInputStream,
       })
 
+      if (!isMountedRef.current) {
+        return
+      }
+
+      await setErrorMessage("Connection closed.")
+
       setStatus((previousStatus) =>
         previousStatus === "LOADING" ? "STREAMING" : previousStatus,
       )
@@ -88,6 +94,7 @@ export default function Streaming({
     handleStream,
     handleInputStream,
     handleVideoStreams,
+    setErrorMessage,
     tlsFingerprint,
     webtransportIP,
   ])
