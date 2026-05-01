@@ -15,7 +15,7 @@ enum TransportStreamType
 
 enum VideoMessageType
 {
-    Codec_Decsription,
+    Codec_Description,
     Codec_Payload
 };
 

@@ -4,7 +4,7 @@
  * so the newest items are always retained. When the input itself is larger than
  * the buffer capacity, only the newest capacity-sized suffix is retained.
  */
-#include "Common.h"
+#include "ringBuffer.h"
 
 #include <pthread.h>
 #include <stdlib.h>

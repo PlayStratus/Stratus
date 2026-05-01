@@ -1,6 +1,5 @@
 #include "EncodeUtils.h"
 #include <unistd.h>
-#include "Common.h"
 #include "video-transport-queue.h"
 
 
@@ -52,7 +51,7 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
         }
 
         // Queue frame to be transported
-        frame = malloc(sizeof(struct video_encode_queue_frame));
+        frame = malloc(sizeof(struct video_transport_queue_frame));
         if (frame == NULL) {
             perror("[Encode] malloc");
             return -1;
@@ -76,7 +75,7 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
         fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
 
         if (state->debug)
-            printf("[Encode] Received encoded frame %3d (size=%5d)\n", state->frame_count, state->pkt->size);
+            printf("[Encode] Received encoded frame %3ls (size=%5d)\n", state->frame_count, state->pkt->size);
 
         av_packet_unref(state->pkt);
     }
