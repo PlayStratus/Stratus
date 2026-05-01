@@ -10,8 +10,6 @@ import playRoutes from "./routes/play.js"
 import gamesRoutes from "./routes/games.js"
 import authRoutes from "./routes/auth.js"
 
-import jwt from "jsonwebtoken"
-
 import { handleMessage } from "./socket/messages.js" //to .js git rebase
 
 import "dotenv/config"
