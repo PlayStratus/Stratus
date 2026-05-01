@@ -165,6 +165,7 @@ int dma_encode_video_frame(
  */
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
                        int stride, int buf_type) {
+    int ret;
 
     if (!state || !argb_buffer) {
         return -1;
@@ -194,10 +195,10 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
 
     state->yuv_frame->pts = state->frame_count;
 
-    avcodec_send_and_receive(state, 0);
+    ret = avcodec_send_and_receive(state, 0);
 
     state->frame_count++;
-    return 0;
+    return ret;
 }
 
 
