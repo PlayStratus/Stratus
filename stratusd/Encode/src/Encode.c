@@ -238,18 +238,18 @@ int encode_main(struct session_args *args) {
 
     while (args->is_active) {
         struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
-        if (frame != NULL) {
-            if (args->client_connected) {
-                if (frame->shm_data != NULL) {
-                    assert(encode_video_frame(ctx, frame->shm_data,
-                                              frame->stride, 0) == 0);
-                } else if (frame->dma_data != NULL) {
-                    assert(dma_encode_video_frame(ctx, frame->dma_data,
-                                                  frame->stride) == 0);
-                }
+        if (rbuf_free_capacity(ctx->output_queue) == 0) {
+            fprintf(stderr, "[Encode] Warning: dropping frame because Transport queue is full\n");
+        } else if (args->client_connected) {
+            if (frame->shm_data != NULL) {
+                assert(encode_video_frame(ctx, frame->shm_data,
+                                            frame->stride, 0) == 0);
+            } else if (frame->dma_data != NULL) {
+                assert(dma_encode_video_frame(ctx, frame->dma_data,
+                                                frame->stride) == 0);
             }
-            rbuf_pop(ctx->input_queue);
         }
+        rbuf_pop(ctx->input_queue);
     }
 
     // Wait to be killed by SideCar

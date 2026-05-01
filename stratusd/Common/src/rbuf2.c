@@ -106,7 +106,7 @@ void rbuf_free_expired(struct rbuf *buf) {
     if (buf->entries[buf->tail] != NULL) {
         // There are expired entries to be freed
 
-        for (i = 1; i < buf->capacity - rbuf_size(buf); i++) {
+        for (i = 1; i < buf->capacity - rbuf_used_capacity(buf); i++) {
             idx = (buf->head + i) % buf->capacity;
             if (buf->entries[idx] != NULL) {
                 buf->free(buf->entries[idx]);
@@ -124,7 +124,7 @@ void rbuf_free_expired(struct rbuf *buf) {
 int rbuf_push(struct rbuf *buf, void *data) {
     // Ensure data is not NULL and ring buffer is not full
     assert(data != NULL);
-    if (rbuf_size(buf) == buf->capacity - 1) {
+    if (rbuf_free_capacity(buf) == 0) {
         // Ring buffer is full
         fprintf(stderr, "[Common] ring buffer full\n");
         return -1;
@@ -152,7 +152,7 @@ static void _rbuf_wait(struct rbuf *buf) {
  * Pop all entries in the ring buffer except the latest one
  */
 static void _rbuf_pop_old(struct rbuf *buf) {
-    while (rbuf_size(buf) > 1)
+    while (rbuf_used_capacity(buf) > 1)
         rbuf_pop(buf);
 }
 
@@ -162,7 +162,7 @@ static void _rbuf_pop_old(struct rbuf *buf) {
  * If the ring buffer is empty, a NULL pointer will be returned.
  */
 static void *_rbuf_peak(struct rbuf *buf) {
-    if (rbuf_size(buf) == 0)
+    if (rbuf_used_capacity(buf) == 0)
         return NULL;
 
     void *data = buf->entries[(buf->tail + 1) % buf->capacity];
@@ -223,7 +223,7 @@ void *rbuf_wait_peak_latest(struct rbuf *buf) {
  */
 void rbuf_pop(struct rbuf *buf) {
     sem_wait(&buf->sem);
-    assert(rbuf_size(buf) > 0);
+    assert(rbuf_used_capacity(buf) > 0);
 
     buf->tail = (buf->tail + 1) % buf->capacity;
 }
@@ -231,6 +231,13 @@ void rbuf_pop(struct rbuf *buf) {
 /*
  * Compute the number of active entries in the ring buffer
  */
-int rbuf_size(struct rbuf *buf) {
+int rbuf_used_capacity(struct rbuf *buf) {
     return (buf->head - buf->tail - 1 + buf->capacity) % buf->capacity;
+}
+
+/*
+ * Compute the number of active entries in the ring buffer
+ */
+int rbuf_free_capacity(struct rbuf *buf) {
+    return buf->capacity - rbuf_used_capacity(buf) - 1;
 }
