@@ -2,6 +2,8 @@ import matter from "gray-matter"
 import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 
+import { DOCS_ROOT } from "@/lib/blog-docs"
+
 export type BlogFrontmatter = {
   title: string
   image: string
@@ -23,8 +25,6 @@ export type BlogPost = BlogSummary & {
   sourcePath: string
   sourceRelativePath: string
 }
-
-const DOCS_ROOT = path.resolve(process.cwd(), "../docs")
 
 function toPosixPath(value: string) {
   return value.split(path.sep).join(path.posix.sep)
@@ -93,7 +93,24 @@ function validateFrontmatter(data: unknown, filePath: string): BlogFrontmatter {
 }
 
 async function getMarkdownFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true })
+  let entries
+
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      console.warn(`Blog docs directory not found: ${dir}`)
+      return []
+    }
+
+    throw error
+  }
+
   const files = await Promise.all(
     entries.map(async (entry) => {
       const entryPath = path.join(dir, entry.name)
@@ -189,12 +206,18 @@ function toBlogPost(filePath: string, rawFile: string): BlogPost {
 
 async function loadBlogPosts() {
   const markdownFiles = await getMarkdownFiles(DOCS_ROOT)
-  const posts = await Promise.all(
+  const maybePosts = await Promise.all(
     markdownFiles.map(async (filePath) => {
-      const fileContents = await readFile(filePath, "utf8")
-      return toBlogPost(filePath, fileContents)
+      try {
+        const fileContents = await readFile(filePath, "utf8")
+        return toBlogPost(filePath, fileContents)
+      } catch (error) {
+        console.error(`Skipping blog post "${filePath}".`, error)
+        return null
+      }
     }),
   )
+  const posts = maybePosts.filter((post) => post !== null)
 
   const slugs = new Set<string>()
   for (const post of posts) {

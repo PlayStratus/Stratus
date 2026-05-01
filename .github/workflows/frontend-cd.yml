@@ -3,6 +3,7 @@ env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
   VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  BLOG_DOCS_ROOT: .vercel-blog-docs
 
 on:
   push:
@@ -10,6 +11,8 @@ on:
       - main
     paths:
       - "frontend/**"
+      - "docs/**"
+      - ".github/workflows/frontend-cd.yml"
 
 jobs:
   deploy:
@@ -40,6 +43,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Stage blog docs for Vercel
+        run: |
+          mkdir -p "$BLOG_DOCS_ROOT"
+          cp -R ../docs/. "$BLOG_DOCS_ROOT"/
+          test -d "$BLOG_DOCS_ROOT"
 
       - name: Pull Vercel environment info
         run: pnpm dlx vercel@latest pull --yes --environment=production --token=$VERCEL_TOKEN

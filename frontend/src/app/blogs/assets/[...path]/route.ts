@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 
+import { DOCS_ROOT } from "@/lib/blog-docs"
+
 type Props = {
   params: Promise<{ path: string[] }>
 }
-
-const DOCS_ROOT = path.resolve(process.cwd(), "../docs")
 
 const MIME_TYPES: Record<string, string> = {
   ".avif": "image/avif",
