@@ -30,9 +30,11 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   const hasStartedRef = useRef(false)
   const hasRedirectedRef = useRef(false)
 
-  const { logs } = useLogs()
+  const { logs, addLogEvent } = useLogs()
 
   const { handleConnecting } = useTransport((errorMessage: string) => {
+    addLogEvent("TRANSPORT", errorMessage, "error")
+
     if (hasRedirectedRef.current) {
       return
     }

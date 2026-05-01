@@ -32,7 +32,8 @@ function Client({ id, title }: Readonly<Props>) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const { logs } = useLogs()
-  const { handleConnecting, handleDisconnect } = useTransport(setErrorMessage)
+  const { handleConnecting, handleDisconnect } =
+    useTransport(handleErrorMessage)
 
   useEffect(() => {
     const onChange = () => {
@@ -182,7 +183,7 @@ function Client({ id, title }: Readonly<Props>) {
     }
   }
 
-  const handleErrorMessage = async (message: string | null) => {
+  async function handleErrorMessage(message: string | null) {
     setErrorMessage(message)
     if (message) {
       setStatus("ERROR")
