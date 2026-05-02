@@ -33,7 +33,7 @@
  *       +- TAIL
  */
 struct rbuf {
-    int capacity;          // Total entries (usable capacity is one less)
+    int size;              // Total entries (usable capacity is one less)
     int head;              // Index of next entry to be pushed
     int tail;              // Index of last entry popped
     void **entries;        // The ring buffer entries
@@ -59,18 +59,19 @@ struct rbuf *rbuf_init(int capacity) {
         perror("[Common] calloc");
         return NULL;
     }
-    buf->entries = calloc(capacity, sizeof(void *));
+    buf->size = capacity + 1;
+    buf->head = 0;
+    buf->tail = buf->size - 1;
+    assert(sem_init(&buf->sem, 0, 0) == 0); // sem_init should not fail
+    buf->free = NULL;
+
+    buf->entries = calloc(buf->size, sizeof(void *));
     if (buf->entries == NULL) {
         free(buf);
+        sem_destroy(&buf->sem);
         perror("[Common] calloc");
         return NULL;
     }
-
-    buf->capacity = capacity;
-    buf->head = 0;
-    buf->tail = capacity - 1;
-    assert(sem_init(&buf->sem, 0, 0) == 0); // sem_init should not fail
-    buf->free = NULL;
 
     return buf;
 }
@@ -87,10 +88,11 @@ void rbuf_set_free(struct rbuf *buf, rbuf_entry_free *free) {
  * Destroy a ring buffer and free its resources
  */
 void rbuf_destroy(struct rbuf *buf) {
-    for (int i = 0; i < buf->capacity; i++) {
+    for (int i = 0; i < buf->size; i++) {
         if (buf->free != NULL && buf->entries[i] != NULL)
             buf->free(buf->entries[i]);
     }
+    sem_destroy(&buf->sem);
     free(buf->entries);
     free(buf);
 }
@@ -106,8 +108,8 @@ void rbuf_free_expired(struct rbuf *buf) {
     if (buf->entries[buf->tail] != NULL) {
         // There are expired entries to be freed
 
-        for (i = 1; i < buf->capacity - rbuf_used_capacity(buf); i++) {
-            idx = (buf->head + i) % buf->capacity;
+        for (i = 1; i < buf->size - rbuf_used_capacity(buf); i++) {
+            idx = (buf->head + i) % buf->size;
             if (buf->entries[idx] != NULL) {
                 buf->free(buf->entries[idx]);
                 buf->entries[idx] = NULL;
@@ -134,7 +136,7 @@ int rbuf_push(struct rbuf *buf, void *data) {
 
     // Update head ptr after inserting data to avoid consumer reading NULL
     buf->entries[buf->head] = data;
-    buf->head = (buf->head + 1) % buf->capacity;
+    buf->head = (buf->head + 1) % buf->size;
     sem_post(&buf->sem);
 
     return 0;
@@ -165,7 +167,7 @@ static void *_rbuf_peak(struct rbuf *buf) {
     if (rbuf_used_capacity(buf) == 0)
         return NULL;
 
-    void *data = buf->entries[(buf->tail + 1) % buf->capacity];
+    void *data = buf->entries[(buf->tail + 1) % buf->size];
     assert(data != NULL);
     return data;
 }
@@ -225,19 +227,19 @@ void rbuf_pop(struct rbuf *buf) {
     sem_wait(&buf->sem);
     assert(rbuf_used_capacity(buf) > 0);
 
-    buf->tail = (buf->tail + 1) % buf->capacity;
+    buf->tail = (buf->tail + 1) % buf->size;
 }
 
 /*
  * Compute the number of active entries in the ring buffer
  */
 int rbuf_used_capacity(struct rbuf *buf) {
-    return (buf->head - buf->tail - 1 + buf->capacity) % buf->capacity;
+    return (buf->head - buf->tail - 1 + buf->size) % buf->size;
 }
 
 /*
  * Compute the number of active entries in the ring buffer
  */
 int rbuf_free_capacity(struct rbuf *buf) {
-    return buf->capacity - rbuf_used_capacity(buf) - 1;
+    return buf->size - rbuf_used_capacity(buf) - 1;
 }
