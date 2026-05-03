@@ -8,11 +8,11 @@
  * Contains capture data associated with an instance of the Capture module
  */
 struct capture_session {
-    char *encode_output;
     uint32_t width;
     uint32_t height;
     struct proxy *proxy;
     struct rbuf *encode_queue;
+    int frame_count;
 };
 
 /*
