@@ -3,6 +3,9 @@
 # Configures a Arch-based Stratus streaming node from scratch. Adapted from
 # https://disconnected.systems/blog/archlinux-installer
 
+STRATUS_GAMES_BUCKET=https://games.playstratus.io
+STRATUS_PKG_REPO=https://os.playstratus.io
+
 # Setup basic logging and error handling
 LOG=/var/log/stratus-install.log
 exec 1> >(tee $LOG)
@@ -23,9 +26,13 @@ read hostname < /dev/tty
 echo 'Available IPs:'
 ip a | grep '(?<=inet ).*' -oP | sed -E -e 's|/([^ ]* )*| (|' \
     -e 's/^/    /' -e 's/$/)/'
- curl -s http://checkip.amazonaws.com | sed -e 's/^/    /' -e 's/$/ (public)/'
+curl -s http://checkip.amazonaws.com | sed -e 's/^/    /' -e 's/$/ (public)/'
 echo -n 'Enter IP address: '
 read ip < /dev/tty
+echo -n 'Enter stratusd password (leave blank to generate): '
+read stratusd_password < /dev/tty
+echo -n 'Enter backend password (leave blank to disable): '
+read backend_password < /dev/tty
 echo '================================================================'
 
 # Partition disk
@@ -49,7 +56,7 @@ mount "$boot_partition" /mnt/boot
 STRATUS_REPO=$(cat << EOF
 [stratus] \\
 SigLevel = Optional TrustAll \\
-Server = https://os.playstratus.io \\
+Server = $STRATUS_PKG_REPO \\
 \\
 \\
 EOF
@@ -67,31 +74,34 @@ else
 fi
 
 # Install packages
-pacstrap -K /mnt base fastfetch less linux linux-firmware networkmanager \
-    openssh stratusd stratus-launcher sudo tmux $UCODE vim
+packages=(base linux linux-firmware networkmanager openssh sudo $UCODE) # core
+packages+=(fastfetch stratusd stratus-launcher) # stratus-specific
+packages+=(less tmux vim) # helpful utils
+pacstrap -K /mnt "${packages[@]}"
 
 # Initialize basic config files
 genfstab -U /mnt >> /mnt/etc/fstab
 echo "$hostname" > /mnt/etc/hostname
 sed --in-place "s|^\[core\]|$STRATUS_REPO[core]|" /mnt/etc/pacman.conf
 
-# Enable system services
+# Enable services
 arch-chroot /mnt systemctl enable NetworkManager
 arch-chroot /mnt systemctl enable sshd
 arch-chroot /mnt systemctl enable systemd-timesyncd
+arch-chroot -S -u stratusd /mnt systemctl --user enable stratusd
 
-# Configure stratusd user service. Note that loginctl & systemctl --user don't
-# work correctly in the chroot, so we must create the required files manully.
+# Enable linger for stratusd user. Note that loginctl doesn't work correctly in
+# the chroot, so we must create the required files manully.
 mkdir --parents /mnt/var/lib/systemd/linger/
 touch /mnt/var/lib/systemd/linger/stratusd
-mkdir --parents /mnt/var/lib/stratusd/.config/systemd/user/default.target.wants
-arch-chroot /mnt chown stratusd:stratusd /var/lib/stratusd/ -R
-arch-chroot /mnt ln -s \
-    /usr/lib/systemd/user/default.target.wants/stratusd.service \
-    /var/lib/stratusd/.config/systemd/user/default.target.wants/stratusd.service
 
-# Set stratusd IP address
+# Update stratusd.conf
 sed --in-place "s|#STRATUSD_IP=.*|STRATUSD_IP=$ip|" /mnt/etc/stratusd.conf
+if [ -n "$backend_password" ]; then
+    sed --in-place \
+        "s|#STRATUSD_BACKEND_PASSWORD=.*|STRATUSD_BACKEND_PASSWORD=$backend_password|" \
+        /mnt/etc/stratusd.conf
+fi
 
 # Configure systemd-boot
 arch-chroot /mnt bootctl install
@@ -105,10 +115,12 @@ options  root=PARTUUID=$(blkid -s PARTUUID -o value "$root_partition") rw
 EOF
 
 # Configure user account
-pacman -Sy words --noconfirm
-password=$(cat /usr/share/dict/american-english | grep -E '^[a-z]{4,8}$' | \
-    shuf | head -n3 | sed 'N;N;s/\n/-/g')
-echo "$password" | arch-chroot /mnt passwd stratusd --stdin
+if [ -z "$stratusd_password" ]; then
+    pacman -Sy words --noconfirm
+    stratusd_password=$(cat /usr/share/dict/american-english | \
+        grep -E '^[a-z]{4,8}$' | shuf | head -n3 | sed 'N;N;s/\n/-/g')
+fi
+echo "$stratusd_password" | arch-chroot /mnt passwd stratusd --stdin
 arch-chroot /mnt chsh -s /usr/bin/bash stratusd
 arch-chroot /mnt usermod -aG wheel stratusd
 echo '%wheel ALL=(ALL:ALL) ALL' > /mnt/etc/sudoers.d/stratusd
@@ -124,10 +136,11 @@ HOME_URL="https://www.playstratus.io"
 EOF
 
 # Download all available games
-for game in $(curl -sL https://games.playstratus.io | grep -oP '(?<=Key>)[^<]+')
+for game in $(curl -sL $STRATUS_GAMES_BUCKET | grep -oP '(?<=Key>)[^<]+')
 do
-    curl -sL https://games.playstratus.io/$game -o /var/lib/stratusd/games/$game
-    chmod +x /var/lib/stratusd/games/$game
+    curl -sL $STRATUS_GAMES_BUCKET/$game -o \
+        /mnt/var/lib/stratusd/games/$game
+    chmod +x /mnt/var/lib/stratusd/games/$game
 done
 
 # Print post-installation info
@@ -136,9 +149,10 @@ echo 'Stratus OS installation complete.'
 echo 'Installation log:'
 echo "    $LOG"
 echo 'Password for stratusd user:'
-echo "    $password"
+echo "    $stratusd_password"
 echo 'A reboot is required.'
 echo '================================================================'
 
 # Copy install log to /var/log/ in the chroot
+sed --in-place "s|$stratusd_password|********|" $LOG
 cp $LOG /mnt/$LOG
