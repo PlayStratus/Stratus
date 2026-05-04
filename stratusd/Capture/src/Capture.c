@@ -137,7 +137,8 @@ static void handle_session_destroy(struct proxy_session *session) {
  * Destroy a capture session and free its resources
  */
 static void capture_destroy(struct capture_session *session) {
-    fprintf(stderr, "[Capture] Wayland proxy destroyed\n");
+    fprintf(stderr, "[Capture] Wayland proxy destroyed (captured %d frames)\n",
+            session->frame_count);
 
     proxy_destroy(session->proxy);
     free(session);
@@ -163,10 +164,10 @@ int capture_main(struct session_args *args) {
     assert(args != NULL);
     assert(args->width > 0);
     assert(args->height > 0);
-    session->encode_output = args->encode_output;
     session->width = args->width;
     session->height = args->height;
     session->encode_queue = args->video_encode_queue;
+    session->frame_count = 0;
 
     rbuf_set_free(session->encode_queue, &free_frame);
 

@@ -39,6 +39,7 @@ void *rbuf_wait_peak_latest(struct rbuf *buf);
 void rbuf_pop(struct rbuf *buf);
 
 // Shared functions
-int rbuf_size(struct rbuf *buf);
+int rbuf_used_capacity(struct rbuf *buf);
+int rbuf_free_capacity(struct rbuf *buf);
 
 #endif

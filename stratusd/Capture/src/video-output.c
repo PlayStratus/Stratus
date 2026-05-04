@@ -259,6 +259,8 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
             // be a big deal.
             buf->dependents++;
 
+            session->frame_count++;
+
         } else {
             if (buf->width > 64 && buf->height > 64) {
                 // A >64x64 frame probably isn't the cursor, so we might be

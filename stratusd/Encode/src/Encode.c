@@ -29,7 +29,8 @@ encoder_context* encoder_startup(struct session_args *args) {
 
     state->width = args->width;
     state->height = args->height;
-    state->frame_count = 0;
+    for (int i = 0; i < FRAME_STATUS_COUNT; i++)
+        state->frame_count[i] = 0;
     state->input_queue = args->video_encode_queue;
     state->output_queue = args->video_transport_queue;
     rbuf_set_free(state->output_queue, &encode_free_frame);
@@ -165,6 +166,7 @@ int dma_encode_video_frame(
  */
 int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
                        int stride, int buf_type) {
+    int ret;
 
     if (!state || !argb_buffer) {
         return -1;
@@ -192,12 +194,12 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
               state->yuv_frame->data,
               state->yuv_frame->linesize);
 
-    state->yuv_frame->pts = state->frame_count;
+    state->yuv_frame->pts = state->frame_count[FRAME_ENCODED];
 
-    avcodec_send_and_receive(state, 0);
+    ret = avcodec_send_and_receive(state, 0);
 
-    state->frame_count++;
-    return 0;
+    state->frame_count[FRAME_ENCODED]++;
+    return ret;
 }
 
 
@@ -207,9 +209,16 @@ void encoder_teardown(encoder_context *state) {
     // Flush encoder (send NULL frame)
     avcodec_send_and_receive(state, 1);
 
-    // Cleanup
-    printf("[Encode] Encoded %d frames total\n", state->frame_count);
+    // Note that the number of frames dropped by rbuf_wait_peak_latest() is not
+    // included in these counts. To determine this number, compare the total
+    // printed here with the total reported by the Capture module.
+    printf("[Encode] Encoded %d frames, dropped %d frames before client "
+            "connected, dropped %d frames due to full Transport buffer\n",
+            state->frame_count[FRAME_ENCODED],
+            state->frame_count[FRAME_DROPPED_PRE_CONNECT],
+            state->frame_count[FRAME_DROPPED_BUF_FULL]);
 
+    // Cleanup
     av_packet_free(&state->pkt);
     sws_freeContext(state->shm_sws_ctx);
     sws_freeContext(state->dma_sws_ctx);
@@ -238,18 +247,21 @@ int encode_main(struct session_args *args) {
 
     while (args->is_active) {
         struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
-        if (frame != NULL) {
-            if (args->client_connected) {
-                if (frame->shm_data != NULL) {
-                    assert(encode_video_frame(ctx, frame->shm_data,
-                                              frame->stride, 0) == 0);
-                } else if (frame->dma_data != NULL) {
-                    assert(dma_encode_video_frame(ctx, frame->dma_data,
-                                                  frame->stride) == 0);
-                }
+        if (rbuf_free_capacity(ctx->output_queue) == 0) {
+            fprintf(stderr, "[Encode] Warning: dropping frame because Transport queue is full\n");
+            ctx->frame_count[FRAME_DROPPED_BUF_FULL]++;
+        } else if (!args->client_connected) {
+            ctx->frame_count[FRAME_DROPPED_PRE_CONNECT]++;
+        } else {
+            if (frame->shm_data != NULL) {
+                assert(encode_video_frame(ctx, frame->shm_data,
+                                            frame->stride, 0) == 0);
+            } else if (frame->dma_data != NULL) {
+                assert(dma_encode_video_frame(ctx, frame->dma_data,
+                                                frame->stride) == 0);
             }
-            rbuf_pop(ctx->input_queue);
         }
+        rbuf_pop(ctx->input_queue);
     }
 
     // Wait to be killed by SideCar
