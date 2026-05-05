@@ -8,7 +8,7 @@
  */
 
 #include "CapturePw.h"
-#include "Common.h"
+#include "ringBuffer.h"
 #include "SideCar.h"
 
 #include <pipewire/pipewire.h>

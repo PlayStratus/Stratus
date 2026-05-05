@@ -49,7 +49,7 @@ void StratusWebTransportSessionVisitor::OnIncomingBidirectionalStreamAvailable()
 
 void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable()
 {
-    std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
+    std::cerr << "[Transport] OnIncomingUnidirectionalStreamAvailable()" << std::endl;
 
     if (!InputStream){
         InputStream = session_->AcceptIncomingUnidirectionalStream();
@@ -87,33 +87,32 @@ absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum Transpor
 {
     if (VideoStream && VideoStream->CanWrite())
     {
-      // Huuge Mem leak will fix.
+        // Huuge Mem leak will fix.
 
-      webtransport::StreamWriteOptions CurrentWriteOptions;
+        webtransport::StreamWriteOptions CurrentWriteOptions;
 
-      uint8_t NetStreamType = StreamType;
-      quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
-      absl::Status ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
-      delete StreamTypeData;
-      if (!ret.ok()) return ret;
+        uint8_t NetStreamType = StreamType;
+        quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
+        absl::Status ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
+        delete StreamTypeData;
+        if (!ret.ok()) return ret;
 
-      uint8_t NetMessageType = MessageType;
-      quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
-      ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
-      delete MessageTypeData;
-      if (!ret.ok()) return ret;
+        uint8_t NetMessageType = MessageType;
+        quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
+        ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+        delete MessageTypeData;
+        if (!ret.ok()) return ret;
 
-      int NetLength = htonl(Length);
-      quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
-      ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-      delete SizeData;
-      if (!ret.ok()) return ret;
+        int NetLength = htonl(Length);
+        quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
+        ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+        delete SizeData;
+        if (!ret.ok()) return ret;
 
-      quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
-      ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-      delete Data;
-      if (!ret.ok()) return ret;
-
+        quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
+        ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+        delete Data;
+        if (!ret.ok()) return ret;
 }
 
     return absl::OkStatus();

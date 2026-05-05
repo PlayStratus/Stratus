@@ -48,39 +48,39 @@ void transport_thread(struct transport_session* session)
 {
     quic::QuicServer* server = session->QuicServer;
     if (!server->CreateUDPSocketAndListen(*session->QuicAddr)) {
-        std::cerr << "[transport] Failed to create UDP socket" << std::endl;
+        std::cerr << "[Transport] Failed to create UDP socket" << std::endl;
     }
 
-    std::cerr << "[transport] Starting WebTransport on port: " << (int)session->port;
+    std::cerr << "[Transport] Starting WebTransport on port: " << (int)session->port << std::endl;
 
     while (*session->is_session_active && session->is_thread_active) {
-      server->WaitForEvents();
+        server->WaitForEvents();
 
-      struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)
-          rbuf_try_peak(session->video_queue);
-      if (frame != NULL) {
-        if (StaticTransportSession->WebTransportSession != NULL) {
-          quic::StratusWebTransportSessionVisitor* CurrentSession = StaticTransportSession->WebTransportSession;
-          absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
-            frame->is_description ? Codec_Decsription : Codec_Payload,
-            frame->data, frame->length);
-          if (!ret.ok()) {
-            std::cerr << "[Transport] " << ret;
-          }
+        struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)
+            rbuf_try_peak(session->video_queue);
+        if (frame != NULL) {
+            if (StaticTransportSession->WebTransportSession != NULL) {
+                quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
+                absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
+                                                                      frame->is_description ? Codec_Description : Codec_Payload,
+                                                                      frame->data, frame->length);
+                if (!ret.ok()) {
+                    std::cerr << "[Transport] " << ret;
+                }
+            }
+            rbuf_pop(session->video_queue);
         }
-        rbuf_pop(session->video_queue);
-      }
     }
 }
 
 void transport_destroy(struct transport_session* session)
 {
-  session->QuicServer->Shutdown();
-  delete session->QuicServer;
-  delete session->WebTransportBackend;
-  delete session->QuicAddr;
-  delete session;
-  return;
+    session->QuicServer->Shutdown();
+    delete session->QuicServer;
+    delete session->WebTransportBackend;
+    delete session->QuicAddr;
+    delete session;
+    return;
 }
 
 static void transport_free_input_msg(void *msg) {
