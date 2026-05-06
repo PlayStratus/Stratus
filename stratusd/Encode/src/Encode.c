@@ -60,9 +60,10 @@ encoder_context* encoder_startup(struct session_args *args) {
     state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
 
     // H.264 specific options
-    av_opt_set(state->codec_ctx->priv_data, "preset", "slow", 0);
+    av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);
     av_opt_set(state->codec_ctx->priv_data, "tune", "zerolatency", 0);
     av_opt_set(state->codec_ctx->priv_data, "crf", "23", 0);
+    av_opt_set(state->codec_ctx->priv_data, "threads", "auto", 0);
 
 
     if (avcodec_open2(state->codec_ctx, codec, NULL) < 0) {
