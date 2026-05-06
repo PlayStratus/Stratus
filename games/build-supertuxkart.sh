@@ -43,9 +43,9 @@ cat << EOF > "$BIN_DIR/supertuxkart-stage-2"
 mkdir --parents $CONFIG_DIR
 cp supertuxkart/players.xml $CONFIG_DIR/players.xml
 
-DISPLAY= wine supertuxkart/bin/supertuxkart.exe \
+DISPLAY= wine supertuxkart/bin/supertuxkart.exe --use-gamepad=0 \
     --fullscreen --screensize=\${STRATUS_DIMENSIONS:-640x480} \
-    --track=sandtrack --no-start-screen --use-gamepad=0
+    --track=sandtrack --no-start-screen --unlock-all --laps=1
 EOF
 chmod +x "$BIN_DIR/supertuxkart-stage-1" "$BIN_DIR/supertuxkart-stage-2"
 
