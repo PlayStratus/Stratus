@@ -166,12 +166,8 @@ int sidecar_on_start_session(struct sidecar_context *ctx,
 
     assert(ctx->active_session == NULL);
 
-    char *output_file = getenv("STRATUSD_OUTPUT_FILE");
-    if (output_file == NULL)
-        output_file = "encode_output.h264";
-
     ctx->active_session = session_start(data->session_id, data->game_id,
-                                        data->width, data->height, output_file);
+                                        data->width, data->height);
     if (ctx->active_session == NULL) {
         api_send_session_error(ctx->api_client, data->session_id,
                                "Failed to start session");

@@ -59,8 +59,6 @@ concurrent stream session.
     - `STRATUSD_INPUT_DEBUG`: Set to log received input messages
     - `STRATUSD_IP`: The IP for stratusd that clients should connect to
       (defaults to `127.0.0.1`)
-    - `STRATUSD_OUTPUT_FILE`: The H264 file to save encoded output (defaults to
-      `encode_output.h264`)
     - `STRATUSD_PORT`: The UDP port to listen for WebTransport connections on
       (defaults to 4433)
     - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first

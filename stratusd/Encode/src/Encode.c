@@ -13,7 +13,6 @@ void cleanup_encoder(encoder_context *state) {
         if (state->yuv_frame->data[0]) av_freep(&state->yuv_frame->data[0]);
         av_frame_free(&state->yuv_frame);
     }
-    if (state->output_file) fclose(state->output_file);
     if (state->codec_ctx) avcodec_free_context(&state->codec_ctx);
     free(state);
 }
@@ -68,13 +67,6 @@ encoder_context* encoder_startup(struct session_args *args) {
 
     if (avcodec_open2(state->codec_ctx, codec, NULL) < 0) {
         fprintf(stderr, "Could not open codec\n");
-        cleanup_encoder(state);
-        return NULL;
-    }
-
-    state->output_file = fopen(args->encode_output, "wb");
-    if (!state->output_file) {
-        fprintf(stderr, "Could not open output file %s\n", args->encode_output);
         cleanup_encoder(state);
         return NULL;
     }
@@ -229,7 +221,6 @@ void encoder_teardown(encoder_context *state) {
 
     egl_capture_destroy(state->egl_ctx);
 
-    fclose(state->output_file);
     free(state);
 }
 
