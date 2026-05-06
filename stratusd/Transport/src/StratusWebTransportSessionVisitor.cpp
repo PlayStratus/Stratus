@@ -85,8 +85,7 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
 
 absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType StreamType, enum VideoMessageType MessageType, void* Buffer, int Length)
 {
-    if (VideoStream && VideoStream->CanWrite())
-    {
+    if (VideoStream && VideoStream->CanWrite()) {
         // Huuge Mem leak will fix.
 
         webtransport::StreamWriteOptions CurrentWriteOptions;
@@ -113,10 +112,12 @@ absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum Transpor
         ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
         delete Data;
         if (!ret.ok()) return ret;
-}
+    } else {
+        std::cerr << "[Transport] Can't write to video stream!\n";
+    }
 
     return absl::OkStatus();
-  }
+}
 
 void StratusWebTransportSessionVisitor::FreeBuffer(absl::string_view test)
 {
