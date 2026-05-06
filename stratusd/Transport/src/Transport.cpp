@@ -6,6 +6,7 @@
 #include <iostream>
 #include "TransportPriv.h"
 #include "video-transport-queue.h"
+#include "audio-transport-queue.h"
 #include "input-queue.h"
 
 
@@ -70,10 +71,26 @@ void transport_thread(struct transport_session* session)
             }
             rbuf_pop(session->video_queue);
         }
+
+        struct audio_transport_queue_frame *audio_frame = (struct audio_transport_queue_frame *)
+            rbuf_try_peak   (session->audio_queue);
+        if (audio_frame != NULL)
+        {
+            if (StaticTransportSession->WebTransportSession != NULL)
+            {
+                quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
+                absl::Status ret = CurrentSession->SubmitAudioDataToStream(Stream_Audio,
+                                                                           audio_frame->data, audio_frame->length);
+                if (!ret.ok()) {
+                    std::cerr << "[Transport] " << ret;
+                }
+            }
+            rbuf_pop(session->audio_queue);
+        }
     }
 }
 
-void transport_destroy(struct transport_session* session)
+void transport_destroy(struct transport_session *session)
 {
     session->QuicServer->Shutdown();
     delete session->QuicServer;
@@ -109,6 +126,7 @@ int transport_main(struct session_args *args) {
     session->is_thread_active = true;
     session->client_connected = &args->client_connected;
     session->video_queue = args->video_transport_queue;
+    session->audio_queue = args->audio_transport_queue;
     session->input_queue = args->input_queue;
     rbuf_set_free(session->input_queue, &transport_free_input_msg);
 

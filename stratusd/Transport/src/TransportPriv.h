@@ -17,6 +17,7 @@ struct transport_session
     quic::QuicSimpleServerBackend* WebTransportBackend;
     quic::StratusWebTransportSessionVisitor* WebTransportSession;
     struct rbuf *video_queue;
+    struct rbuf *audio_queue;
     struct rbuf *input_queue;
 };
 

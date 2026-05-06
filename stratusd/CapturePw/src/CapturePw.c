@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /*
  * Structure holding the Pipewire session states
@@ -36,6 +37,7 @@ struct capture_pw_session {
     /* Audio Format */
     struct spa_audio_info format;
     struct audio_context *audio_context;
+    bool *client_connected;
 
     uint64_t dropped_frames; // Counter for frames discarded when a single
                              // capture chunk exceeds ring capacity
@@ -86,6 +88,10 @@ static void on_process(void *userdata) {
     if ((b = pw_stream_dequeue_buffer(session->stream)) == NULL) {
         pw_log_warn("out of buffers: %m");
         return;
+    }
+
+    if (!*session->client_connected) {
+        goto end;
     }
 
     buf = b->buffer;
@@ -339,7 +345,11 @@ int capture_pw_main(void *userdata) {
     }
 
     session->audio_context = &args->audio_context;
+    session->client_connected = &args->client_connected;
     session->debug = (getenv("STRATUSD_CAPTUREPW_DEBUG") != NULL);
+
+    if (!args->is_active)
+        goto end;
 
     if (capture_pw_run(session) < 0) {
         fprintf(stderr, "[CapturePw] Failed to run capture session\n");

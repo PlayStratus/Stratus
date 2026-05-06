@@ -1,5 +1,6 @@
 #include "AudioEncode.h"
 #include "SideCar.h"
+#include "audio-transport-queue.h"
 
 #include <opus/opus.h>
 #include <inttypes.h>
@@ -21,6 +22,7 @@ struct audio_encoder_context {
     uint32_t sample_rate;
     uint32_t channels;
     uint32_t frame_size;
+    struct rbuf *output_queue;
     bool debug;
 };
 
@@ -64,7 +66,8 @@ static int audio_encoder_compute_frame_size(uint32_t sample_rate,
  * Initializes the audio encoder
  */
 struct audio_encoder_context *audio_encoder_startup(uint32_t sample_rate,
-                                                    uint32_t channels) {
+                                                    uint32_t channels,
+                                                    struct rbuf *output_queue) {
     struct audio_encoder_context *ctx;
     int opus_error = OPUS_OK;
 
@@ -82,6 +85,7 @@ struct audio_encoder_context *audio_encoder_startup(uint32_t sample_rate,
 
     ctx->channels = channels;
     ctx->sample_rate = sample_rate;
+    ctx->output_queue = output_queue;
     ctx->debug = (getenv("STRATUSD_AUDIO_ENCODE_DEBUG") != NULL);
 
     ctx->encoder = opus_encoder_create(ctx->sample_rate, ctx->channels,
@@ -108,6 +112,10 @@ err:
  */
 int encode_audio_frame(struct audio_encoder_context *ctx,
                        const int16_t *samples, uint32_t frame_count) {
+    struct audio_transport_queue_frame *frame;
+    unsigned char packet[MAX_PACKET_SIZE];
+    int packet_len;
+
     if (ctx == NULL || samples == NULL) {
         fprintf(stderr,
                 "[EncodeAudio] Invalid audio encoder context or samples\n");
@@ -118,8 +126,7 @@ int encode_audio_frame(struct audio_encoder_context *ctx,
         fprintf(stdout, "[EncodeAudio] Received audio frames: %u\n",
                 frame_count);
 
-    unsigned char packet[MAX_PACKET_SIZE];
-    int packet_len =
+    packet_len =
         opus_encode(ctx->encoder, samples, frame_count, packet, sizeof(packet));
 
     if (packet_len < 0) {
@@ -131,9 +138,35 @@ int encode_audio_frame(struct audio_encoder_context *ctx,
         return -1;
     }
 
-    // TODO: Send the packet to transport through mailbox
+    frame = malloc(sizeof(*frame));
+    if (frame == NULL) {
+        perror("[EncodeAudio] malloc");
+        return -1;
+    }
+
+    frame->length = packet_len;
+    frame->data = malloc(frame->length);
+    if (frame->data == NULL) {
+        perror("[EncodeAudio] malloc");
+        free(frame);
+        return -1;
+    }
+
+    memcpy(frame->data, packet, frame->length);
+    if (rbuf_push(ctx->output_queue, frame) < 0) {
+        free(frame->data);
+        free(frame);
+        return -1;
+    }
 
     return 0;
+}
+
+/*
+ * Free an audio frame after its payload has been handed to transport.
+ */
+static void audio_encoder_free_frame(void *frame) {
+    free(frame);
 }
 
 /**
@@ -188,6 +221,8 @@ int audio_encoder_main(void *userdata) {
     if (audio_ring_buffer == NULL || buffer_capacity_frames == 0)
         return -1;
 
+    rbuf_set_free(args->audio_transport_queue, &audio_encoder_free_frame);
+
     if (audio_encoder_compute_frame_size(sample_rate, channels, &frame_size) <
         0) {
         fprintf(stderr,
@@ -202,7 +237,8 @@ int audio_encoder_main(void *userdata) {
             "frame_size=%u (%u ms)\n",
             sample_rate, channels, frame_size, FRAME_DURATION_MS);
 
-    ctx = audio_encoder_startup(sample_rate, channels);
+    ctx = audio_encoder_startup(sample_rate, channels,
+                                args->audio_transport_queue);
     if (ctx == NULL)
         return -1;
 

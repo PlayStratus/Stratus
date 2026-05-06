@@ -93,6 +93,8 @@ void session_teardown(struct session *session) {
         rbuf_destroy(session->args.video_encode_queue);
     if (session->args.video_transport_queue != NULL)
         rbuf_destroy(session->args.video_transport_queue);
+    if (session->args.audio_transport_queue != NULL)
+        rbuf_destroy(session->args.audio_transport_queue);
     if (session->args.input_queue != NULL)
         rbuf_destroy(session->args.input_queue);
 
@@ -219,9 +221,12 @@ struct session *session_start(char *session_id, char *game_id, int width,
     session->args.video_transport_queue = rbuf_init(8);
     if (session->args.video_transport_queue == NULL)
         goto err_rbuf_2;
+    session->args.audio_transport_queue = rbuf_init(64);
+    if (session->args.audio_transport_queue == NULL)
+        goto err_rbuf_3;
     session->args.input_queue = rbuf_init(8);
     if (session->args.input_queue == NULL)
-        goto err_rbuf_3;
+        goto err_rbuf_4;
 
     // Start modules in separate threads
     for (int thread = 0; thread < THREAD_COUNT; thread++) {
@@ -247,6 +252,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
 
 err_start:
     rbuf_destroy(session->args.input_queue);
+err_rbuf_4:
+    rbuf_destroy(session->args.audio_transport_queue);
 err_rbuf_3:
     rbuf_destroy(session->args.video_transport_queue);
 err_rbuf_2:

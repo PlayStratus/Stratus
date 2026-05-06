@@ -11,6 +11,7 @@ StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTranspor
     ControlStream = nullptr;
     InputStream = nullptr;
     VideoStream = nullptr;
+    AudioStream = nullptr;
     this->input_queue = input_queue;
 
     assert(StaticTransportSession->WebTransportSession == NULL);
@@ -77,6 +78,7 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
     std::cerr << "[Transport] OnCanCreateNewOutgoingUnidirectionalStream()" << std::endl;
 
     VideoStream = session_->OpenOutgoingUnidirectionalStream();
+    AudioStream = session_->OpenOutgoingUnidirectionalStream();
 
     webtransport::SessionStats SessionStats = session_->GetSessionStats();
 
@@ -119,9 +121,39 @@ absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum Transpor
     return absl::OkStatus();
 }
 
+absl::Status StratusWebTransportSessionVisitor::SubmitAudioDataToStream(enum TransportStreamType StreamType, void* Buffer, int Length)
+{
+    if (AudioStream && AudioStream->CanWrite()) {
+        // Huuge Mem leak will fix.
+
+        webtransport::StreamWriteOptions CurrentWriteOptions;
+
+        uint8_t NetStreamType = StreamType;
+        quiche::QuicheMemSlice *StreamTypeData = new quiche::QuicheMemSlice((char *)&NetStreamType, 1, nullptr);
+        absl::Status ret = AudioStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
+        delete StreamTypeData;
+        if (!ret.ok()) return ret;
+
+        int NetLength = htonl(Length);
+        quiche::QuicheMemSlice *SizeData = new quiche::QuicheMemSlice((char *)&NetLength, 4, nullptr);
+        ret = AudioStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+        delete SizeData;
+        if (!ret.ok()) return ret;
+
+        quiche::QuicheMemSlice *Data = new quiche::QuicheMemSlice((char *)Buffer, Length, FreeBuffer);
+        ret = AudioStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+        delete Data;
+        if (!ret.ok()) return ret;
+    } else {
+        std::cerr << "[Transport] Can't write to audio stream" << std::endl;
+    }
+
+    return absl::OkStatus();
+}
+
 void StratusWebTransportSessionVisitor::FreeBuffer(absl::string_view test)
 {
-  free((void*)test.data());
+    free((void*)test.data());
 }
 
 }
