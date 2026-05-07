@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Inclusive_Sans } from "next/font/google"
 
 import { AuthProvider } from "@/components/auth/AuthProvider"
-
+import Footer from "@/components/Footer"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -29,16 +29,13 @@ export default function RootLayout({
   return (
     <html lang='en' className='dark'>
       <body
-        className={`${geistSans.variable} ${inclusiveSans.variable} antialiased`}
+        className={`${geistSans.variable} ${inclusiveSans.variable} antialiased min-h-screen flex flex-col`}
       >
         <AuthProvider>
-          {children}
-
-          <footer className='px-4 py-20 bg-muted/30'>
-            <div className='container mx-auto'>
-              <h2 className='text-3xl md:text-5xl font-bold mb-6'>Stratus</h2>
-            </div>
-          </footer>
+          <div className="flex-1 flex flex-col">
+            {children}
+          </div>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
