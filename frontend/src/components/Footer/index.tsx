@@ -9,7 +9,7 @@ export default function Footer() {
   const { user } = useAuth()
 
   return (
-    <footer className="w-full bg-background border-t py-16 md:py-24 overflow-hidden relative">
+    <footer className="w-full bg-background border-t pt-16 pb-8 md:pt-24 md:pb-12 overflow-hidden relative">
       <div className="absolute inset-0 w-full h-full bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10 flex flex-col items-center justify-between gap-12">
@@ -51,7 +51,7 @@ export default function Footer() {
           </Link>
         </nav>
 
-        <div className="w-full flex items-center justify-center pt-8 border-t border-border/50">
+        <div className="w-full flex items-center justify-center pt-6 mt-4 border-t border-border/50">
           <p className="text-xs text-muted-foreground/60">
             &copy; {new Date().getFullYear()} Stratus. All rights reserved.
           </p>

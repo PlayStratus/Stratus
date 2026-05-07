@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 interface ExpandableImageProps {
   src: string;
@@ -10,15 +12,16 @@ interface ExpandableImageProps {
   width: number;
   height: number;
   className?: string;
+  imageClassName?: string;
 }
 
-export function ExpandableImage({ src, alt, width, height, className }: ExpandableImageProps) {
+export function ExpandableImage({ src, alt, width, height, className, imageClassName }: ExpandableImageProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
       <div 
-        className={`cursor-pointer overflow-hidden group ${className}`} 
+        className={cn("cursor-pointer overflow-hidden group", className)} 
         onClick={() => setIsOpen(true)}
       >
         <Image 
@@ -26,11 +29,11 @@ export function ExpandableImage({ src, alt, width, height, className }: Expandab
           alt={alt} 
           width={width} 
           height={height} 
-          className="w-full h-auto object-contain transition-transform group-hover:scale-[1.02]" 
+          className={cn("w-full h-auto object-contain transition-transform group-hover:scale-[1.02]", imageClassName)} 
         />
       </div>
       
-      {isOpen && (
+      {isOpen && typeof document !== "undefined" && createPortal(
         <div 
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm p-4 md:p-8 animate-in fade-in duration-200 cursor-zoom-out"
           onClick={() => setIsOpen(false)}
@@ -60,7 +63,8 @@ export function ExpandableImage({ src, alt, width, height, className }: Expandab
               />
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
