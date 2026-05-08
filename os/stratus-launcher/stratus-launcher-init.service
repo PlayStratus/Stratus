@@ -1,0 +1,11 @@
+[Unit]
+Description=Initialize the stratus game environment before starting stratusd
+After=network.target
+Before=stratusd.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/stratus-launcher --init
+
+[Install]
+WantedBy=stratusd.service

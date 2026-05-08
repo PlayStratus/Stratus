@@ -89,6 +89,7 @@ arch-chroot /mnt systemctl enable NetworkManager
 arch-chroot /mnt systemctl enable sshd
 arch-chroot /mnt systemctl enable systemd-timesyncd
 arch-chroot -S -u stratusd /mnt systemctl --user enable stratusd
+arch-chroot -S -u stratusd /mnt systemctl --user enable stratus-launcher-init
 
 # Enable linger for stratusd user. Note that loginctl doesn't work correctly in
 # the chroot, so we must create the required files manully.
@@ -140,6 +141,7 @@ for game in $(curl -sL $STRATUS_GAMES_BUCKET | grep -oP '(?<=Key>)[^<]+')
 do
     curl -sL $STRATUS_GAMES_BUCKET/$game -o \
         /mnt/var/lib/stratusd/games/$game
+    chown stratusd:stratusd /mnt/var/lib/stratusd/games/$game
     chmod +x /mnt/var/lib/stratusd/games/$game
 done
 
