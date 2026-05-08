@@ -1,7 +1,7 @@
 # Maintainer: Stratus
 
 pkgname=stratus-launcher
-pkgver=0.0.r159.g0fd9a41
+pkgver=0.0
 pkgrel=1
 pkgdesc='The stratus game launcher'
 arch=('x86_64')
@@ -9,6 +9,7 @@ url='https://github.com/playstratus/stratus'
 license=('MIT')
 
 depends=('bubblewrap' 'fuse' 'wine' 'winetricks' 'wine-mono')
+optdepends=('stratusd: stratus-launcher-init.service')
 makedepends=('git')
 
 provides=('stratus-launcher')
@@ -19,8 +20,10 @@ source=(
   # TODO: This isn't quite best-practice, we should just download a release
   # tarball from GitHub instead once Stratus is published.
   "stratus::git+file://$(git rev-parse --show-toplevel)"
+
+  'stratus-launcher-init.service'
 )
-sha256sums=('SKIP')
+sha256sums=('SKIP' 'SKIP')
 
 pkgver() {
   git describe --tags --long --always | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
@@ -28,4 +31,5 @@ pkgver() {
 
 package() {
   install -Dm755 "$srcdir/stratus/games/stratus-launcher.sh" "$pkgdir/usr/bin/stratus-launcher"
+  install -Dm644 "$srcdir/stratus-launcher-init.service" "$pkgdir/usr/lib/systemd/user/stratus-launcher-init.service"
 }
