@@ -36,7 +36,7 @@ struct session {
 };
 
 struct session *session_start(char *session_id, char *game_uuid, int width,
-                              int height, char *encode_output);
+                              int height);
 
 int session_poll(struct session *session);
 

@@ -71,9 +71,6 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
             return -1;
         }
 
-        // Write packet data
-        fwrite(state->pkt->data, 1, state->pkt->size, state->output_file);
-
         if (state->debug)
             printf("[Encode] Received encoded frame %3ls (size=%5d)\n", state->frame_count, state->pkt->size);
 

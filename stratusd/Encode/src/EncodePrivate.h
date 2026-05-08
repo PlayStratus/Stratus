@@ -30,7 +30,6 @@ typedef struct {
     struct SwsContext *dma_sws_ctx;
     AVFrame *yuv_frame;
     AVPacket *pkt;
-    FILE *output_file;
     int frame_count[FRAME_STATUS_COUNT];
     int width;
     int height;

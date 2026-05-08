@@ -181,7 +181,7 @@ static int session_launch_game(char *game_id, int width, int height) {
  * Returns the crated session struct on success and NULL on failure.
  */
 struct session *session_start(char *session_id, char *game_id, int width,
-                              int height, char *encode_output) {
+                              int height) {
     struct session *session;
 
     // Create session struct
@@ -204,7 +204,6 @@ struct session *session_start(char *session_id, char *game_id, int width,
 
     session->args.is_active = true;
     session->args.client_connected = false;
-    session->args.encode_output = encode_output;
     session->args.width = width;
     session->args.height = height;
     session->args.cert = create_certificate();
