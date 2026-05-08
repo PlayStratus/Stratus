@@ -181,35 +181,32 @@ export default async function Home() {
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
-            <div className='flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow hover:border-primary/30'>
+            <div className='group flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-md shadow-blue-400/20 hover:shadow-xl hover:shadow-blue-400/30 hover:-translate-y-1.5 transition-all'>
               <div className='h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4'>
                 <MonitorPlay className='h-6 w-6 text-primary' />
               </div>
-              <h4 className='text-xl font-semibold mb-2'>Compatible</h4>
+              <h4 className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>Compatible</h4>
               <p className='text-muted-foreground'>Stratus works on any device and supports any Windows- or Linux-native game</p>
             </div>
-
-            <div className='flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow hover:border-primary/30'>
+            <div className='group flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-md shadow-blue-400/20 hover:shadow-xl hover:shadow-blue-400/30 hover:-translate-y-1.5 transition-all'>
               <div className='h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4'>
                 <Zap className='h-6 w-6 text-primary' />
               </div>
-              <h4 className='text-xl font-semibold mb-2'>Fast</h4>
+              <h4 className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>Fast</h4>
               <p className='text-muted-foreground'>Stratus can stream in 1080p at 60fps with round-trip latencies of as little as 60ms</p>
             </div>
-
-            <div className='flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow hover:border-primary/30'>
+            <div className='group flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-md shadow-blue-400/20 hover:shadow-xl hover:shadow-blue-400/30 hover:-translate-y-1.5 transition-all'>
               <div className='h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4'>
                 <Code className='h-6 w-6 text-primary' />
               </div>
-              <h4 className='text-xl font-semibold mb-2'>Open Source</h4>
+              <h4 className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>Open Source</h4>
               <p className='text-muted-foreground'>The complete source code for Stratus is available on GitHub</p>
             </div>
-
-            <div className='flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow hover:border-primary/30'>
+            <div className='group flex flex-col items-center text-center p-6 bg-card rounded-xl border border-border shadow-md shadow-blue-400/20 hover:shadow-xl hover:shadow-blue-400/30 hover:-translate-y-1.5 transition-all'>
               <div className='h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4'>
                 <Leaf className='h-6 w-6 text-primary' />
               </div>
-              <h4 className='text-xl font-semibold mb-2'>Sustainable</h4>
+              <h4 className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>Sustainable</h4>
               <p className='text-muted-foreground'>The Stratus servers run on recycled crypto-miners</p>
             </div>
           </div>
@@ -258,18 +255,18 @@ export default async function Home() {
       {/* Our Team Section */}
       <div className='bg-muted/30 py-20 w-full border-y border-border/50'>
         <div className='container mx-auto px-4 max-w-6xl'>
-          <h2 className='text-3xl md:text-4xl font-bold mb-6 text-center'>Our Team</h2>
+          <h2 className='text-3xl md:text-4xl font-bold mb-8 text-center'>Our Team</h2>
           <p className='text-lg text-muted-foreground mb-12 text-center max-w-3xl mx-auto'>
             Stratus was developed by a team of six Oregon State University students as a senior capstone project:
           </p>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
             {teamMembers.map((member) => (
-              <Card key={member.name} className='group relative transition-all hover:shadow-lg hover:border-primary/50 hover:-translate-y-1 bg-card'>
+              <Card key={member.name} className='group relative transition-all hover:-translate-y-1.5 shadow-md shadow-blue-400/20 hover:shadow-xl hover:shadow-blue-400/30 bg-card border-border'>
                 <CardContent className='flex flex-col h-full pt-6'>
                   <CardTitle className='text-xl font-semibold mb-2 group-hover:text-primary transition-colors'>
                     {member.name}
                   </CardTitle>
-                  <CardDescription className='grow text-base'>
+                  <CardDescription className='grow text-sm'>
                     {member.description}
                   </CardDescription>
                 </CardContent>
