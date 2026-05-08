@@ -131,12 +131,6 @@ function normalizeWebTransportUrl(url: string) {
     throw new Error("WebTransport requires an https:// URL.")
   }
 
-  // stratusd currently serves WebTransport on 4433, so if the backend sends
-  // only a hostname/IP we need to supply the transport port here.
-  if (!normalizedUrl.port) {
-    normalizedUrl.port = "4433"
-  }
-
   if (!normalizedUrl.pathname) {
     normalizedUrl.pathname = "/"
   }

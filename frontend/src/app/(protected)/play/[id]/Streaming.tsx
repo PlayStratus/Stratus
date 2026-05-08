@@ -54,7 +54,7 @@ export default function Streaming({
     hasStartedRef.current = true
 
     const handleMount = async () => {
-      const url = `${webtransportIP}:4433`
+      const url = `${webtransportIP}:443`
 
       const transport = await handleConnecting(url, tlsFingerprint)
 
