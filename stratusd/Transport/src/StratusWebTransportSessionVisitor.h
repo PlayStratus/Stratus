@@ -42,6 +42,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
   void OnCanCreateNewOutgoingUnidirectionalStream() override;
 
   absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length);
+  absl::Status SubmitAudioDataToStream(enum TransportStreamType Stream, void* Buffer, int Length);
 
  private:
   static void FreeBuffer(absl::string_view Buffer);
@@ -50,6 +51,7 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
   WebTransportStream* ControlStream;
   WebTransportStream* InputStream;
   WebTransportStream* VideoStream;
+  WebTransportStream* AudioStream;
   rbuf *input_queue;
 };
 

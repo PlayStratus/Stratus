@@ -8,7 +8,13 @@ import {
   useState,
 } from "react"
 
-type ComponentType = "TRANSPORT" | "ROUTER" | "VIDEO" | "CONTROL" | "INPUT"
+type ComponentType =
+  | "TRANSPORT"
+  | "ROUTER"
+  | "VIDEO"
+  | "AUDIO"
+  | "CONTROL"
+  | "INPUT"
 
 type SeverityType = "info" | "log" | "warn" | "error"
 

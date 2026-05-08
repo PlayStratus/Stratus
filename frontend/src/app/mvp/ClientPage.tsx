@@ -7,6 +7,7 @@ import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
 import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
 import { useVideoStream } from "@/lib/transport/hooks/videoStream"
+import { useAudioStream } from "@/lib/transport/hooks/audioStream"
 import { useControlStream } from "@/lib/transport/hooks/controlStream"
 import { useInputStream } from "@/lib/transport/hooks/inputStream"
 
@@ -57,6 +58,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     setAverageRenderTimeMs,
     setFps,
   )
+  const { handleAudioStreams } = useAudioStream()
   const { handleInputStream, setManualAxisX } = useInputStream()
 
   useEffect(() => {
@@ -72,6 +74,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
       await handleStream(transport, {
         handleControlStream,
         handleVideoStreams,
+        handleAudioStreams,
         handleInputStream,
       })
     }
@@ -81,6 +84,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     handleConnecting,
     handleControlStream,
     handleStream,
+    handleAudioStreams,
     handleInputStream,
     handleVideoStreams,
   ])

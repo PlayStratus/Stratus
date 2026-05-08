@@ -3,6 +3,7 @@ import { Dispatch, SetStateAction, useEffect, useRef } from "react"
 import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
 import { useControlStream } from "@/lib/transport/hooks/controlStream"
 import { useVideoStream } from "@/lib/transport/hooks/videoStream"
+import { useAudioStream } from "@/lib/transport/hooks/audioStream"
 import { useInputStream } from "@/lib/transport/hooks/inputStream"
 
 import { StatusType } from "@/lib/transport/types"
@@ -35,6 +36,7 @@ export default function Streaming({
 
   const { handleControlStream } = useControlStream()
   const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
+  const { handleAudioStreams } = useAudioStream()
   const { handleInputStream } = useInputStream()
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function Streaming({
       await handleStream(transport, {
         handleControlStream,
         handleVideoStreams,
+        handleAudioStreams,
         handleInputStream,
       })
 
@@ -92,6 +95,7 @@ export default function Streaming({
     handleConnecting,
     handleControlStream,
     handleStream,
+    handleAudioStreams,
     handleInputStream,
     handleVideoStreams,
     setErrorMessage,

@@ -10,6 +10,10 @@ type StreamHandlers = {
     reader: ReadableStreamDefaultReader<Uint8Array>,
     initialChunk: Uint8Array,
   ) => Promise<void> | void
+  handleAudioStreams: (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    initialChunk: Uint8Array,
+  ) => Promise<void> | void
   handleInputStream: (transport: WebTransport) => Promise<void> | void
 }
 
@@ -73,11 +77,9 @@ export function useStreamRouter() {
             await handlers.handleVideoStreams(reader, initialChunk)
             break
           case TransportStreamType.Stream_Audio:
-            addLogEvent(
-              "ROUTER",
-              "Audio streams are not handled yet; closing stream.",
-              "warn",
-            )
+            handedOff = true
+            pendingStreamReadersRef.current.delete(reader)
+            await handlers.handleAudioStreams(reader, initialChunk)
             break
           default:
             addLogEvent(

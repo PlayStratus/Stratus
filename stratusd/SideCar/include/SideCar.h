@@ -30,9 +30,10 @@ struct session_args {
     uint32_t width;
     uint32_t height;
     struct StratusCertificate *cert;
-    struct audio_context audio_context;
     struct rbuf *video_encode_queue;
     struct rbuf *video_transport_queue;
+    struct audio_context audio_context;
+    struct rbuf *audio_transport_queue;
     struct rbuf *input_queue;
 };
 
