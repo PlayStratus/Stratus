@@ -2,7 +2,8 @@
 
 # Usage:
 #   stratus-launcher --init
-#   stratus-launcher wine <exe path relative to $APPDIR> <args>...
+#   stratus-launcher [--amx-profile <path>] wine \
+#       <exe path relative to $APPDIR> <args>...
 
 # This launcher script creates a bubblewrap "sandbox" that ensures that all
 # writes are non-persistent. It must be called from the AppRun script of an
@@ -18,17 +19,41 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Initialize wine and install required libraries
+PROGRAM_FILES="$HOME/.wine/drive_c/Program Files"
+
+# Initialize game environment
 if [ "$1" = '--init' ]; then
     if [ -z "$WAYLAND_DISPLAY" ]; then
         echo "Error: the vcrun2015 installer requires a Wayland server"
         exit 1
     fi
 
+    # Initialize wine prefix
     wineboot --init
+
+    # Install required libraries
     winetricks -q dotnet45
     winetricks -q vcrun2015
+
+    # Install AntiMicroX to support keyboard-only games
+    if [ ! -d "$PROGRAM_FILES/antimicrox-3.6.0-PortableWindows-AMD64/" ]; then
+        curl -L https://github.com/AntiMicroX/antimicrox/releases/download/3.6.0/antimicrox-3.6.0-PortableWindows-AMD64.zip \
+            -o "$PROGRAM_FILES/amx.zip"
+        unzip -o "$PROGRAM_FILES/amx.zip" -d "$PROGRAM_FILES"
+        rm "$PROGRAM_FILES/amx.zip"
+    else
+        echo 'Skipping AntiMicroX because it is already installed'
+    fi
+
     exit 0
+fi
+
+# Parse --amx-profile arg
+if [ "$1" = '--amx-profile' ]; then
+    AMX_PROFILE="$2"
+    shift 2
+else
+    AMX_PROFILE=""
 fi
 
 # Check preconditions
@@ -63,7 +88,7 @@ bwrap_args+=(
     --tmp-overlay ~/.wine
 )
 bwrap_args+=(
-    # Prevent $HOME from being exposed and make user changes non-persistant
+    # Prevent $HOME from being exposed and make user changes non-persistent
     --tmpfs "$HOME/.wine/drive_c/users/$(whoami)"
 )
 
@@ -73,4 +98,19 @@ bwrap_args+=(
 )
 bwrap_args+=(--chdir "$APPDIR")
 
-bwrap "${bwrap_args[@]}" $@
+# Run bubblewrap
+DISPLAY= bwrap "${bwrap_args[@]}" bash << EOF
+# Start AntiMicroX if enabled
+[ -n "$AMX_PROFILE" ] && wine \
+    "$PROGRAM_FILES/antimicrox-3.6.0-PortableWindows-AMD64/bin/antimicrox.exe" \
+    --hidden --no-tray --profile $AMX_PROFILE &
+
+cleanup() {
+    # Stop AntiMicroX if enabled
+    [ -n "$AMX_PROFILE" ] && killall antimicrox.exe
+}
+trap cleanup EXIT
+
+# Run user payload
+$@
+EOF
