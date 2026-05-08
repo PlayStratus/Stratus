@@ -10,6 +10,8 @@ import {
 } from "../lib/authToken.js"
 import { getUserById } from "./authController.js"
 
+let lock = 0;
+
 export const ControllerCreateSession = async (req: Request, res: Response) => {
   const { game_id, height, width } = req.body
 
@@ -38,6 +40,10 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
 
   if (!user) {
     return res.status(403).json({ error: "User not found" })
+  }
+
+  if (lock == 1 && (user.Username !== "carolrang" && user.Username !== "Johnhp1" && user.Username !== "asher" && user.Username !== "izzardthelizard" && user.Username !== "Nathen" && user.Username !== "Amin")){
+    return res.status(403).json({ error: "Sorry, access is temporarily restricted" })
   }
 
   const result = await startGameSession(
