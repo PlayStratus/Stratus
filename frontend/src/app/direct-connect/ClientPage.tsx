@@ -60,7 +60,8 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     setFps,
   )
   const { handleAudioStreams } = useAudioStream(setAverageAudioRenderTimeMs)
-  const { handleInputStream, setManualAxisX } = useInputStream()
+  const { handleInputStream, setManualAxisX, setManualButton } =
+    useInputStream()
 
   useEffect(() => {
     if (hasStartedRef.current) {
@@ -112,7 +113,10 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
         <div>Avg audio render: {averageAudioRenderTimeMs.toFixed(1)}ms</div>
       </div>
 
-      <InputButtons onAxisXChange={setManualAxisX} />
+      <InputButtons
+        onAxisXChange={setManualAxisX}
+        onButtonChange={setManualButton}
+      />
 
       {shouldShowLoading && <Loading />}
     </>

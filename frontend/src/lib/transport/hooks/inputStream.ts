@@ -14,6 +14,7 @@ export function useInputStream() {
 
   const writerRef = useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null)
   const manualAxisXRef = useRef<ManualAxisXValue>(0)
+  const manualButtonIndicesRef = useRef(new Set<number>())
   const [isInputReady, setIsInputReady] = useState(false)
 
   const closeWriter = useCallback(
@@ -66,6 +67,22 @@ export function useInputStream() {
     manualAxisXRef.current = nextAxisX
   }, [])
 
+  const setManualButton = useCallback(
+    (buttonIndex: number, isPressed: boolean) => {
+      if (!Number.isInteger(buttonIndex) || buttonIndex < 0) {
+        return
+      }
+
+      if (isPressed) {
+        manualButtonIndicesRef.current.add(buttonIndex)
+        return
+      }
+
+      manualButtonIndicesRef.current.delete(buttonIndex)
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!isInputReady) return
 
@@ -96,10 +113,18 @@ export function useInputStream() {
           axes.push(0)
         }
 
-        // On-screen controls temporarily override only the left joystick X axis.
+        // On-screen controls temporarily override only the controls they own.
         if (manualAxisXRef.current !== 0) {
           axes[LEFT_JOYSTICK_X_AXIS_INDEX] = manualAxisXRef.current
         }
+
+        manualButtonIndicesRef.current.forEach((buttonIndex) => {
+          while (buttons.length <= buttonIndex) {
+            buttons.push(0)
+          }
+
+          buttons[buttonIndex] = 1
+        })
 
         const payload = JSON.stringify({
           type: "gamepad",
@@ -145,8 +170,9 @@ export function useInputStream() {
       setIsInputReady(false)
       void closeWriter(writer)
       manualAxisXRef.current = 0
+      manualButtonIndicesRef.current.clear()
     }
   }, [closeWriter])
 
-  return { handleInputStream, setManualAxisX }
+  return { handleInputStream, setManualAxisX, setManualButton }
 }
