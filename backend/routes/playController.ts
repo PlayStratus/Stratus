@@ -10,7 +10,11 @@ import {
 } from "../lib/authToken.js"
 import { getUserById } from "./authController.js"
 
-let lock = 0;
+import "dotenv/config"
+
+const lock = process.env.LOCK ? 1 : 0;
+
+const whitelist = (process.env.WHITELISTED_USERS ? JSON.parse(process.env.WHITELISTED_USERS) : []) as string[];         //ensure your .env if structured WHITELISTED_USERS='["user1", "user2",..., "userN"]'
 
 export const ControllerCreateSession = async (req: Request, res: Response) => {
   const { game_id, height, width } = req.body
@@ -42,7 +46,7 @@ export const ControllerCreateSession = async (req: Request, res: Response) => {
     return res.status(403).json({ error: "User not found" })
   }
 
-  if (lock == 1 && (user.Username !== "carolrang" && user.Username !== "Johnhp1" && user.Username !== "asher" && user.Username !== "izzardthelizard" && user.Username !== "Nathen" && user.Username !== "Amin")){
+  if (lock == 1 && !(whitelist.includes(user.Username))){
     return res.status(403).json({ error: "Sorry, access is temporarily restricted" })
   }
 
