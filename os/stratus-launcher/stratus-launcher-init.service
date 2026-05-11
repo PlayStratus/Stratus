@@ -1,9 +1,12 @@
 [Unit]
 Description=Initialize the stratus game environment before starting stratusd
 After=network.target
+Requires=stratusd-sway.service
+After=stratusd-sway.service
 Before=stratusd.service
 
 [Service]
+Environment="WAYLAND_DISPLAY=wayland-1"
 Type=oneshot
 ExecStart=/usr/bin/stratus-launcher --init
 

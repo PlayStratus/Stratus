@@ -12,6 +12,11 @@ set -e
 
 # Initialize wine and install required libraries
 if [ "$1" = '--init' ]; then
+    if [ -z "$WAYLAND_DISPLAY" ]; then
+        echo "Error: the vcrun2015 installer requires a Wayland server"
+        exit 1
+    fi
+
     wineboot --init
     winetricks -q dotnet45
     winetricks -q vcrun2015
