@@ -49,6 +49,7 @@ encoder_context* encoder_startup(struct session_args *args) {
     }
 
     // Configure encoder
+    enum AVPixelFormat dst_pix_fmt = AV_PIX_FMT_YUV444P;
     state->codec_ctx->bit_rate = 2000000;  // 2 Mbps
     state->codec_ctx->width = state->width;
     state->codec_ctx->height = state->height;
@@ -56,7 +57,7 @@ encoder_context* encoder_startup(struct session_args *args) {
     state->codec_ctx->framerate = (AVRational){30, 1};
     state->codec_ctx->gop_size = 30;
     state->codec_ctx->max_b_frames = 0;
-    state->codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+    state->codec_ctx->pix_fmt = dst_pix_fmt;
 
     // H.264 specific options
     av_opt_set(state->codec_ctx->priv_data, "preset", "ultrafast", 0);
@@ -92,7 +93,7 @@ encoder_context* encoder_startup(struct session_args *args) {
     // Initialize shm swscale context
     state->shm_sws_ctx = sws_getContext(state->width, state->height,
                                         AV_PIX_FMT_BGR0, state->width,
-                                        state->height, AV_PIX_FMT_YUV420P,
+                                        state->height, dst_pix_fmt,
                                         SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->shm_sws_ctx) {
         fprintf(stderr, "Could not initialize shm swscale context\n");
@@ -102,7 +103,7 @@ encoder_context* encoder_startup(struct session_args *args) {
 
     state->dma_sws_ctx = sws_getContext(state->width, state->height,
                                         AV_PIX_FMT_RGBA, state->width,
-                                        state->height, AV_PIX_FMT_YUV420P,
+                                        state->height, dst_pix_fmt,
                                         SWS_BILINEAR, NULL, NULL, NULL);
     if (!state->dma_sws_ctx) {
         fprintf(stderr, "Could not initialize swscale context\n");
@@ -179,7 +180,7 @@ int encode_video_frame(encoder_context *state, const uint8_t *argb_buffer,
             return -1;
     }
 
-    // Convert ARGB to YUV420P
+    // Convert ARGB to destination format
     sws_scale(sws_ctx,
               (const uint8_t * const*)&argb_buffer,
               &stride,
