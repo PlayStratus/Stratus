@@ -10,6 +10,14 @@
 
 set -e
 
+# Ensure wine server is shutdown correctly
+# Note: this won't work if stratus-launcher itself is SIGKILL'd
+cleanup() {
+    echo 'Killing wineserver...'
+    wineserver --kill
+}
+trap cleanup EXIT
+
 # Initialize wine and install required libraries
 if [ "$1" = '--init' ]; then
     if [ -z "$WAYLAND_DISPLAY" ]; then
