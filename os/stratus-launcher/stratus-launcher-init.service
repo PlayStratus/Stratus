@@ -4,6 +4,7 @@ After=network.target
 Requires=stratusd-sway.service
 After=stratusd-sway.service
 Before=stratusd.service
+ConditionPathExists=!%h/.wine
 
 [Service]
 Environment="WAYLAND_DISPLAY=wayland-1"
