@@ -67,6 +67,11 @@ void session_teardown(struct session *session) {
     pthread_cond_broadcast(&audio_context->format_cond);
     pthread_mutex_unlock(&audio_context->format_mutex);
 
+    // send SIGTERM to the game's process tree
+    if (session->game_pid != 0) {
+        killpg(session->game_pid, 15);
+    }
+
     // Give threads 100ms to get to a good stopping point before we kill them
     usleep(100000);
 
