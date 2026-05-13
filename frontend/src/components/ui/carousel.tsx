@@ -28,6 +28,7 @@ type CarouselContextProps = {
   scrollNext: () => void
   canScrollPrev: boolean
   canScrollNext: boolean
+  isHydrated: boolean
 } & CarouselProps
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null)
@@ -60,6 +61,7 @@ function Carousel({
   )
   const [canScrollPrev, setCanScrollPrev] = React.useState(false)
   const [canScrollNext, setCanScrollNext] = React.useState(false)
+  const [isHydrated, setIsHydrated] = React.useState(false)
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) return
@@ -89,6 +91,10 @@ function Carousel({
   )
 
   React.useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  React.useEffect(() => {
     if (!api || !setApi) return
     setApi(api)
   }, [api, setApi])
@@ -116,6 +122,7 @@ function Carousel({
         scrollNext,
         canScrollPrev,
         canScrollNext,
+        isHydrated,
       }}
     >
       <div
@@ -179,7 +186,7 @@ function CarouselPrevious({
   size = "icon",
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { orientation, scrollPrev, canScrollPrev } = useCarousel()
+  const { orientation, scrollPrev, canScrollPrev, isHydrated } = useCarousel()
 
   return (
     <Button
@@ -193,7 +200,7 @@ function CarouselPrevious({
           : "-top-12 left-1/2 -translate-x-1/2 rotate-90",
         className
       )}
-      disabled={!canScrollPrev}
+      disabled={isHydrated ? !canScrollPrev : undefined}
       onClick={scrollPrev}
       {...props}
     >
@@ -209,7 +216,7 @@ function CarouselNext({
   size = "icon",
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { orientation, scrollNext, canScrollNext } = useCarousel()
+  const { orientation, scrollNext, canScrollNext, isHydrated } = useCarousel()
 
   return (
     <Button
@@ -223,7 +230,7 @@ function CarouselNext({
           : "-bottom-12 left-1/2 -translate-x-1/2 rotate-90",
         className
       )}
-      disabled={!canScrollNext}
+      disabled={isHydrated ? !canScrollNext : undefined}
       onClick={scrollNext}
       {...props}
     >

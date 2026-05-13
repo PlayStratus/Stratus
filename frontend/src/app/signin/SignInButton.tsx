@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
 import { CredentialResponse, GoogleLogin } from "@react-oauth/google"
+import { useRef, useState } from "react"
 import { LoaderCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -50,7 +50,7 @@ export default function SignInButton() {
       <Button
         type='button'
         variant='outline'
-        className='h-11 w-full justify-center border-border/70 bg-background/60 text-foreground'
+        className='h-11 w-full justify-center border-border/70 bg-background/50 text-foreground shadow-md shadow-blue-400/10'
         disabled
       >
         <LoaderCircle className='h-4 w-4 animate-spin' />
@@ -67,7 +67,7 @@ export default function SignInButton() {
       text='signin_with'
       shape='rectangular'
       logo_alignment='left'
-      width='196'
+      width='300'
       containerProps={{
         className: "flex w-full justify-center",
       }}

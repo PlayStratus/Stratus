@@ -1,4 +1,5 @@
 import { getGames } from "@/lib/actions/games"
+
 import NavClient from "./NavClient"
 
 type Props = {

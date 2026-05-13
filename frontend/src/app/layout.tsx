@@ -1,8 +1,10 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Geist, Inclusive_Sans } from "next/font/google"
 
 import { AuthProvider } from "@/components/auth/AuthProvider"
-import Footer from "@/components/Footer"
+import ConditionalFooter from "@/components/Footer/ConditionalFooter"
+
 import "./globals.css"
 
 const geistSans = Geist({
@@ -32,10 +34,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${inclusiveSans.variable} antialiased min-h-screen flex flex-col`}
       >
         <AuthProvider>
-          <div className="flex-1 flex flex-col">
-            {children}
-          </div>
-          <Footer />
+          <div className='flex min-h-0 flex-1 flex-col'>{children}</div>
+          <Suspense fallback={null}>
+            <ConditionalFooter />
+          </Suspense>
         </AuthProvider>
       </body>
     </html>
