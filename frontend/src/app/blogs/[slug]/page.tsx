@@ -11,6 +11,7 @@ import { ExpandableImage } from "@/components/ui/expandable-image"
 import {
   buildBlogAssetUrl,
   getBlogPostBySlug,
+  resolveDocLinkHref,
   resolveDocAssetPath,
 } from "@/lib/blogs"
 
@@ -125,14 +126,21 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
                   {children}
                 </blockquote>
               ),
-              a: ({ href, children }) => (
-                <a
-                  href={href}
-                  className='font-medium text-primary underline underline-offset-4'
-                >
-                  {children}
-                </a>
-              ),
+              a: ({ href, children }) => {
+                const resolvedHref = resolveDocLinkHref(
+                  post.sourceRelativePath,
+                  href,
+                )
+
+                return (
+                  <a
+                    href={resolvedHref}
+                    className='font-medium text-primary underline underline-offset-4'
+                  >
+                    {children}
+                  </a>
+                )
+              },
               code: ({ className, children }) => (
                 <code
                   className={

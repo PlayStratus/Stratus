@@ -171,6 +171,43 @@ export function buildBlogAssetUrl(relativeDocsPath: string) {
     .join("/")}`
 }
 
+export function buildBlogPostUrl(relativeDocsPath: string) {
+  return `/blogs/${slugifyFilename(path.posix.basename(relativeDocsPath))}`
+}
+
+export function resolveDocLinkHref(
+  sourceRelativePath: string,
+  rawHref: string | undefined,
+) {
+  if (!rawHref || rawHref.startsWith("#")) {
+    return rawHref
+  }
+
+  if (/^[a-z]+:/i.test(rawHref) || rawHref.startsWith("//")) {
+    return rawHref
+  }
+
+  const linkPath = rawHref.split(/[?#]/, 1)[0]
+  const linkSuffix = rawHref.slice(linkPath.length)
+  const linkExtension = path.posix.extname(linkPath).toLowerCase()
+
+  if (!linkExtension) {
+    return rawHref
+  }
+
+  const relativeDocsPath = resolveDocAssetPath(sourceRelativePath, rawHref)
+
+  if (!relativeDocsPath) {
+    return rawHref
+  }
+
+  if (path.posix.extname(relativeDocsPath).toLowerCase() === ".md") {
+    return `${buildBlogPostUrl(relativeDocsPath)}${linkSuffix}`
+  }
+
+  return `${buildBlogAssetUrl(relativeDocsPath)}${linkSuffix}`
+}
+
 function toBlogPost(filePath: string, rawFile: string): BlogPost {
   const parsed = matter(rawFile)
   const frontmatter = validateFrontmatter(parsed.data, filePath)

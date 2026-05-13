@@ -7,6 +7,8 @@ tags: [Streaming Node, Audio]
 
 # Audio Capture Pipeline
 
+[Link to TEMP File](./Temp_File.md)
+
 ## Implementation
 
 ![Audio Capture Pipeline](./images/audio_capture_pipeline.png)
