@@ -138,7 +138,7 @@ static int api_connect(struct api_client *client) {
         goto err_pre_init;
     }
     assert(curl_easy_setopt(client->curl, CURLOPT_URL, url) == CURLE_OK);
-    assert(curl_easy_setopt(client->curl, CURLOPT_CONNECT_ONLY, 2) == CURLE_OK);
+    assert(curl_easy_setopt(client->curl, CURLOPT_CONNECT_ONLY, 2L) == CURLE_OK);
     if (pw != NULL) {
         assert(curl_easy_setopt(client->curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC) == CURLE_OK);
         assert(curl_easy_setopt(client->curl, CURLOPT_USERNAME, "stratusd") == CURLE_OK);
