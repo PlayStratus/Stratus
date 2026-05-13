@@ -48,7 +48,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
       error: errorMessage,
     })
 
-    router.replace(`/mvp?${params.toString()}`)
+    router.replace(`/direct-connect?${params.toString()}`)
   })
   const { handleStream } = useStreamRouter()
   const { handleControlStream } = useControlStream()

@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react"
 import { flushSync } from "react-dom"
 
-import { getBackendPath } from "@/lib/backend/getBackendPath"
-
 import { useAuth } from "@/components/auth/AuthProvider"
 
+import { getBackendPath } from "@/lib/backend/getBackendPath"
 import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
 import { StatusType } from "@/lib/transport/types"
@@ -17,11 +16,15 @@ import Streaming, { LoadingScreen } from "./Streaming"
 const SESSION_ERROR_MESSAGE = "The game session could not be started."
 
 type Props = {
-  id: string
-  title: string
+  game: {
+    id: string
+    title: string
+    developer: string
+    coverImage: string | null
+  }
 }
 
-function Client({ id, title }: Readonly<Props>) {
+function Client({ game }: Readonly<Props>) {
   const { token } = useAuth()
 
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -94,7 +97,7 @@ function Client({ id, title }: Readonly<Props>) {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            game_id: id,
+            game_id: game.id,
             width: 640,
             height: 480,
             // width: viewport.width,
@@ -140,7 +143,7 @@ function Client({ id, title }: Readonly<Props>) {
       cancelled = true
       abortController.abort()
     }
-  }, [id, status, token])
+  }, [game.id, status, token])
 
   useEffect(() => {
     ;(globalThis as any).dumpLogs = () => dumpLogs(logs)
@@ -195,7 +198,7 @@ function Client({ id, title }: Readonly<Props>) {
   const hasSessionDetails = Boolean(webtransportIP && tlsFingerprint)
 
   return (
-    <div className='flex flex-1' ref={wrapperRef}>
+    <div className='flex flex-1 bg-background' ref={wrapperRef}>
       {status === "LOADING" && !hasSessionDetails ? <LoadingScreen /> : null}
 
       {status === "STREAMING" || (status === "LOADING" && hasSessionDetails) ? (
@@ -211,7 +214,7 @@ function Client({ id, title }: Readonly<Props>) {
 
       {status === "NOT_STARTED" || status === "ERROR" ? (
         <LandingForm
-          title={title}
+          game={game}
           errorMessage={errorMessage}
           isStarting={isStarting}
           onStart={handleStart}

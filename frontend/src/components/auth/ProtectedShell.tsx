@@ -26,7 +26,7 @@ export default function ProtectedShell({
 
   if (status === "loading") {
     return (
-      <main className='flex min-h-screen items-center justify-center'>
+      <main className='flex flex-1 items-center justify-center'>
         <p className='text-sm text-muted-foreground'>Checking session...</p>
       </main>
     )

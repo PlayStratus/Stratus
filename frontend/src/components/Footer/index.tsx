@@ -1,61 +1,81 @@
-"use client"
-
 import Link from "next/link"
 import Image from "next/image"
-import { useAuth } from "@/components/auth/AuthProvider"
+
 import wordmarkLogo from "@/assets/wordmark-logo.png"
 
-export default function Footer() {
-  const { user } = useAuth()
+import { GithubIcon } from "@/components/ui/brand-icons"
 
+type Props = {
+  logoLoading?: "eager" | "lazy"
+}
+
+export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
   return (
-    <footer className="w-full bg-background border-t pt-16 pb-8 md:pt-24 md:pb-12 overflow-hidden relative">
-      <div className="absolute inset-0 w-full h-full bg-gradient-to-t from-primary/5 to-transparent pointer-events-none" />
+    <footer className='relative w-full overflow-hidden border-t bg-background pt-14 pb-8 md:pt-20 md:pb-10'>
+      <div className='pointer-events-none absolute inset-0 h-full w-full bg-linear-to-t from-primary/5 to-transparent' />
 
-      <div className="container mx-auto px-4 relative z-10 flex flex-col items-center justify-between gap-12">
-        <div className="flex flex-col items-center gap-6">
-          <Link href="/" className="group inline-block">
+      <div className='container relative z-10 mx-auto flex flex-col gap-12 px-4 md:flex-row md:items-start md:justify-between'>
+        <div className='flex flex-col items-center gap-5 text-center md:items-start md:text-left'>
+          <Link href='/' className='group inline-block'>
             <Image
               src={wordmarkLogo}
-              alt="Stratus"
-              className="h-10 md:h-14 w-auto drop-shadow-md transition-transform duration-300 group-hover:scale-105"
+              alt='Stratus'
+              loading={logoLoading}
+              className='h-10 w-auto brightness-0 invert drop-shadow-md transition-transform duration-300 group-hover:scale-105 md:h-14'
             />
           </Link>
-          <p className="text-muted-foreground text-center max-w-sm">
+          <p className='max-w-sm text-muted-foreground'>
             An open source game streaming service.
           </p>
         </div>
 
-        <nav className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
+        <nav
+          aria-label='Explore'
+          className='flex flex-col items-center gap-4 text-center md:items-start md:text-left'
+        >
+          <h2 className='text-sm font-semibold uppercase tracking-widest text-foreground'>
+            Explore
+          </h2>
           <Link
-            href="/"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
+            href='/'
+            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
           >
             Home
           </Link>
-
-          {user && (
-            <Link
-              href="/browse"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
-            >
-              Browse
-            </Link>
-          )}
-
           <Link
-            href="/about"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-primary after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:origin-left"
+            href='/#Blogs'
+            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
           >
-            About
+            Blogs
+          </Link>
+          <Link
+            href='/browse'
+            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+          >
+            Browse
           </Link>
         </nav>
 
-        <div className="w-full flex items-center justify-center pt-6 mt-4 border-t border-border/50">
-          <p className="text-xs text-muted-foreground/60">
-            &copy; {new Date().getFullYear()} Stratus. All rights reserved.
-          </p>
+        <div className='flex flex-col items-center gap-4 text-center md:items-start md:text-left'>
+          <h2 className='text-sm font-semibold uppercase tracking-widest text-foreground'>
+            Source
+          </h2>
+          <a
+            href='https://github.com/PlayStratus/Stratus'
+            target='_blank'
+            rel='noreferrer'
+            className='inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+          >
+            <GithubIcon className='h-4 w-4' aria-hidden='true' />
+            GitHub
+          </a>
         </div>
+      </div>
+
+      <div className='container relative z-10 mx-auto mt-10 flex items-center justify-center border-t border-border/50 px-4 pt-6 md:mt-12'>
+        <p className='text-xs text-muted-foreground/60'>
+          &copy; {new Date().getFullYear()} Stratus. All rights reserved.
+        </p>
       </div>
     </footer>
   )

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Children, isValidElement, type ReactNode } from "react"
@@ -17,6 +18,15 @@ import {
 
 type Props = {
   params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const post = await getBlogPostBySlug(slug)
+
+  return {
+    title: post?.title ?? "Blog Post",
+  }
 }
 
 function hasMarkdownImage(children: ReactNode) {
@@ -41,7 +51,7 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
 
   return (
     <main className='min-h-screen'>
-      <Nav />
+      <Nav hideSearchBar />
 
       <article className='container mx-auto max-w-5xl px-4 py-16'>
         <Link

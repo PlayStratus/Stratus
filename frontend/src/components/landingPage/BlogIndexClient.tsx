@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useState } from "react"
 
 import { Input } from "@/components/ui/input"
@@ -11,6 +10,8 @@ import {
   CardDescription,
   CardTitle,
 } from "@/components/ui/card"
+import { HoverCard } from "@/components/ui/hover-card"
+
 import type { BlogSummary } from "@/lib/blogs"
 
 type Props = {
@@ -46,54 +47,56 @@ export default function BlogIndexClient({ posts }: Readonly<Props>) {
 
   return (
     <div className='space-y-8'>
-      <div className='grid gap-4 rounded-2xl border border-border/70 bg-card/60 p-6 shadow-sm'>
-        <Input
-          type='search'
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder='Search blogs...'
-          aria-label='Search blogs'
-          className='h-11'
-        />
+      <Card className='gap-4 border-border/70 p-6'>
+        <CardContent className='grid gap-4 px-0'>
+          <Input
+            type='search'
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder='Search blogs...'
+            aria-label='Search blogs'
+            className='h-11'
+          />
 
-        <div className='grid gap-3'>
-          <div className='flex items-center justify-between gap-4'>
-            <h3 className='text-sm font-medium text-muted-foreground'>
-              Filter by tags
-            </h3>
-            {selectedTags.length > 0 ? (
-              <Button
-                type='button'
-                variant='ghost'
-                size='sm'
-                onClick={() => setSelectedTags([])}
-                className='px-0 text-muted-foreground hover:text-foreground'
-              >
-                Clear filters
-              </Button>
-            ) : null}
-          </div>
-
-          <div className='flex flex-wrap gap-2'>
-            {availableTags.map((tag) => {
-              const isSelected = selectedTags.includes(tag)
-
-              return (
+          <div className='grid gap-3'>
+            <div className='flex items-center justify-between gap-4'>
+              <CardTitle className='text-sm font-medium text-muted-foreground'>
+                Filter by tags
+              </CardTitle>
+              {selectedTags.length > 0 ? (
                 <Button
-                  key={tag}
                   type='button'
-                  variant={isSelected ? "default" : "outline"}
+                  variant='ghost'
                   size='sm'
-                  onClick={() => toggleTag(tag)}
-                  className='rounded-full'
+                  onClick={() => setSelectedTags([])}
+                  className='px-0 text-muted-foreground hover:text-foreground'
                 >
-                  {tag}
+                  Clear filters
                 </Button>
-              )
-            })}
+              ) : null}
+            </div>
+
+            <div className='flex flex-wrap gap-2'>
+              {availableTags.map((tag) => {
+                const isSelected = selectedTags.includes(tag)
+
+                return (
+                  <Button
+                    key={tag}
+                    type='button'
+                    variant={isSelected ? "default" : "outline"}
+                    size='sm'
+                    onClick={() => toggleTag(tag)}
+                    className='rounded-full'
+                  >
+                    {tag}
+                  </Button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       <div className='flex items-center justify-between gap-4'>
         <p className='text-sm text-muted-foreground'>
@@ -104,10 +107,10 @@ export default function BlogIndexClient({ posts }: Readonly<Props>) {
       {filteredPosts.length > 0 ? (
         <div className='grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3'>
           {filteredPosts.map((post) => (
-            <Link
+            <HoverCard
               key={post.slug}
               href={`/blogs/${post.slug}`}
-              className='group flex flex-col h-full hover:-translate-y-1 transition-all cursor-pointer rounded-lg shadow-md shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40'
+              className='h-full cursor-pointer gap-0 overflow-hidden rounded-lg py-0 shadow-blue-400/30 hover:shadow-blue-400/40'
             >
               <div className='w-full aspect-[16/9] overflow-hidden rounded-t-lg bg-muted relative'>
                 <img
@@ -116,13 +119,13 @@ export default function BlogIndexClient({ posts }: Readonly<Props>) {
                   className='h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]'
                 />
               </div>
-              <div className='bg-card text-card-foreground px-4 py-3 rounded-b-lg border border-t-0 border-border flex flex-col flex-grow'>
-                <h3 className='font-semibold text-lg mb-1 group-hover:text-primary transition-colors line-clamp-1'>
+              <CardContent className='flex grow flex-col px-4 py-3'>
+                <CardTitle className='mb-1 text-lg font-semibold group-hover:text-primary transition-colors line-clamp-1'>
                   {post.title}
-                </h3>
-                <p className='text-sm text-muted-foreground line-clamp-2'>
+                </CardTitle>
+                <CardDescription className='line-clamp-2'>
                   {post.author}
-                </p>
+                </CardDescription>
 
                 <div className='mt-auto flex flex-wrap gap-2'>
                   {post.tags.map((tag) => (
@@ -134,12 +137,12 @@ export default function BlogIndexClient({ posts }: Readonly<Props>) {
                     </span>
                   ))}
                 </div>
-              </div>
-            </Link>
+              </CardContent>
+            </HoverCard>
           ))}
         </div>
       ) : (
-        <Card className='border-dashed border-border/70 bg-card/50'>
+        <Card className='border-dashed border-border/70 bg-card'>
           <CardContent className='px-6 py-10 text-center'>
             <CardTitle className='text-2xl'>No matching posts</CardTitle>
             <CardDescription className='mt-2 text-base'>

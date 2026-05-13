@@ -1,6 +1,15 @@
+import type { Metadata } from "next"
+import Link from "next/link"
+
+import { CardContent, CardTitle, CardDescription } from "@/components/ui/card"
+import { HoverCard } from "@/components/ui/hover-card"
+
 import { getGames } from "@/lib/actions/games"
 import { GameType } from "@/lib/types"
-import Link from "next/link"
+
+export const metadata: Metadata = {
+  title: "Browse",
+}
 
 export default async function Browse() {
   const games = await getGames()
@@ -18,36 +27,34 @@ export default async function Browse() {
 
         <section className='grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'>
           {games?.map((game) => (
-            <Link
+            <HoverCard
               href={"/browse/" + game.GameID}
-              className='group'
+              className='h-full cursor-pointer gap-0 overflow-hidden rounded-lg py-0'
               key={game.GameID}
             >
-              <div className='flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card shadow-md shadow-blue-400/20 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl group-hover:shadow-blue-400/30'>
-                <div className='relative aspect-video w-full overflow-hidden bg-muted'>
-                  {game.s3?.[0] ? (
-                    <img
-                      src={game.s3[0]}
-                      alt={game.title}
-                      className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
-                    />
-                  ) : (
-                    <div className='flex h-full w-full items-center justify-center text-muted-foreground'>
-                      No image
-                    </div>
-                  )}
-                </div>
-
-                <div className='flex flex-1 flex-col px-4 py-3'>
-                  <h3 className='mb-1 line-clamp-1 text-lg font-semibold transition-colors group-hover:text-primary'>
-                    {game.title}
-                  </h3>
-                  <p className='line-clamp-2 text-sm text-muted-foreground'>
-                    {game.sDescript}
-                  </p>
-                </div>
+              <div className='relative aspect-video w-full overflow-hidden rounded-t-lg bg-muted'>
+                {game.s3?.[0] ? (
+                  <img
+                    src={game.s3[0]}
+                    alt={game.title}
+                    className='h-full w-full object-cover transition-transform duration-500 group-hover:scale-105'
+                  />
+                ) : (
+                  <div className='flex h-full w-full items-center justify-center text-muted-foreground'>
+                    No image
+                  </div>
+                )}
               </div>
-            </Link>
+
+              <CardContent className='flex grow flex-col px-4 py-3'>
+                <CardTitle className='mb-1 line-clamp-1 text-lg font-semibold transition-colors group-hover:text-primary'>
+                  {game.title}
+                </CardTitle>
+                <CardDescription className='line-clamp-2'>
+                  {game.sDescript}
+                </CardDescription>
+              </CardContent>
+            </HoverCard>
           ))}
         </section>
       </main>

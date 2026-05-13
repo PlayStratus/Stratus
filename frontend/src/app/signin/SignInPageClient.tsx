@@ -1,9 +1,7 @@
 "use client"
 
 import { useEffect } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
 
 import { useAuth } from "@/components/auth/AuthProvider"
 
@@ -15,8 +13,18 @@ type SignInPageClientProps = {
 
 function SessionStatus() {
   return (
-    <main className='flex min-h-screen items-center justify-center bg-linear-to-b from-background via-background to-muted/20 px-4'>
-      <div className='text-center'>
+    <main className='relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-background px-4'>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className='pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-40'
+      >
+        <source src='/gradient.mp4' type='video/mp4' />
+      </video>
+
+      <div className='rounded-lg border border-border/70 bg-card/80 px-5 py-4 text-center shadow-lg shadow-blue-400/15 backdrop-blur'>
         <p className='text-sm text-muted-foreground'>Checking session...</p>
       </div>
     </main>
@@ -44,33 +52,46 @@ export default function SignInPageClient({
   }
 
   return (
-    <main className='flex min-h-screen flex-col items-center justify-center bg-linear-to-b from-background to-muted/20'>
-      <div className='flex flex-col items-center justify-center space-y-8 px-4 py-16 text-center max-w-2xl w-full'>
-        <Link
-          href='/'
-          className='self-start flex items-center gap-2 text-muted-foreground hover:text-foreground'
-        >
-          <ArrowLeft className='w-5 h-5' />
-          <span>Back to Home</span>
-        </Link>
+    <main className='relative flex min-h-0 flex-1 items-center justify-center overflow-x-hidden overflow-y-auto bg-background px-4 py-10 sm:px-6 lg:px-8'>
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className='pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-60'
+      >
+        <source src='/gradient.mp4' type='video/mp4' />
+      </video>
+      <div className='pointer-events-none absolute inset-0 -z-10 bg-background/25' />
 
-        <h1 className='text-4xl md:text-5xl font-extrabold tracking-tight'>
-          Stratus
-        </h1>
+      <div className='mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1fr_0.92fr]'>
+        <section className='flex flex-col items-center text-center lg:items-start lg:text-left'>
+          <h1 className='max-w-3xl text-4xl font-bold tracking-tight text-foreground sm:text-5xl'>
+            Stratus is currently available to Oregon State University students
+          </h1>
 
-        <div className='w-full max-w-md bg-card p-8 rounded-lg border'>
-          <div className='mb-4 p-3 border rounded-lg text-sm'>
-            Sign in with your oregonstate.edu email address.
-          </div>
+          <p className='mt-5 max-w-2xl text-lg font-medium leading-relaxed text-muted-foreground md:text-xl'>
+            Sign in with your oregonstate.edu email to continue
+          </p>
+        </section>
 
-          <SignInButton />
-
-          {error && (
-            <div className='mb-4 p-3 bg-red-500/10 border border-red-500 rounded-lg text-red-500 text-sm'>
-              {error}
+        <section className='w-full'>
+          <div className='mx-auto w-full max-w-md rounded-xl border border-border/70 bg-card/85 p-5 shadow-xl shadow-blue-400/25 backdrop-blur md:p-8'>
+            <div className='mb-6'>
+              <h1 className='mt-2 text-3xl font-bold tracking-tight md:text-4xl'>
+                Sign In
+              </h1>
             </div>
-          )}
-        </div>
+
+            <SignInButton />
+
+            {error && (
+              <div className='mt-5 rounded-lg border border-red-500/70 bg-red-500/10 p-3 text-sm text-red-200'>
+                {error}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   )

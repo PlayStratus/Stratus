@@ -6,7 +6,7 @@ import Image from "next/image"
 import { Menu } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import Logo from "./stratus-logo.png"
+import Logo from "@/assets/stratus-logo.png"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,9 +15,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { GameType } from "@/lib/types"
-import SearchBar from "./SearchBar"
 import { useAuth } from "@/components/auth/AuthProvider"
+
+import type { GameType } from "@/lib/types"
+
+import SearchBar from "./SearchBar"
 
 type Props = {
   games: GameType[]
@@ -70,27 +72,31 @@ export default function NavClient({
       }
     >
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
-        <div className='flex items-center gap-4'>
+        <div className='flex items-center gap-6'>
           <Link href='/'>
-            <Image
-              src={Logo}
-              alt='Stratus'
-              height={34}
-              style={{ width: "auto" }}
-            />
+            <Image src={Logo} alt='Stratus' className='h-8 w-auto' />
           </Link>
 
-          <div className='hidden md:flex items-center'>
-            <Link href='/browse'>
-              <Button variant='link'>Browse</Button>
+          <div className='hidden items-center gap-6 md:flex'>
+            <Link
+              href='/'
+              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+            >
+              Home
             </Link>
 
-            <Link href='/#About'>
-              <Button variant='link'>About</Button>
+            <Link
+              href='/#Blogs'
+              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+            >
+              Blogs
             </Link>
 
-            <Link href='/#Blogs'>
-              <Button variant='link'>Blogs</Button>
+            <Link
+              href='/browse'
+              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+            >
+              Browse
             </Link>
           </div>
         </div>
@@ -136,20 +142,20 @@ export default function NavClient({
 
               <DropdownMenuContent align='end'>
                 <DropdownMenuItem asChild>
-                  <Link href='/browse' className='w-full cursor-pointer'>
-                    Browse
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link href='/#About' className='w-full cursor-pointer'>
-                    About
+                  <Link href='/' className='w-full cursor-pointer'>
+                    Home
                   </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem asChild>
                   <Link href='/#Blogs' className='w-full cursor-pointer'>
                     Blogs
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href='/browse' className='w-full cursor-pointer'>
+                    Browse
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>

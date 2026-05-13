@@ -1,6 +1,8 @@
 "use client"
+
 import { useEffect, useState } from "react"
-import { getHeartbeat, NodeHeartbeat } from "../../lib/actions/heartbeat"
+
+import { getHeartbeat, NodeHeartbeat } from "@/lib/actions/heartbeat"
 
 export default function NodeHeartbeats() {
   const [nodes, setNodes] = useState<NodeHeartbeat[]>([])

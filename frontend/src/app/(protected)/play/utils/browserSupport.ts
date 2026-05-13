@@ -1,4 +1,10 @@
-export type BrowserRequirementKey = "webTransport" | "webCodecsAvc" | "gamepad"
+export type BrowserRequirementKey =
+  | "chromiumBrowser"
+  | "webTransport"
+  | "webCodecsAvc"
+  | "webCodecsOpus"
+  | "audioWorklet"
+  | "gamepad"
 
 export type BrowserRequirementStatus = "checking" | "supported" | "unsupported"
 
@@ -16,6 +22,12 @@ export interface BrowserSupportReport {
 
 const defaultRequirements: BrowserRequirement[] = [
   {
+    key: "chromiumBrowser",
+    label: "Chromium browser",
+    status: "checking",
+    detail: "Checking for a Chromium-based browser.",
+  },
+  {
     key: "webTransport",
     label: "WebTransport",
     status: "checking",
@@ -26,6 +38,18 @@ const defaultRequirements: BrowserRequirement[] = [
     label: "WebCodecs AVC decoder (avc1.42C01E)",
     status: "checking",
     detail: "Checking WebCodecs and H.264 decoder support.",
+  },
+  {
+    key: "webCodecsOpus",
+    label: "WebCodecs Opus decoder",
+    status: "checking",
+    detail: "Checking WebCodecs and Opus decoder support.",
+  },
+  {
+    key: "audioWorklet",
+    label: "AudioWorklet",
+    status: "checking",
+    detail: "Checking for the AudioWorklet API.",
   },
   {
     key: "gamepad",
@@ -47,12 +71,32 @@ export function createPendingBrowserSupportReport(): BrowserSupportReport {
 export async function checkPlayPageBrowserSupport(): Promise<BrowserSupportReport> {
   const requirements = createPendingBrowserSupportReport().requirements
 
+  const chromiumSupported = isChromiumBrowser()
+  updateRequirement(requirements, "chromiumBrowser", {
+    status: chromiumSupported ? "supported" : "unsupported",
+    detail: chromiumSupported
+      ? "A Chromium-based browser was detected."
+      : "Stratus currently requires a Chromium-based browser.",
+  })
+
   const webTransportSupported = typeof WebTransport !== "undefined"
   updateRequirement(requirements, "webTransport", {
     status: webTransportSupported ? "supported" : "unsupported",
     detail: webTransportSupported
       ? "WebTransport is available."
       : "This browser does not expose the WebTransport API.",
+  })
+
+  const audioContextSupported = typeof AudioContext !== "undefined"
+  const audioWorkletSupported =
+    audioContextSupported && "audioWorklet" in AudioContext.prototype
+  updateRequirement(requirements, "audioWorklet", {
+    status: audioWorkletSupported ? "supported" : "unsupported",
+    detail: audioWorkletSupported
+      ? "AudioWorklet is available."
+      : audioContextSupported
+        ? "This browser exposes AudioContext, but not AudioWorklet."
+        : "This browser does not expose the AudioContext API.",
   })
 
   const gamepadSupported =
@@ -96,6 +140,37 @@ export async function checkPlayPageBrowserSupport(): Promise<BrowserSupportRepor
     detail: webCodecsDetail,
   })
 
+  let webCodecsOpusStatus: BrowserRequirementStatus = "unsupported"
+  let webCodecsOpusDetail = "This browser does not expose the AudioDecoder API."
+
+  if (typeof AudioDecoder !== "undefined") {
+    if (typeof AudioDecoder.isConfigSupported !== "function") {
+      webCodecsOpusDetail =
+        "This browser exposes AudioDecoder, but not AudioDecoder.isConfigSupported()."
+    } else {
+      try {
+        const result = await AudioDecoder.isConfigSupported({
+          codec: "opus",
+          sampleRate: 48_000,
+          numberOfChannels: 2,
+        })
+
+        webCodecsOpusStatus = result.supported ? "supported" : "unsupported"
+        webCodecsOpusDetail = result.supported
+          ? "WebCodecs is available and reports support for Opus decoding."
+          : "WebCodecs is available, but Opus decoding is not reported as supported."
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        webCodecsOpusDetail = `The Opus decoder check failed: ${message}`
+      }
+    }
+  }
+
+  updateRequirement(requirements, "webCodecsOpus", {
+    status: webCodecsOpusStatus,
+    detail: webCodecsOpusDetail,
+  })
+
   return {
     allSupported: requirements.every(
       (requirement) => requirement.status === "supported",
@@ -114,4 +189,25 @@ function updateRequirement(
 
   requirement.status = next.status
   requirement.detail = next.detail
+}
+
+function isChromiumBrowser() {
+  if (typeof navigator === "undefined") {
+    return false
+  }
+
+  const userAgentData = (
+    navigator as Navigator & {
+      userAgentData?: {
+        brands?: Array<{ brand: string }>
+      }
+    }
+  ).userAgentData
+  const brands = userAgentData?.brands ?? []
+  if (brands.some(({ brand }) => /Chromium|Chrome|Edge/i.test(brand))) {
+    return true
+  }
+
+  const userAgent = navigator.userAgent
+  return /Chrom(e|ium)|CriOS|Edg|OPR\//i.test(userAgent)
 }
