@@ -1,3 +1,4 @@
+#include "absl/log/initialize.h"
 #include "QuicheCore.h"
 #include "Transport.h"
 #include "Certs.h"
@@ -33,6 +34,8 @@ transport_session* transport_init(int port, struct StratusCertificate *cert)
     transport_session* session = new transport_session();
     StaticTransportSession = session;
 
+    absl::InitializeLog();
+
     session->port = port;
 
     session->WebTransportSession = NULL;
@@ -66,7 +69,7 @@ void transport_thread(struct transport_session* session)
                                                                       frame->is_description ? Codec_Description : Codec_Payload,
                                                                       frame->data, frame->length);
                 if (!ret.ok()) {
-                    std::cerr << "[Transport] " << ret;
+                    std::cerr << "[Transport] " << ret << std::endl;
                 }
             }
             rbuf_pop(session->video_queue);
@@ -82,7 +85,7 @@ void transport_thread(struct transport_session* session)
                 absl::Status ret = CurrentSession->SubmitAudioDataToStream(Stream_Audio,
                                                                            audio_frame->data, audio_frame->length);
                 if (!ret.ok()) {
-                    std::cerr << "[Transport] " << ret;
+                    std::cerr << "[Transport] " << ret << std::endl;
                 }
             }
             rbuf_pop(session->audio_queue);

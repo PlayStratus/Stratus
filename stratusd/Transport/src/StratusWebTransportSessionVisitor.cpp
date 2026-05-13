@@ -29,15 +29,13 @@ void StratusWebTransportSessionVisitor::OnSessionReady()
 
 void StratusWebTransportSessionVisitor::OnSessionClosed(WebTransportSessionError error_code, const std::string& error_message)
 {
-    std::cerr << "[Transport] Session closed with Error Code " << error_code << " " << error_message << std::endl;
+    std::cerr << "[Transport] Session closed with exit code " << error_code << " " << error_message << std::endl;
     StaticTransportSession->is_thread_active = false;
 }
 
 
 void StratusWebTransportSessionVisitor::OnIncomingBidirectionalStreamAvailable()
 {
-    std::cerr << "[Transport] OnIncomingBidirectionalStreamAvailable()" << std::endl;
-
     if (!ControlStream){
         ControlStream = session_->AcceptIncomingBidirectionalStream();
     }
@@ -50,8 +48,6 @@ void StratusWebTransportSessionVisitor::OnIncomingBidirectionalStreamAvailable()
 
 void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable()
 {
-    std::cerr << "[Transport] OnIncomingUnidirectionalStreamAvailable()" << std::endl;
-
     if (!InputStream){
         InputStream = session_->AcceptIncomingUnidirectionalStream();
         InputStream->SetVisitor(std::make_unique<InputStreamVisitor>(InputStream, input_queue));
@@ -65,24 +61,20 @@ void StratusWebTransportSessionVisitor::OnIncomingUnidirectionalStreamAvailable(
 
 void StratusWebTransportSessionVisitor::OnDatagramReceived(absl::string_view datagram)
 {
-    std::cerr << "[Transport] OnDatagramReceived()" << std::endl;
 }
 
 void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingBidirectionalStream()
 {
-    std::cerr << "[Transport] OnCanCreateNewOutgoingBidirectionalStream()" << std::endl;
 }
 
 void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStream()
 {
-    std::cerr << "[Transport] OnCanCreateNewOutgoingUnidirectionalStream()" << std::endl;
-
     VideoStream = session_->OpenOutgoingUnidirectionalStream();
     AudioStream = session_->OpenOutgoingUnidirectionalStream();
 
     webtransport::SessionStats SessionStats = session_->GetSessionStats();
 
-    std::cerr << "Current Session Stats are Bytes Recieved: " << SessionStats.application_bytes_acknowledged << " Round Trip Latency " << SessionStats.smoothed_rtt << std::endl;
+    std::cerr << "[Transport] Current round trip latency: " << SessionStats.smoothed_rtt << std::endl;
 }
 
 absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType StreamType, enum VideoMessageType MessageType, void* Buffer, int Length)
