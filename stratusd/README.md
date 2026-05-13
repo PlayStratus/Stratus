@@ -65,3 +65,10 @@ concurrent stream session.
       session is stopped
 
 6.  Run binary located at `./build/src/stratusd`
+
+7.  If using the `STRATUSD_API_MSG` option to start a session manually, open the
+    [Direct Connect][direct-connect] page to connect to the stream. Otherwise,
+    initiate a stream through the frontend.
+
+
+[direct-connect]: https://www.playstratus.io/direct-connect
