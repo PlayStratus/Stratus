@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useLogs } from "./logs"
-import { closeWriterSafely } from "./writer"
+import { closeWriterSafely } from "../utils/writer"
 
 export function useControlStream() {
   const { addLogEvent } = useLogs()

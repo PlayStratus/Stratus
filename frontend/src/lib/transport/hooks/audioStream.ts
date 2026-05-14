@@ -1,72 +1,26 @@
-import { useCallback, useEffect, useRef } from "react"
-
 import {
-  AudioStreamDecoder,
-  type DecodedAudioFrame,
-} from "./audioStreamDecoder"
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react"
+
 import { useLogs } from "./logs"
+import { TransportMediaStream } from "../utils/transportMediaStream"
 
 const SAMPLE_RATE = 48_000
 const CHANNELS = 2
-const MAX_CHUNK_BATCH_COUNT = 8
-const MAX_CHUNK_BATCH_BYTES = 128 * 1024
-const CHUNK_BATCH_DELAY_MS = 8
 
-export function useAudioStream() {
+export function useAudioStream(
+  setAverageAudioRenderTimeMs?: Dispatch<SetStateAction<number>>,
+) {
   const { addLogEvent } = useLogs()
   const audioContextRef = useRef<AudioContext | null>(null)
   const rendererRef = useRef<AudioWorkletNode | null>(null)
-  const decoderRef = useRef<AudioStreamDecoder | null>(null)
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
+  const workerRef = useRef<Worker | null>(null)
+  const streamRef = useRef<TransportMediaStream | null>(null)
   const isUnmountedRef = useRef(false)
-
-  const closeDecoder = useCallback(() => {
-    decoderRef.current?.close()
-    decoderRef.current = null
-  }, [])
-
-  const postDecodedAudioFrame = useCallback((frame: DecodedAudioFrame) => {
-    const renderer = rendererRef.current
-    if (!renderer) {
-      return
-    }
-
-    renderer.port.postMessage(
-      {
-        type: "frame",
-        channels: frame.channels,
-        numberOfFrames: frame.numberOfFrames,
-      },
-      frame.channels,
-    )
-  }, [])
-
-  const postAudioReset = useCallback(() => {
-    rendererRef.current?.port.postMessage({ type: "reset" })
-  }, [])
-
-  const getDecoder = useCallback(() => {
-    if (decoderRef.current) {
-      return decoderRef.current
-    }
-
-    const decoder = new AudioStreamDecoder({
-      onFrame: postDecodedAudioFrame,
-      onReset: postAudioReset,
-      onLog: (message, severity) => addLogEvent("AUDIO", message, severity),
-      onError: (message) => addLogEvent("AUDIO", message, "error"),
-    })
-    decoderRef.current = decoder
-
-    return decoder
-  }, [addLogEvent, postAudioReset, postDecodedAudioFrame])
-
-  const handleChunkBatch = useCallback(
-    (chunks: Uint8Array[]) => {
-      getDecoder().decodeChunks(chunks)
-    },
-    [getDecoder],
-  )
 
   const getRenderer = useCallback(async () => {
     if (rendererRef.current) {
@@ -120,6 +74,65 @@ export function useAudioStream() {
     return renderer
   }, [addLogEvent])
 
+  const getWorker = useCallback(
+    (renderer: AudioWorkletNode) => {
+      if (workerRef.current) {
+        return workerRef.current
+      }
+
+      const worker = new Worker(
+        new URL("./audioStream.worker.ts", import.meta.url),
+        { type: "module" },
+      )
+
+      worker.onmessage = (event: MessageEvent<any>) => {
+        const message = event.data
+
+        if (message.type === "log") {
+          addLogEvent("AUDIO", message.message, message.severity)
+        } else if (message.type === "metrics") {
+          setAverageAudioRenderTimeMs?.(message.averageRenderTimeMs)
+        } else if (message.type === "error") {
+          addLogEvent("AUDIO", message.message, "error")
+        }
+      }
+
+      worker.onerror = (event) => {
+        if (!isUnmountedRef.current) {
+          addLogEvent("AUDIO", event.message || "Audio worker error", "error")
+        }
+      }
+
+      worker.postMessage({ type: "init", port: renderer.port }, [renderer.port])
+      workerRef.current = worker
+      addLogEvent("AUDIO", "Audio decoder worker started")
+
+      return worker
+    },
+    [addLogEvent, setAverageAudioRenderTimeMs],
+  )
+
+  const getStream = useCallback(
+    (worker: Worker) => {
+      if (streamRef.current) {
+        return streamRef.current
+      }
+
+      const stream = new TransportMediaStream({
+        worker,
+        label: "Audio",
+        onOpen: () => addLogEvent("AUDIO", "Audio stream opened"),
+        onClose: () => addLogEvent("AUDIO", "Audio stream closed"),
+        onError: (message) => addLogEvent("AUDIO", message, "error"),
+        isClosed: () => isUnmountedRef.current,
+      })
+
+      streamRef.current = stream
+      return stream
+    },
+    [addLogEvent],
+  )
+
   const handleAudioStreams = useCallback(
     async (
       reader: ReadableStreamDefaultReader<Uint8Array>,
@@ -139,109 +152,31 @@ export function useAudioStream() {
         )
       }
 
-      if (!renderer || readerRef.current) {
+      const worker = renderer ? getWorker(renderer) : null
+      if (!renderer || !worker) {
         await reader.cancel().catch(() => undefined)
         reader.releaseLock()
         return
       }
 
-      readerRef.current = reader
-
-      let pendingChunks: Uint8Array[] = []
-      let pendingChunkBytes = 0
-      let flushTimeoutId: ReturnType<typeof setTimeout> | null = null
-
-      const flushPendingChunks = () => {
-        flushTimeoutId = null
-
-        if (pendingChunks.length === 0) {
-          return
-        }
-
-        const chunks = pendingChunks
-        pendingChunks = []
-        pendingChunkBytes = 0
-        handleChunkBatch(chunks)
-      }
-
-      const queueChunk = (value: Uint8Array) => {
-        if (value.length === 0) {
-          return
-        }
-
-        pendingChunks.push(value)
-        pendingChunkBytes += value.byteLength
-
-        if (
-          pendingChunks.length >= MAX_CHUNK_BATCH_COUNT ||
-          pendingChunkBytes >= MAX_CHUNK_BATCH_BYTES
-        ) {
-          if (flushTimeoutId) {
-            clearTimeout(flushTimeoutId)
-          }
-          flushPendingChunks()
-          return
-        }
-
-        if (!flushTimeoutId) {
-          flushTimeoutId = setTimeout(() => {
-            flushPendingChunks()
-          }, CHUNK_BATCH_DELAY_MS)
-        }
-      }
-
-      try {
-        addLogEvent("AUDIO", "Audio stream opened")
-
-        queueChunk(initialChunk)
-
-        while (true) {
-          const { value, done } = await reader.read()
-          if (done) {
-            if (flushTimeoutId) {
-              clearTimeout(flushTimeoutId)
-              flushPendingChunks()
-            } else if (pendingChunks.length > 0) {
-              flushPendingChunks()
-            }
-            addLogEvent("AUDIO", "Audio stream closed")
-            return
-          }
-          if (!value?.length) continue
-
-          queueChunk(value)
-        }
-      } catch (error) {
-        if (!isUnmountedRef.current) {
-          const errorMessage =
-            error instanceof Error ? error.message : String(error)
-          addLogEvent("AUDIO", `Audio stream error: ${errorMessage}`, "error")
-        }
-      } finally {
-        if (flushTimeoutId) {
-          clearTimeout(flushTimeoutId)
-          flushPendingChunks()
-        }
-        readerRef.current = null
-        reader.releaseLock()
-      }
+      await getStream(worker).start(reader, initialChunk)
     },
-    [addLogEvent, getRenderer, handleChunkBatch],
+    [getRenderer, getStream, getWorker],
   )
 
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true
-      void readerRef.current?.cancel().catch(() => undefined)
-      closeDecoder()
+      streamRef.current?.close()
+      streamRef.current = null
+      workerRef.current?.postMessage({ type: "close" })
+      workerRef.current = null
       rendererRef.current?.disconnect()
-      rendererRef.current?.port.postMessage({ type: "close" })
-      rendererRef.current?.port.close()
       rendererRef.current = null
       void audioContextRef.current?.close().catch(() => undefined)
       audioContextRef.current = null
     }
-  }, [closeDecoder])
+  }, [])
 
   return { handleAudioStreams }
 }
