@@ -25,6 +25,8 @@ encoder_context* encoder_startup(struct session_args *args) {
     }
 
     state->debug = (getenv("STRATUSD_ENCODE_DEBUG") != NULL);
+    if (!state->debug)
+        av_log_set_level(AV_LOG_FATAL);
 
     state->width = args->width;
     state->height = args->height;

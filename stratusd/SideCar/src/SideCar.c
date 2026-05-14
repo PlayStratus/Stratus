@@ -90,8 +90,6 @@ int sidecar_heartbeat(struct sidecar_context *ctx) {
     struct statfs fs;
     struct api_msg_heartbeat msg;
 
-    fprintf(stderr, "[Sidecar] Sending heartbeat...\n");
-
     // Get list of installed games
     if ((game_dir = getenv("STRATUSD_GAME_DIR")) == NULL)
         game_dir = DEFAULT_GAME_DIR;
@@ -162,7 +160,6 @@ err_opendir:
  */
 int sidecar_on_start_session(struct sidecar_context *ctx,
                              struct api_msg_start_session *data) {
-    fprintf(stderr, "[Sidecar] Starting session %s...\n", data->session_id);
 
     assert(ctx->active_session == NULL);
 
@@ -185,7 +182,6 @@ int sidecar_on_start_session(struct sidecar_context *ctx,
  * Returns 0 on success and -1 on failure.
  */
 int sidecar_on_stop_session(struct sidecar_context *ctx, char *session_id) {
-    fprintf(stderr, "[Sidecar] Stopping session %s...\n", session_id);
 
     assert(ctx->active_session != NULL);
     assert(ctx->active_session->id == session_id);
@@ -207,7 +203,8 @@ int sidecar_main() {
     time_t last_heartbeat;
     char *test_api_msg;
 
-    fprintf(stderr, "[Sidecar] Starting sidecar module...\n");
+    fprintf(stderr, "[Sidecar] Starting stratusd %s sidecar\n",
+            STRATUSD_VERSION);
 
     // Initialize sidecar context
     ctx.active_session = NULL;

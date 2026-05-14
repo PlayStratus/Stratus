@@ -60,6 +60,8 @@ void session_teardown(struct session *session) {
     if (session == NULL)
         return;
 
+    fprintf(stderr, "[Sidecar] Stopping session %s\n", session->id);
+
     // Notify threads of session teardown
     session->args.is_active = false;
     audio_context = &session->args.audio_context;
@@ -107,6 +109,9 @@ void session_teardown(struct session *session) {
     pthread_mutex_destroy(&audio_context->format_mutex);
 
     destroy_certificate(session->args.cert);
+
+    fprintf(stderr, "[Sidecar] Stopped session %s\n", session->id);
+
     free(session);
 }
 
@@ -189,6 +194,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
                               int height) {
     struct session *session;
 
+    fprintf(stderr, "[Sidecar] Starting session %s\n", session_id);
+
     // Create session struct
     session = calloc(1, sizeof(struct session));
     if (session == NULL) {
@@ -215,8 +222,8 @@ struct session *session_start(char *session_id, char *game_id, int width,
     if (session->args.cert == NULL) {
         goto err_malloc_2;
     }
-    printf("[Sidecar] Generated TLS certificate: %s (DER) / %s (SPKI)\n",
-           get_der_hash(session->args.cert), get_spki_hash(session->args.cert));
+    printf("[Sidecar] Generated TLS certificate: %s\n",
+           get_der_hash(session->args.cert));
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
     session->args.video_encode_queue = rbuf_init(8);
