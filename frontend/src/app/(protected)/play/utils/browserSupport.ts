@@ -71,12 +71,15 @@ export function createPendingBrowserSupportReport(): BrowserSupportReport {
 export async function checkPlayPageBrowserSupport(): Promise<BrowserSupportReport> {
   const requirements = createPendingBrowserSupportReport().requirements
 
-  const chromiumSupported = isChromiumBrowser()
+  const iosBrowser = isIOSBrowser()
+  const browserSupported = iosBrowser || isChromiumBrowser()
   updateRequirement(requirements, "chromiumBrowser", {
-    status: chromiumSupported ? "supported" : "unsupported",
-    detail: chromiumSupported
-      ? "A Chromium-based browser was detected."
-      : "Stratus currently requires a Chromium-based browser.",
+    status: browserSupported ? "supported" : "unsupported",
+    detail: iosBrowser
+      ? "An iOS/WebKit browser was detected."
+      : browserSupported
+        ? "A Chromium-based browser was detected."
+        : "Stratus currently requires a Chromium-based browser or iOS/WebKit with WebTransport support.",
   })
 
   const webTransportSupported = typeof WebTransport !== "undefined"
@@ -84,7 +87,9 @@ export async function checkPlayPageBrowserSupport(): Promise<BrowserSupportRepor
     status: webTransportSupported ? "supported" : "unsupported",
     detail: webTransportSupported
       ? "WebTransport is available."
-      : "This browser does not expose the WebTransport API.",
+      : iosBrowser
+        ? "This iPhone browser does not expose WebTransport. Update iOS/Chrome and try Safari if Chrome still rejects the handshake."
+        : "This browser does not expose the WebTransport API.",
   })
 
   const audioContextSupported = typeof AudioContext !== "undefined"
@@ -210,4 +215,12 @@ function isChromiumBrowser() {
 
   const userAgent = navigator.userAgent
   return /Chrom(e|ium)|CriOS|Edg|OPR\//i.test(userAgent)
+}
+
+function isIOSBrowser() {
+  if (typeof navigator === "undefined") {
+    return false
+  }
+
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
 }

@@ -13,6 +13,11 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         return transportRef.current
       }
 
+      if (typeof WebTransport === "undefined") {
+        handleError(getWebTransportUnavailableMessage())
+        return
+      }
+
       let newTransport: WebTransport | null = null
       let transportUrl: string
 
@@ -24,17 +29,23 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         return
       }
 
-      const trimmedHash = tlsFingerprint.trim()
+      const trimmedHash = normalizeCertificateHashInput(tlsFingerprint)
       let serverCertificateHashes: WebTransportHash[] | undefined
 
       if (trimmedHash) {
         try {
+          const hashValue = Uint8Array.from(atob(trimmedHash), (char) => {
+            return char.codePointAt(0) ?? 0
+          })
+
+          if (hashValue.byteLength !== 32) {
+            throw new Error("The SHA-256 fingerprint must decode to 32 bytes.")
+          }
+
           serverCertificateHashes = [
             {
               algorithm: "sha-256",
-              value: Uint8Array.from(atob(trimmedHash), (char) => {
-                return char.codePointAt(0) ?? 0
-              }),
+              value: hashValue,
             },
           ]
         } catch (error) {
@@ -60,10 +71,11 @@ export function useTransport(handleError: (errorMessage: string) => void) {
       }
 
       try {
-        await newTransport?.ready
+        await newTransport.ready
         addLogEvent("TRANSPORT", "Connection ready.", "info")
       } catch (error) {
-        const errorMessage = `Connection failed: ${(error as Error).message}`
+        newTransport.close()
+        const errorMessage = getConnectionFailureMessage(error)
         handleError(errorMessage)
         return
       }
@@ -77,7 +89,7 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         },
         (error) => {
           if (!isMountedRef.current) return
-          const errorMessage = `Connection closed with error: ${(error as Error).message}`
+          const errorMessage = `Connection closed with error: ${getErrorMessage(error)}`
           handleError(errorMessage)
           transportRef.current = null
         },
@@ -136,4 +148,46 @@ function normalizeWebTransportUrl(url: string) {
   }
 
   return normalizedUrl.toString()
+}
+
+function getConnectionFailureMessage(error: unknown) {
+  const message = getErrorMessage(error)
+
+  return `Connection failed: ${message}}`
+}
+
+function normalizeCertificateHashInput(input: string) {
+  const trimmedInput = input.trim()
+  if (!trimmedInput) {
+    return ""
+  }
+
+  const compactInput = trimmedInput.replace(/\s+/g, "")
+  if (/^[A-Za-z0-9+/]{43}=$/.test(compactInput)) {
+    return compactInput
+  }
+
+  const match = /[A-Za-z0-9+/]{43}=/.exec(trimmedInput)
+  return match ? match[0] : trimmedInput
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message || error.name
+  }
+
+  return String(error)
+}
+
+function getWebTransportUnavailableMessage() {
+  if (isIOSUserAgent()) {
+    return `WebTransport is not available in this browser.`
+  }
+
+  return "WebTransport is not available in this browser. Use a browser with WebTransport support."
+}
+
+function isIOSUserAgent() {
+  if (typeof navigator === "undefined") return false
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
 }

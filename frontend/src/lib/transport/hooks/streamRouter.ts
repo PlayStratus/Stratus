@@ -117,8 +117,24 @@ export function useStreamRouter() {
         return
       }
 
-      await handlers.handleControlStream(transport)
-      await handlers.handleInputStream(transport)
+      void Promise.resolve()
+        .then(() => handlers.handleControlStream(transport))
+        .catch((error) => {
+          addLogEvent(
+            "ROUTER",
+            `Control stream setup failed: ${(error as Error).message}`,
+            "error",
+          )
+        })
+      void Promise.resolve()
+        .then(() => handlers.handleInputStream(transport))
+        .catch((error) => {
+          addLogEvent(
+            "ROUTER",
+            `Input stream setup failed: ${(error as Error).message}`,
+            "error",
+          )
+        })
 
       const reader = transport.incomingUnidirectionalStreams.getReader()
       incomingStreamReaderRef.current = reader
