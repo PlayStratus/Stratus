@@ -20,6 +20,7 @@ import {
   DetailHoverCardTrigger,
 } from "@/components/ui/detail-hover-card"
 
+import { useLogs } from "@/lib/transport/hooks/logs"
 import { cn } from "@/lib/utils"
 
 import {
@@ -51,6 +52,7 @@ export default function LandingForm({
   isStarting,
   onStart,
 }: Readonly<Props>) {
+  const { addLogEvent } = useLogs()
   const [browserSupport, setBrowserSupport] = useState(
     createPendingBrowserSupportReport(),
   )
@@ -61,6 +63,13 @@ export default function LandingForm({
     void (async () => {
       const report = await checkPlayPageBrowserSupport()
       if (!cancelled) {
+        addLogEvent(
+          "PLAY",
+          `Browser support checked: ${report.requirements
+            .map((requirement) => `${requirement.key}=${requirement.status}`)
+            .join(", ")}.`,
+          "info",
+        )
         setBrowserSupport(report)
       }
     })()
@@ -68,7 +77,7 @@ export default function LandingForm({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [addLogEvent])
 
   const isCheckingSupport = browserSupport.requirements.some(
     (requirement) => requirement.status === "checking",
@@ -237,6 +246,7 @@ export default function LandingForm({
                 isStarting || isCheckingSupport || hasUnsupportedRequirement
               }
               onClick={() => {
+                addLogEvent("PLAY", "Start button clicked.", "info")
                 void onStart()
               }}
             >

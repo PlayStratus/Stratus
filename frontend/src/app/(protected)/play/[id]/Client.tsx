@@ -35,24 +35,45 @@ function Client({ game }: Readonly<Props>) {
   const [status, setStatus] = useState<StatusType>("NOT_STARTED")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const { logs } = useLogs()
+  const { logs, addLogEvent } = useLogs()
   const { handleConnecting, handleDisconnect } =
     useTransport(handleErrorMessage)
   const { handleAudioStreams, prepareAudioPlayback } = useAudioStream()
 
   useEffect(() => {
     const onChange = () => {
+      addLogEvent(
+        "PLAY",
+        `Fullscreen changed. active=${document.fullscreenElement === wrapperRef.current} element=${document.fullscreenElement?.tagName ?? "none"}`,
+        "info",
+      )
+
       if (document.fullscreenElement === wrapperRef.current) {
         return
       }
 
+      addLogEvent("PLAY", "Fullscreen exited; disconnecting session.", "warn")
       handleDisconnect()
       setStatus("NOT_STARTED")
     }
 
     document.addEventListener("fullscreenchange", onChange)
     return () => document.removeEventListener("fullscreenchange", onChange)
-  }, [])
+  }, [addLogEvent, handleDisconnect])
+
+  useEffect(() => {
+    addLogEvent("PLAY", `Status changed to ${status}.`, "info")
+  }, [addLogEvent, status])
+
+  useEffect(() => {
+      addLogEvent(
+        "PLAY",
+        `Client environment: userAgent="${navigator.userAgent}", platform="${navigator.platform}", maxTouchPoints=${navigator.maxTouchPoints}, standalone=${Boolean((navigator as Navigator & { standalone?: boolean }).standalone)}, fullscreen=${Boolean(document.fullscreenEnabled)}, visualViewport=${Boolean(window.visualViewport)}, gamepads=${
+          typeof navigator.getGamepads === "function"
+        }.`,
+      "info",
+    )
+  }, [addLogEvent])
 
   useEffect(() => {
     if (status !== "LOADING") {
@@ -79,18 +100,34 @@ function Client({ game }: Readonly<Props>) {
 
     const startLoadingSession = async () => {
       try {
+        addLogEvent(
+          "PLAY",
+          `Waiting for fullscreen before session request. fullscreenElement=${document.fullscreenElement?.tagName ?? "none"}`,
+          "info",
+        )
         await waitForFullscreenElement(container)
 
         if (cancelled) {
+          addLogEvent("PLAY", "Session request cancelled before fetch.", "warn")
           return
         }
 
         if (document.fullscreenElement !== container) {
+          addLogEvent(
+            "PLAY",
+            "Fullscreen was not active after wait; returning to idle.",
+            "warn",
+          )
           setStatus("NOT_STARTED")
           return
         }
 
         const viewport = await getFullscreenViewportSize(container)
+        addLogEvent(
+          "PLAY",
+          `Requesting session for game=${game.id} viewport=${viewport.width}x${viewport.height}.`,
+          "info",
+        )
 
         const response = await fetch(getBackendPath("/play/session"), {
           method: "POST",
@@ -108,31 +145,63 @@ function Client({ game }: Readonly<Props>) {
           signal: abortController.signal,
         })
         const payload = await response.json().catch(() => null)
+        addLogEvent(
+          "PLAY",
+          `Session response status=${response.status} ok=${response.ok}.`,
+          response.ok ? "info" : "warn",
+        )
 
         if (!response.ok) {
           throw new Error(getSessionErrorMessage(payload))
         }
 
         if (cancelled) {
+          addLogEvent(
+            "PLAY",
+            "Session response ignored after cancellation.",
+            "warn",
+          )
           return
         }
 
         if (document.fullscreenElement !== container) {
+          addLogEvent(
+            "PLAY",
+            "Fullscreen exited before session details were applied.",
+            "warn",
+          )
           setStatus("NOT_STARTED")
           return
         }
 
-        console.log("Play session response:", payload)
+        addLogEvent("PLAY", `Play session response: ${JSON.stringify(payload)}`)
 
         if (isSessionPayload(payload)) {
+          addLogEvent(
+            "PLAY",
+            `Session details received. ip=${payload.ip} tlsFingerprintLength=${payload.tls_fingerprint.length}.`,
+            "info",
+          )
           setWebtransportIP(payload.ip)
           setTlsFingerprint(payload.tls_fingerprint)
+        } else {
+          addLogEvent(
+            "PLAY",
+            "Session payload did not match expected shape.",
+            "warn",
+          )
         }
       } catch (error) {
         if (cancelled || isAbortError(error)) {
+          addLogEvent("PLAY", "Session request aborted.", "warn")
           return
         }
 
+        addLogEvent(
+          "PLAY",
+          `Session startup error: ${error instanceof Error ? error.message : String(error)}`,
+          "error",
+        )
         await handleErrorMessage(
           error instanceof Error ? error.message : SESSION_ERROR_MESSAGE,
         )
@@ -145,18 +214,30 @@ function Client({ game }: Readonly<Props>) {
       cancelled = true
       abortController.abort()
     }
-  }, [game.id, status, token])
+  }, [addLogEvent, game.id, status, token])
 
   useEffect(() => {
     ;(globalThis as any).dumpLogs = () => dumpLogs(logs)
   }, [logs])
 
   const handleStart = async () => {
+    addLogEvent("PLAY", `Start requested while status=${status}.`, "info")
+
     if (status === "STREAMING" || status === "LOADING") {
+      addLogEvent(
+        "PLAY",
+        "Start ignored because a session is already active.",
+        "warn",
+      )
       return
     }
 
     if (!token) {
+      addLogEvent(
+        "PLAY",
+        "Start blocked because no auth token is available.",
+        "warn",
+      )
       await handleErrorMessage(
         "You need to sign in before starting a game session.",
       )
@@ -165,6 +246,7 @@ function Client({ game }: Readonly<Props>) {
 
     const container = wrapperRef.current
     if (!container) {
+      addLogEvent("PLAY", "Start blocked because wrapperRef is empty.", "error")
       await handleErrorMessage(
         "The play surface is not ready yet. Please try again.",
       )
@@ -172,6 +254,7 @@ function Client({ game }: Readonly<Props>) {
     }
 
     prepareAudioPlayback()
+    addLogEvent("PLAY", "Audio playback prepared from user gesture.", "info")
     await handleErrorMessage(null)
 
     flushSync(() => {
@@ -179,10 +262,17 @@ function Client({ game }: Readonly<Props>) {
       setTlsFingerprint(null)
       setStatus("LOADING")
     })
+    addLogEvent("PLAY", "State set to LOADING; requesting fullscreen.", "info")
 
     try {
       await container.requestFullscreen()
+      addLogEvent("PLAY", "requestFullscreen resolved.", "info")
     } catch (error) {
+      addLogEvent(
+        "PLAY",
+        `requestFullscreen failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      )
       await handleErrorMessage(
         error instanceof Error ? error.message : SESSION_ERROR_MESSAGE,
       )
@@ -190,6 +280,11 @@ function Client({ game }: Readonly<Props>) {
   }
 
   async function handleErrorMessage(message: string | null) {
+    addLogEvent(
+      "PLAY",
+      message ? `Error message set: ${message}` : "Error message cleared.",
+      message ? "warn" : "info",
+    )
     setErrorMessage(message)
     if (message) {
       setStatus("ERROR")

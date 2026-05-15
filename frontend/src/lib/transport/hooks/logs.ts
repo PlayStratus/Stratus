@@ -9,6 +9,7 @@ import {
 } from "react"
 
 type ComponentType =
+  | "PLAY"
   | "TRANSPORT"
   | "ROUTER"
   | "VIDEO"
@@ -64,6 +65,8 @@ function useLogsState(): LogsContextValue {
         console.error(`[${component}] ${message}`)
       } else if (severity === "warn") {
         console.warn(`[${component}] ${message}`)
+      } else if (severity === "info") {
+        console.info(`[${component}] ${message}`)
       } else if (severity === "log") {
         console.log(`[${component}] ${message}`)
       }

@@ -10,10 +10,16 @@ export function useTransport(handleError: (errorMessage: string) => void) {
   const handleConnecting = useCallback(
     async (url: string, tlsFingerprint: string) => {
       if (transportRef.current) {
+        addLogEvent("TRANSPORT", "Reusing existing WebTransport instance.", "info")
         return transportRef.current
       }
 
       if (typeof WebTransport === "undefined") {
+        addLogEvent(
+          "TRANSPORT",
+          `WebTransport unavailable. userAgent="${navigator.userAgent}".`,
+          "error",
+        )
         handleError(getWebTransportUnavailableMessage())
         return
       }
@@ -23,14 +29,21 @@ export function useTransport(handleError: (errorMessage: string) => void) {
 
       try {
         transportUrl = normalizeWebTransportUrl(url)
+        addLogEvent("TRANSPORT", `Normalized WebTransport URL: ${transportUrl}`, "info")
       } catch (error) {
         const errorMessage = `Invalid URL: ${(error as Error).message}`
+        addLogEvent("TRANSPORT", errorMessage, "error")
         handleError(errorMessage)
         return
       }
 
       const trimmedHash = normalizeCertificateHashInput(tlsFingerprint)
       let serverCertificateHashes: WebTransportHash[] | undefined
+      addLogEvent(
+        "TRANSPORT",
+        `Preparing certificate hash. inputLength=${tlsFingerprint.length} normalizedLength=${trimmedHash.length}.`,
+        "info",
+      )
 
       if (trimmedHash) {
         try {
@@ -41,6 +54,7 @@ export function useTransport(handleError: (errorMessage: string) => void) {
           if (hashValue.byteLength !== 32) {
             throw new Error("The SHA-256 fingerprint must decode to 32 bytes.")
           }
+          addLogEvent("TRANSPORT", "Certificate hash decoded to 32 bytes.", "info")
 
           serverCertificateHashes = [
             {
@@ -50,6 +64,7 @@ export function useTransport(handleError: (errorMessage: string) => void) {
           ]
         } catch (error) {
           const errorMessage = `Invalid TLS hash: ${(error as Error).message}`
+          addLogEvent("TRANSPORT", errorMessage, "error")
           handleError(errorMessage)
           return
         }
@@ -76,6 +91,7 @@ export function useTransport(handleError: (errorMessage: string) => void) {
       } catch (error) {
         newTransport.close()
         const errorMessage = getConnectionFailureMessage(error)
+        addLogEvent("TRANSPORT", errorMessage, "error")
         handleError(errorMessage)
         return
       }
@@ -84,12 +100,14 @@ export function useTransport(handleError: (errorMessage: string) => void) {
         () => {
           if (!isMountedRef.current) return
           const errorMessage = "Connection closed."
+          addLogEvent("TRANSPORT", errorMessage, "warn")
           handleError(errorMessage)
           transportRef.current = null
         },
         (error) => {
           if (!isMountedRef.current) return
           const errorMessage = `Connection closed with error: ${getErrorMessage(error)}`
+          addLogEvent("TRANSPORT", errorMessage, "error")
           handleError(errorMessage)
           transportRef.current = null
         },

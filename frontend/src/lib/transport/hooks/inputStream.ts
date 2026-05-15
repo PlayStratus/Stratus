@@ -16,6 +16,52 @@ export function useInputStream() {
   const manualAxisXRef = useRef<ManualAxisXValue>(0)
   const [isInputReady, setIsInputReady] = useState(false)
 
+  useEffect(() => {
+    addLogEvent(
+      "INPUT",
+      `Input hook mounted. ${getInputEnvironmentSummary()}`,
+      "info",
+    )
+
+    const handleGamepadConnected = (event: GamepadEvent) => {
+      addLogEvent(
+        "INPUT",
+        `Gamepad connected: index=${event.gamepad.index} id="${event.gamepad.id}" buttons=${event.gamepad.buttons.length} axes=${event.gamepad.axes.length}.`,
+        "info",
+      )
+    }
+
+    const handleGamepadDisconnected = (event: GamepadEvent) => {
+      addLogEvent(
+        "INPUT",
+        `Gamepad disconnected: index=${event.gamepad.index} id="${event.gamepad.id}".`,
+        "warn",
+      )
+    }
+
+    const handleVisibilityChange = () => {
+      addLogEvent(
+        "INPUT",
+        `Document visibility changed to ${document.visibilityState}.`,
+        document.visibilityState === "visible" ? "info" : "warn",
+      )
+    }
+
+    window.addEventListener("gamepadconnected", handleGamepadConnected)
+    window.addEventListener("gamepaddisconnected", handleGamepadDisconnected)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      addLogEvent("INPUT", "Input hook unmounted.", "info")
+      window.removeEventListener("gamepadconnected", handleGamepadConnected)
+      window.removeEventListener(
+        "gamepaddisconnected",
+        handleGamepadDisconnected,
+      )
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [addLogEvent])
+
   const closeWriter = useCallback(
     async (writer: WritableStreamDefaultWriter<Uint8Array> | null) => {
       await closeWriterSafely(writer, (error) => {
@@ -42,10 +88,16 @@ export function useInputStream() {
   const handleInputStream = useCallback(
     async (transport: WebTransport) => {
       if (writerRef.current) {
+        addLogEvent(
+          "INPUT",
+          "Input stream setup skipped because a writer already exists.",
+          "warn",
+        )
         return
       }
 
       try {
+        addLogEvent("INPUT", "Creating input unidirectional stream.", "info")
         const stream = await transport.createUnidirectionalStream()
         const writer = stream.getWriter()
         writerRef.current = writer
@@ -62,9 +114,15 @@ export function useInputStream() {
     [addLogEvent],
   )
 
-  const setManualAxisX = useCallback((nextAxisX: ManualAxisXValue) => {
-    manualAxisXRef.current = nextAxisX
-  }, [])
+  const setManualAxisX = useCallback(
+    (nextAxisX: ManualAxisXValue) => {
+      if (manualAxisXRef.current !== nextAxisX) {
+        addLogEvent("INPUT", `Manual X axis set to ${nextAxisX}.`, "info")
+      }
+      manualAxisXRef.current = nextAxisX
+    },
+    [addLogEvent],
+  )
 
   useEffect(() => {
     if (!isInputReady) return
@@ -77,14 +135,52 @@ export function useInputStream() {
         ? navigator.getGamepads.bind(navigator)
         : null
     let lastSentPayload = ""
+    let frameCount = 0
+    let sentCount = 0
+    let noGamepadLogged = false
+    let lastGamepadSummary = ""
+
+    addLogEvent(
+      "INPUT",
+      `Input loop starting. getGamepads=${Boolean(getGamepads)} ready=${isInputReady}.`,
+      "info",
+    )
 
     const loop = async () => {
       if (disposed) return
       const writer = writerRef.current
 
       if (writer) {
-        const gamepads = getGamepads?.() ?? []
+        frameCount += 1
+        let gamepads: readonly (Gamepad | null)[] = []
+        try {
+          gamepads = getGamepads?.() ?? []
+        } catch (error) {
+          addLogEvent(
+            "INPUT",
+            `navigator.getGamepads threw: ${(error as Error).message}`,
+            "error",
+          )
+        }
         const gp = gamepads[0]
+
+        if (!gp && !noGamepadLogged) {
+          noGamepadLogged = true
+          addLogEvent(
+            "INPUT",
+            `No gamepad found at index 0. gamepadSlots=${gamepads.length} manualAxisX=${manualAxisXRef.current}.`,
+            "warn",
+          )
+        }
+
+        if (gp) {
+          const gamepadSummary = `index=${gp.index} id="${gp.id}" connected=${gp.connected} buttons=${gp.buttons.length} axes=${gp.axes.length} timestamp=${gp.timestamp}`
+          if (gamepadSummary !== lastGamepadSummary) {
+            addLogEvent("INPUT", `Polling gamepad: ${gamepadSummary}.`, "info")
+            lastGamepadSummary = gamepadSummary
+          }
+        }
+
         const buttons = gp
           ? gp.buttons.map((button) => button.value)
           : ([] as number[])
@@ -116,8 +212,13 @@ export function useInputStream() {
             await writer.ready
             await writer.write(encoder.encode(payload))
             lastSentPayload = payload
+            sentCount += 1
 
-            addLogEvent("INPUT", `Sent input string: ${payload}`, "info")
+            addLogEvent(
+              "INPUT",
+              `Sent input #${sentCount} frame=${frameCount}: ${summarizePayload(buttons, axes)} payload=${payload}`,
+              "info",
+            )
           } catch (error) {
             addLogEvent(
               "INPUT",
@@ -137,6 +238,11 @@ export function useInputStream() {
 
     rafId = requestAnimationFrame(loop)
     return () => {
+      addLogEvent(
+        "INPUT",
+        `Input loop stopping after ${frameCount} frames and ${sentCount} sends.`,
+        "info",
+      )
       disposed = true
       cancelAnimationFrame(rafId)
     }
@@ -147,10 +253,33 @@ export function useInputStream() {
       const writer = writerRef.current
       writerRef.current = null
       setIsInputReady(false)
+      addLogEvent("INPUT", "Input stream cleanup closing writer.", "info")
       void closeWriter(writer)
       manualAxisXRef.current = 0
     }
-  }, [closeWriter])
+  }, [addLogEvent, closeWriter])
 
   return { handleInputStream, setManualAxisX }
+}
+
+function getInputEnvironmentSummary() {
+  return [
+    `userAgent="${navigator.userAgent}"`,
+    `platform="${navigator.platform}"`,
+    `maxTouchPoints=${navigator.maxTouchPoints}`,
+    `getGamepads=${typeof navigator.getGamepads === "function"}`,
+    `GamepadEvent=${typeof GamepadEvent !== "undefined"}`,
+    `PointerEvent=${typeof PointerEvent !== "undefined"}`,
+    `TouchEvent=${typeof TouchEvent !== "undefined"}`,
+  ].join(" ")
+}
+
+function summarizePayload(buttons: number[], axes: number[]) {
+  const pressedButtons = buttons
+    .map((value, index) => (value >= 0.5 ? index : null))
+    .filter((value): value is number => value !== null)
+
+  return `pressed=[${pressedButtons.join(",")}] axes=[${axes
+    .map((axis) => axis.toFixed(3))
+    .join(",")}]`
 }

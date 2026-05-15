@@ -117,8 +117,12 @@ export function useStreamRouter() {
         return
       }
 
+      addLogEvent("ROUTER", "Starting control stream setup.", "info")
       void Promise.resolve()
         .then(() => handlers.handleControlStream(transport))
+        .then(() => {
+          addLogEvent("ROUTER", "Control stream setup returned.", "info")
+        })
         .catch((error) => {
           addLogEvent(
             "ROUTER",
@@ -126,8 +130,12 @@ export function useStreamRouter() {
             "error",
           )
         })
+      addLogEvent("ROUTER", "Starting input stream setup.", "info")
       void Promise.resolve()
         .then(() => handlers.handleInputStream(transport))
+        .then(() => {
+          addLogEvent("ROUTER", "Input stream setup returned.", "info")
+        })
         .catch((error) => {
           addLogEvent(
             "ROUTER",
