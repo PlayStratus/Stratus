@@ -13,11 +13,17 @@ const AUDIO_DECODER_CONFIG: AudioDecoderConfig = {
   sampleRate: SAMPLE_RATE,
   numberOfChannels: CHANNELS,
 }
+const VERBOSE_AUDIO_FRAME_LOG_COUNT = 5
+const AUDIO_FRAME_LOG_INTERVAL = 100
 
 type AudioWorkerMessage =
   | { type: "init"; port: MessagePort }
   | { type: "chunk-batch"; chunks: ArrayBuffer[] }
   | { type: "close" }
+
+type AudioWorkletMessage =
+  | { type: "log"; message: string; severity?: "info" | "warn" | "error" }
+  | { type: "render-stats"; renderedBlocks: number; underruns: number }
 
 type AudioMessageHeader = {
   streamType: TransportStreamType
@@ -34,6 +40,9 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
   private pendingFrameReceivedAtMs: number[] = []
   private totalRenderLatencyMs = 0
   private renderedFrameCount = 0
+  private receivedPacketCount = 0
+  private decodedFrameCount = 0
+  private postedFrameCount = 0
 
   constructor() {
     super(AUDIO_MESSAGE_HEADER_BYTES)
@@ -42,7 +51,11 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
   protected handleCustomMessage(message: AudioWorkerMessage) {
     if (message.type === "init") {
       this.workletPort = message.port
+      this.workletPort.onmessage = (
+        event: MessageEvent<AudioWorkletMessage>,
+      ) => this.handleWorkletMessage(event.data)
       this.workletPort.start()
+      this.postLog("Audio worklet port connected", "info")
     }
   }
 
@@ -63,6 +76,7 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
         break
       }
 
+      this.logAudioPacketHeader(header, currentDecoder)
       this.frameBuffer.discard(AUDIO_MESSAGE_HEADER_BYTES)
 
       if (header.payloadLen < 1) {
@@ -89,15 +103,18 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
       try {
         const receivedAtMs = nowMs()
         const frameData = this.frameBuffer.take(header.payloadLen)
+        const packetTimestampUs = this.timestampUs
         this.pendingFrameReceivedAtMs.push(receivedAtMs)
         currentDecoder.decode(
           new EncodedAudioChunk({
             type: "key",
-            timestamp: this.timestampUs,
+            timestamp: packetTimestampUs,
             duration: FRAME_DURATION_US,
             data: frameData,
           }),
         )
+        this.receivedPacketCount += 1
+        this.logAudioDecodeQueued(packetTimestampUs, currentDecoder)
         this.timestampUs += FRAME_DURATION_US
       } catch (error) {
         this.pendingFrameReceivedAtMs.pop()
@@ -116,6 +133,9 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
 
     this.streamType = null
     this.timestampUs = 0
+    this.receivedPacketCount = 0
+    this.decodedFrameCount = 0
+    this.postedFrameCount = 0
     this.resetMetrics()
     this.workletPort?.postMessage({ type: "close" })
     this.workletPort?.close()
@@ -150,6 +170,10 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
     })
 
     this.decoder.configure(AUDIO_DECODER_CONFIG)
+    this.postLog(
+      `AudioDecoder configured codec=${AUDIO_DECODER_CONFIG.codec} sampleRate=${AUDIO_DECODER_CONFIG.sampleRate} channels=${AUDIO_DECODER_CONFIG.numberOfChannels}`,
+      "info",
+    )
 
     return this.decoder
   }
@@ -159,6 +183,10 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
     const channels = frame.numberOfChannels
     const frames = frame.numberOfFrames
     const channelBuffers: ArrayBuffer[] = []
+    let peak = 0
+    let sumSquares = 0
+    let sampleCount = 0
+    this.decodedFrameCount += 1
 
     for (let channel = 0; channel < channels; channel++) {
       const channelData = new Float32Array(frames)
@@ -166,8 +194,22 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
         format: "f32-planar",
         planeIndex: channel,
       })
+      for (const sample of channelData) {
+        const magnitude = Math.abs(sample)
+        if (magnitude > peak) {
+          peak = magnitude
+        }
+        sumSquares += sample * sample
+        sampleCount += 1
+      }
       channelBuffers.push(channelData.buffer)
     }
+    this.logDecodedFrame(
+      frame,
+      receivedAtMs,
+      peak,
+      sampleCount > 0 ? Math.sqrt(sumSquares / sampleCount) : 0,
+    )
 
     if (!this.workletPort) {
       this.postError("Audio worklet port is not initialized")
@@ -182,6 +224,8 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
       },
       channelBuffers,
     )
+    this.postedFrameCount += 1
+    this.logPostedFrame(frames, channels)
     this.updateMetrics(receivedAtMs)
   }
 
@@ -190,8 +234,12 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
       this.decoder.reset()
     }
     this.timestampUs = 0
+    this.receivedPacketCount = 0
+    this.decodedFrameCount = 0
+    this.postedFrameCount = 0
     this.resetMetrics()
     this.workletPort?.postMessage({ type: "reset" })
+    this.postLog("Audio decoder reset; worklet buffer cleared", "warn")
   }
 
   private updateMetrics(receivedAtMs: number) {
@@ -224,6 +272,68 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
       payloadLen: readU32BE(header, 1),
     } satisfies AudioMessageHeader
   }
+
+  private logAudioPacketHeader(
+    header: AudioMessageHeader,
+    decoder: AudioDecoder,
+  ) {
+    this.postLog(
+      `Received audio packet header streamType=${header.streamTypeLabel} payloadBytes=${header.payloadLen} bufferedBytes=${this.frameBuffer.byteLength} decoderState=${decoder.state} decodeQueueSize=${decoder.decodeQueueSize}`,
+      "info",
+    )
+  }
+
+  private logAudioDecodeQueued(timestampUs: number, decoder: AudioDecoder) {
+    if (!shouldLogFrame(this.receivedPacketCount)) {
+      return
+    }
+
+    this.postLog(
+      `Queued audio packet #${this.receivedPacketCount} timestampUs=${timestampUs} decodeQueueSize=${decoder.decodeQueueSize}`,
+      "info",
+    )
+  }
+
+  private logDecodedFrame(
+    frame: AudioData,
+    receivedAtMs: number,
+    peak: number,
+    rms: number,
+  ) {
+    if (!shouldLogFrame(this.decodedFrameCount)) {
+      return
+    }
+
+    this.postLog(
+      `Decoded audio frame #${this.decodedFrameCount} channels=${frame.numberOfChannels} frames=${frame.numberOfFrames} sampleRate=${frame.sampleRate} timestampUs=${frame.timestamp} peak=${peak.toFixed(5)} rms=${rms.toFixed(5)} latencyMs=${Math.max(nowMs() - receivedAtMs, 0).toFixed(1)}`,
+      "info",
+    )
+  }
+
+  private logPostedFrame(frames: number, channels: number) {
+    if (!shouldLogFrame(this.postedFrameCount)) {
+      return
+    }
+
+    this.postLog(
+      `Posted audio frame #${this.postedFrameCount} to worklet channels=${channels} frames=${frames}`,
+      "info",
+    )
+  }
+
+  private handleWorkletMessage(message: AudioWorkletMessage) {
+    if (message.type === "log") {
+      this.postLog(`[worklet] ${message.message}`, message.severity ?? "info")
+      return
+    }
+
+    if (message.type === "render-stats") {
+      this.postLog(
+        `[worklet] renderedBlocks=${message.renderedBlocks} underruns=${message.underruns}`,
+        message.underruns > 0 ? "warn" : "info",
+      )
+    }
+  }
 }
 
 const audioStreamWorker = new AudioStreamWorker()
@@ -238,4 +348,11 @@ function errorToMessage(error: unknown) {
 
 function nowMs() {
   return performance.timeOrigin + performance.now()
+}
+
+function shouldLogFrame(frameCount: number) {
+  return (
+    frameCount <= VERBOSE_AUDIO_FRAME_LOG_COUNT ||
+    frameCount % AUDIO_FRAME_LOG_INTERVAL === 0
+  )
 }
