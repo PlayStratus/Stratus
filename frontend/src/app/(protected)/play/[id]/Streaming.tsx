@@ -3,7 +3,6 @@ import { Dispatch, SetStateAction, useEffect, useRef } from "react"
 import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
 import { useControlStream } from "@/lib/transport/hooks/controlStream"
 import { useVideoStream } from "@/lib/transport/hooks/videoStream"
-import { useAudioStream } from "@/lib/transport/hooks/audioStream"
 import { useInputStream } from "@/lib/transport/hooks/inputStream"
 
 import { StatusType } from "@/lib/transport/types"
@@ -18,6 +17,10 @@ type Props = {
   status: Exclude<StatusType, "NOT_STARTED" | "ERROR">
   setStatus: Dispatch<SetStateAction<StatusType>>
   setErrorMessage: (message: string | null) => Promise<void> | void
+  handleAudioStreams: (
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    initialChunk: Uint8Array,
+  ) => Promise<void> | void
 }
 
 export default function Streaming({
@@ -27,6 +30,7 @@ export default function Streaming({
   status,
   setStatus,
   setErrorMessage,
+  handleAudioStreams,
 }: Readonly<Props>) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hasStartedRef = useRef(false)
@@ -36,7 +40,6 @@ export default function Streaming({
 
   const { handleControlStream } = useControlStream()
   const { handleVideoStreams } = useVideoStream(canvasRef, setStatus)
-  const { handleAudioStreams } = useAudioStream()
   const { handleInputStream } = useInputStream()
 
   useEffect(() => {

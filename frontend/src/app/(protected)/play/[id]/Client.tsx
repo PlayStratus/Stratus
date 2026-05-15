@@ -6,6 +6,7 @@ import { flushSync } from "react-dom"
 import { useAuth } from "@/components/auth/AuthProvider"
 
 import { getBackendPath } from "@/lib/backend/getBackendPath"
+import { useAudioStream } from "@/lib/transport/hooks/audioStream"
 import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
 import { StatusType } from "@/lib/transport/types"
@@ -37,6 +38,7 @@ function Client({ game }: Readonly<Props>) {
   const { logs } = useLogs()
   const { handleConnecting, handleDisconnect } =
     useTransport(handleErrorMessage)
+  const { handleAudioStreams, prepareAudioPlayback } = useAudioStream()
 
   useEffect(() => {
     const onChange = () => {
@@ -169,6 +171,7 @@ function Client({ game }: Readonly<Props>) {
       return
     }
 
+    prepareAudioPlayback()
     await handleErrorMessage(null)
 
     flushSync(() => {
@@ -209,6 +212,7 @@ function Client({ game }: Readonly<Props>) {
           status={status}
           setStatus={setStatus}
           setErrorMessage={handleErrorMessage}
+          handleAudioStreams={handleAudioStreams}
         />
       ) : null}
 

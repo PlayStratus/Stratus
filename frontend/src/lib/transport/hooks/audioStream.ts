@@ -30,11 +30,7 @@ export function useAudioStream(
   const resumeAudioCleanupRef = useRef<(() => void) | null>(null)
   const isUnmountedRef = useRef(false)
 
-  const getRenderer = useCallback(async () => {
-    if (rendererRef.current) {
-      return rendererRef.current
-    }
-
+  const getAudioContext = useCallback(() => {
     if (typeof AudioContext === "undefined") {
       addLogEvent("AUDIO", "AudioContext API not available", "error")
       return null
@@ -54,12 +50,57 @@ export function useAudioStream(
       return null
     }
 
-    const audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE })
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext({ sampleRate: SAMPLE_RATE })
+    }
+
+    return audioContextRef.current
+  }, [addLogEvent])
+
+  const armAudioPlayback = useCallback(
+    (audioCtx: AudioContext) => {
+      resumeAudioCleanupRef.current?.()
+      resumeAudioCleanupRef.current = keepAudioContextRunning(
+        audioCtx,
+        addLogEvent,
+        () => isUnmountedRef.current,
+      )
+    },
+    [addLogEvent],
+  )
+
+  const prepareAudioPlayback = useCallback(() => {
+    const audioCtx = getAudioContext()
+    if (!audioCtx) {
+      return
+    }
+
+    armAudioPlayback(audioCtx)
+    addLogEvent(
+      "AUDIO",
+      audioCtx.state === "running"
+        ? "Audio playback armed"
+        : "Audio playback arming requested",
+    )
+  }, [addLogEvent, armAudioPlayback, getAudioContext])
+
+  const getRenderer = useCallback(async () => {
+    if (rendererRef.current) {
+      return rendererRef.current
+    }
+
+    const audioCtx = getAudioContext()
+    if (!audioCtx) {
+      return null
+    }
 
     try {
       await loadAudioWorkletModule(audioCtx)
     } catch (error) {
       await audioCtx.close().catch(() => undefined)
+      if (audioContextRef.current === audioCtx) {
+        audioContextRef.current = null
+      }
       throw error
     }
 
@@ -71,14 +112,8 @@ export function useAudioStream(
 
     renderer.connect(audioCtx.destination)
 
-    audioContextRef.current = audioCtx
     rendererRef.current = renderer
-    resumeAudioCleanupRef.current?.()
-    resumeAudioCleanupRef.current = keepAudioContextRunning(
-      audioCtx,
-      addLogEvent,
-      () => isUnmountedRef.current,
-    )
+    armAudioPlayback(audioCtx)
 
     addLogEvent(
       "AUDIO",
@@ -88,7 +123,7 @@ export function useAudioStream(
     )
 
     return renderer
-  }, [addLogEvent])
+  }, [addLogEvent, armAudioPlayback, getAudioContext])
 
   const getWorker = useCallback(
     (renderer: AudioWorkletNode) => {
@@ -196,7 +231,7 @@ export function useAudioStream(
     }
   }, [])
 
-  return { handleAudioStreams }
+  return { handleAudioStreams, prepareAudioPlayback }
 }
 
 async function loadAudioWorkletModule(audioCtx: AudioContext) {

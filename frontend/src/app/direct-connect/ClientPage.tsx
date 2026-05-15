@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Play } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
 import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
@@ -22,7 +24,7 @@ type MVPPageProps = {
 }
 
 function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
-  const [status, setStatus] = useState<StatusType>("LOADING")
+  const [status, setStatus] = useState<StatusType>("NOT_STARTED")
   const [averageRenderTimeMs, setAverageRenderTimeMs] = useState(0)
   const [averageAudioRenderTimeMs, setAverageAudioRenderTimeMs] = useState(0)
   const [fps, setFps] = useState(0)
@@ -59,10 +61,16 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     setAverageRenderTimeMs,
     setFps,
   )
-  const { handleAudioStreams } = useAudioStream(setAverageAudioRenderTimeMs)
+  const { handleAudioStreams, prepareAudioPlayback } = useAudioStream(
+    setAverageAudioRenderTimeMs,
+  )
   const { handleInputStream, setManualAxisX } = useInputStream()
 
   useEffect(() => {
+    if (status !== "LOADING") {
+      return
+    }
+
     if (hasStartedRef.current) {
       return
     }
@@ -88,6 +96,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     handleAudioStreams,
     handleInputStream,
     handleVideoStreams,
+    status,
   ])
 
   useEffect(() => {
@@ -95,6 +104,12 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   }, [logs])
 
   const shouldShowLoading = status === "LOADING"
+  const shouldShowStart = status === "NOT_STARTED"
+
+  const handleStart = () => {
+    prepareAudioPlayback()
+    setStatus("LOADING")
+  }
 
   return (
     <>
@@ -113,6 +128,19 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
       </div>
 
       <InputButtons onAxisXChange={setManualAxisX} />
+
+      {shouldShowStart && (
+        <div className='fixed inset-0 z-30 flex items-center justify-center bg-black/80 px-4'>
+          <Button
+            size='lg'
+            className='h-12 px-6 text-base font-semibold'
+            onClick={handleStart}
+          >
+            <Play />
+            Start Stream
+          </Button>
+        </div>
+      )}
 
       {shouldShowLoading && <Loading />}
     </>
