@@ -158,7 +158,7 @@ aspects of Stratus, and to check out the Stratus source code on
 [blogs-audio]:          ./blogs/Audio_Capture_Pipeline.md
 [blogs-capture]:        ./wayland-proxy.md
 [blogs-future]:         /blogs/todo
-[blogs-games]:          /blogs/todo
+[blogs-games]:          ./game-packaging.md
 [blogs-os]:             ./stratus-os.md
 [blogs-performance]:    ./blog-stratus-performance.md
 [blogs-transport]:      ./Blog-Post-Webtransport.md
