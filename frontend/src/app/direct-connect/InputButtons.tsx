@@ -47,12 +47,15 @@ export default function InputButtons({
   }, [onAxisXChange])
 
   return (
-    <div className='fixed bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4 z-10'>
+    <div className='fixed bottom-4 left-1/2 z-10 flex -translate-x-1/2 transform space-x-4 touch-none select-none'>
       <Button
         type='button'
         size='lg'
         onPointerDown={(event) => {
-          if (event.button !== 0) return
+          if (event.pointerType === "mouse" && event.button !== 0) return
+
+          event.preventDefault()
+          event.currentTarget.setPointerCapture(event.pointerId)
           activateDirection(`pointer:left:${event.pointerId}`, LEFT_AXIS_VALUE)
         }}
         onPointerUp={(event) => {
@@ -61,7 +64,7 @@ export default function InputButtons({
         onPointerCancel={(event) => {
           deactivateDirection(`pointer:left:${event.pointerId}`)
         }}
-        onPointerLeave={(event) => {
+        onLostPointerCapture={(event) => {
           deactivateDirection(`pointer:left:${event.pointerId}`)
         }}
         onKeyDown={(event) => {
@@ -88,7 +91,10 @@ export default function InputButtons({
         type='button'
         size='lg'
         onPointerDown={(event) => {
-          if (event.button !== 0) return
+          if (event.pointerType === "mouse" && event.button !== 0) return
+
+          event.preventDefault()
+          event.currentTarget.setPointerCapture(event.pointerId)
           activateDirection(
             `pointer:right:${event.pointerId}`,
             RIGHT_AXIS_VALUE,
@@ -100,7 +106,7 @@ export default function InputButtons({
         onPointerCancel={(event) => {
           deactivateDirection(`pointer:right:${event.pointerId}`)
         }}
-        onPointerLeave={(event) => {
+        onLostPointerCapture={(event) => {
           deactivateDirection(`pointer:right:${event.pointerId}`)
         }}
         onKeyDown={(event) => {

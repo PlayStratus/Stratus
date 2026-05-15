@@ -72,6 +72,10 @@ export function useInputStream() {
     let rafId = 0
     let disposed = false
     const encoder = new TextEncoder()
+    const getGamepads =
+      typeof navigator.getGamepads === "function"
+        ? navigator.getGamepads.bind(navigator)
+        : null
     let lastSentPayload = ""
 
     const loop = async () => {
@@ -79,7 +83,7 @@ export function useInputStream() {
       const writer = writerRef.current
 
       if (writer) {
-        const gamepads = navigator.getGamepads()
+        const gamepads = getGamepads?.() ?? []
         const gp = gamepads[0]
         const buttons = gp
           ? gp.buttons.map((button) => button.value)
