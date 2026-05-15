@@ -23,7 +23,14 @@ type AudioWorkerMessage =
 
 type AudioWorkletMessage =
   | { type: "log"; message: string; severity?: "info" | "warn" | "error" }
-  | { type: "render-stats"; renderedBlocks: number; underruns: number }
+  | {
+      type: "render-stats"
+      renderedBlocks: number
+      underruns: number
+      peak?: number
+      rms?: number
+      queuedFrames?: number
+    }
 
 type AudioMessageHeader = {
   streamType: TransportStreamType
@@ -329,7 +336,7 @@ class AudioStreamWorker extends TransportPacketWorker<AudioWorkerMessage> {
 
     if (message.type === "render-stats") {
       this.postLog(
-        `[worklet] renderedBlocks=${message.renderedBlocks} underruns=${message.underruns}`,
+        `[worklet] renderedBlocks=${message.renderedBlocks} underruns=${message.underruns} peak=${formatAudioLevel(message.peak)} rms=${formatAudioLevel(message.rms)} queuedFrames=${message.queuedFrames ?? "unknown"}`,
         message.underruns > 0 ? "warn" : "info",
       )
     }
@@ -355,4 +362,8 @@ function shouldLogFrame(frameCount: number) {
     frameCount <= VERBOSE_AUDIO_FRAME_LOG_COUNT ||
     frameCount % AUDIO_FRAME_LOG_INTERVAL === 0
   )
+}
+
+function formatAudioLevel(value: number | undefined) {
+  return typeof value === "number" ? value.toFixed(5) : "unknown"
 }

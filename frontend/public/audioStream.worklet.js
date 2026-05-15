@@ -21,6 +21,9 @@ class StratusAudioRenderer extends AudioWorkletProcessor {
 
     let written = 0
     const frameLength = output[0]?.length ?? 0
+    let outputPeak = 0
+    let outputSumSquares = 0
+    let outputSampleCount = 0
 
     while (written < frameLength) {
       const frame = this.frames[0]
@@ -54,19 +57,38 @@ class StratusAudioRenderer extends AudioWorkletProcessor {
     }
 
     if (written > 0) {
+      for (const channel of output) {
+        for (let index = 0; index < written; index++) {
+          const sample = channel[index]
+          const magnitude = Math.abs(sample)
+          if (magnitude > outputPeak) {
+            outputPeak = magnitude
+          }
+          outputSumSquares += sample * sample
+          outputSampleCount += 1
+        }
+      }
+    }
+
+    if (written > 0) {
       this.renderedBlockCount += 1
 
       if (!this.hasLoggedFirstRender) {
         this.hasLoggedFirstRender = true
         this.port.postMessage({
           type: "log",
-          message: `rendered first audio block samples=${written} queuedFrames=${this.frames.length}`,
+          message: `rendered first audio block channels=${output.length} samples=${written} peak=${outputPeak.toFixed(5)} rms=${this.getRms(outputSumSquares, outputSampleCount)} queuedFrames=${this.frames.length}`,
         })
       } else if (this.renderedBlockCount % 100 === 0) {
         this.port.postMessage({
           type: "render-stats",
           renderedBlocks: this.renderedBlockCount,
           underruns: this.underrunCount,
+          peak: outputPeak,
+          rms: outputSampleCount > 0
+            ? Math.sqrt(outputSumSquares / outputSampleCount)
+            : 0,
+          queuedFrames: this.frames.length,
         })
       }
     }
@@ -132,6 +154,14 @@ class StratusAudioRenderer extends AudioWorkletProcessor {
         severity: "warn",
       })
     }
+  }
+
+  getRms(sumSquares, sampleCount) {
+    if (sampleCount === 0) {
+      return "0.00000"
+    }
+
+    return Math.sqrt(sumSquares / sampleCount).toFixed(5)
   }
 }
 

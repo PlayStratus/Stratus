@@ -52,6 +52,11 @@ export function useAudioStream(
 
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext({ sampleRate: SAMPLE_RATE })
+      addLogEvent(
+        "AUDIO",
+        `AudioContext created state=${audioContextRef.current.state} sampleRate=${audioContextRef.current.sampleRate} baseLatency=${formatOptionalNumber(audioContextRef.current.baseLatency)} outputLatency=${formatOptionalNumber(audioContextRef.current.outputLatency)}`,
+        "info",
+      )
     }
 
     return audioContextRef.current
@@ -111,6 +116,11 @@ export function useAudioStream(
     })
 
     renderer.connect(audioCtx.destination)
+    addLogEvent(
+      "AUDIO",
+      `Audio worklet connected to destination maxChannelCount=${audioCtx.destination.maxChannelCount} channelCount=${audioCtx.destination.channelCount} channelCountMode=${audioCtx.destination.channelCountMode} channelInterpretation=${audioCtx.destination.channelInterpretation}`,
+      "info",
+    )
 
     rendererRef.current = renderer
     armAudioPlayback(audioCtx)
@@ -331,4 +341,8 @@ function wait(ms: number) {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms)
   })
+}
+
+function formatOptionalNumber(value: number | undefined) {
+  return typeof value === "number" ? value.toFixed(4) : "unknown"
 }
