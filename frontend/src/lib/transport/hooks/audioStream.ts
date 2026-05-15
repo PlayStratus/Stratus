@@ -11,6 +11,13 @@ import { TransportMediaStream } from "../utils/transportMediaStream"
 
 const SAMPLE_RATE = 48_000
 const CHANNELS = 2
+const AUDIO_RESUME_EVENTS = ["pointerdown", "keydown", "touchstart"] as const
+
+type AudioLogEvent = (
+  component: "AUDIO",
+  message: string,
+  severity?: "info" | "log" | "warn" | "error",
+) => void
 
 export function useAudioStream(
   setAverageAudioRenderTimeMs?: Dispatch<SetStateAction<number>>,
@@ -20,6 +27,7 @@ export function useAudioStream(
   const rendererRef = useRef<AudioWorkletNode | null>(null)
   const workerRef = useRef<Worker | null>(null)
   const streamRef = useRef<TransportMediaStream | null>(null)
+  const resumeAudioCleanupRef = useRef<(() => void) | null>(null)
   const isUnmountedRef = useRef(false)
 
   const getRenderer = useCallback(async () => {
@@ -63,13 +71,21 @@ export function useAudioStream(
 
     renderer.connect(audioCtx.destination)
 
-    if (audioCtx.state === "suspended") {
-      await audioCtx.resume().catch(() => undefined)
-    }
-
     audioContextRef.current = audioCtx
     rendererRef.current = renderer
-    addLogEvent("AUDIO", "Audio worklet started")
+    resumeAudioCleanupRef.current?.()
+    resumeAudioCleanupRef.current = keepAudioContextRunning(
+      audioCtx,
+      addLogEvent,
+      () => isUnmountedRef.current,
+    )
+
+    addLogEvent(
+      "AUDIO",
+      audioCtx.state === "running"
+        ? "Audio worklet started"
+        : "Audio worklet started; waiting for playback resume",
+    )
 
     return renderer
   }, [addLogEvent])
@@ -171,6 +187,8 @@ export function useAudioStream(
       streamRef.current = null
       workerRef.current?.postMessage({ type: "close" })
       workerRef.current = null
+      resumeAudioCleanupRef.current?.()
+      resumeAudioCleanupRef.current = null
       rendererRef.current?.disconnect()
       rendererRef.current = null
       void audioContextRef.current?.close().catch(() => undefined)
@@ -183,4 +201,99 @@ export function useAudioStream(
 
 async function loadAudioWorkletModule(audioCtx: AudioContext) {
   await audioCtx.audioWorklet.addModule("/audioStream.worklet.js")
+}
+
+function keepAudioContextRunning(
+  audioCtx: AudioContext,
+  addLogEvent: AudioLogEvent,
+  isClosed: () => boolean,
+) {
+  let isCleanedUp = false
+  let hasLoggedWaiting = false
+  let previousStateChange = audioCtx.onstatechange
+
+  const cleanup = () => {
+    if (isCleanedUp) {
+      return
+    }
+
+    isCleanedUp = true
+    AUDIO_RESUME_EVENTS.forEach((eventName) => {
+      window.removeEventListener(eventName, resumeFromUserGesture, true)
+    })
+    audioCtx.onstatechange = previousStateChange
+  }
+
+  const resumeFromUserGesture = () => {
+    void tryResume()
+  }
+
+  const tryResume = async () => {
+    if (isCleanedUp || isClosed() || audioCtx.state === "closed") {
+      cleanup()
+      return
+    }
+
+    if (audioCtx.state !== "suspended") {
+      cleanup()
+      return
+    }
+
+    try {
+      await Promise.race([audioCtx.resume(), wait(250)])
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      addLogEvent(
+        "AUDIO",
+        `Audio playback resume failed: ${errorMessage}`,
+        "warn",
+      )
+    }
+
+    if (isCleanedUp) {
+      return
+    }
+
+    if ((audioCtx.state as AudioContextState) === "running") {
+      addLogEvent("AUDIO", "Audio playback resumed")
+      cleanup()
+      return
+    }
+
+    if (!hasLoggedWaiting) {
+      hasLoggedWaiting = true
+      addLogEvent(
+        "AUDIO",
+        "Audio playback is waiting for a browser user gesture.",
+        "warn",
+      )
+    }
+  }
+
+  previousStateChange = audioCtx.onstatechange
+  audioCtx.onstatechange = (event) => {
+    previousStateChange?.call(audioCtx, event)
+
+    if ((audioCtx.state as AudioContextState) === "running") {
+      addLogEvent("AUDIO", "Audio playback resumed")
+      cleanup()
+    }
+  }
+
+  AUDIO_RESUME_EVENTS.forEach((eventName) => {
+    window.addEventListener(eventName, resumeFromUserGesture, {
+      capture: true,
+      passive: true,
+    })
+  })
+
+  void tryResume()
+
+  return cleanup
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
 }
