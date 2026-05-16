@@ -14,6 +14,7 @@ interface ExpandableImageProps {
   height: number
   className?: string
   imageClassName?: string
+  showCaption?: boolean, // whether to show alt caption when not expanded
 }
 
 export function ExpandableImage({
@@ -23,6 +24,7 @@ export function ExpandableImage({
   height,
   className,
   imageClassName,
+  showCaption,
 }: Readonly<ExpandableImageProps>) {
   const [isOpen, setIsOpen] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -82,6 +84,10 @@ export function ExpandableImage({
           )}
         />
       </button>
+
+      {showCaption && alt &&
+        <p className='italic text-center mt-2'>{alt}</p>
+      }
 
       {isOpen &&
         typeof document !== "undefined" &&

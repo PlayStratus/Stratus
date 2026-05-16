@@ -81,15 +81,6 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
               {post.author}
             </p>
           </div>
-
-          <div className='overflow-hidden rounded-3xl border border-border/70 bg-muted/40 shadow-sm'>
-            <ExpandableImage
-              src={post.imageUrl}
-              alt={post.title}
-              width={1200}
-              height={800}
-            />
-          </div>
         </header>
 
         <div className='grid gap-6 text-base leading-8 text-foreground/95'>
@@ -130,13 +121,13 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
                   {children}
                 </ol>
               ),
-              li: ({ children }) => <li>{children}</li>,
+              li: ({ id, children }) => <li id={id}>{children}</li>,
               blockquote: ({ children }) => (
                 <blockquote className='rounded-r-xl border-l-4 border-primary/50 bg-card/50 px-4 py-3 text-muted-foreground'>
                   {children}
                 </blockquote>
               ),
-              a: ({ href, children }) => {
+              a: ({ id, href, children }) => {
                 const resolvedHref = resolveDocLinkHref(
                   post.sourceRelativePath,
                   href,
@@ -144,6 +135,7 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
 
                 return (
                   <a
+                    id={id}
                     href={resolvedHref}
                     className='font-medium text-primary underline underline-offset-4'
                   >
@@ -184,6 +176,7 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
                     alt={alt ?? "Blog image"}
                     width={1200}
                     height={800}
+                    showCaption={true}
                   />
                 )
               },
