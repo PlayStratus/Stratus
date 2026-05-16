@@ -17,10 +17,19 @@ const inclusiveSans = Inclusive_Sans({
   subsets: ["latin"],
 })
 
+const DESCRIPTION = "Stratus is a low-latency game streaming service that enables users to play games directly from their web browser.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.playstratus.io'),
   title: "Stratus",
-  description:
-    "Stratus is a game streaming service that enables users to play games directly from their web browser, similarly to services such as Google Stadia, Nvidia GeForce NOW, and Amazon Luna.",
+  description: DESCRIPTION,
+  openGraph: {
+    type: 'website',
+    url: '/',
+    title: 'Stratus',
+    description: DESCRIPTION,
+    images: '/opengraph.png',
+  }
 }
 
 export default function RootLayout({
