@@ -76,7 +76,7 @@ fi
 # Install packages
 packages=(base linux linux-firmware networkmanager openssh sudo $UCODE) # core
 packages+=(fastfetch stratusd stratus-launcher) # stratus-specific
-packages+=(less tmux vim) # helpful utils
+packages+=(htop less tmux vim) # helpful utils
 pacstrap -K /mnt "${packages[@]}"
 
 # Initialize basic config files
@@ -141,7 +141,7 @@ for game in $(curl -sL $STRATUS_GAMES_BUCKET | grep -oP '(?<=Key>)[^<]+')
 do
     curl -sL $STRATUS_GAMES_BUCKET/$game -o \
         /mnt/var/lib/stratusd/games/$game
-    chown stratusd:stratusd /mnt/var/lib/stratusd/games/$game
+    arch-chroot /mnt chown stratusd:stratusd /var/lib/stratusd/games/$game
     chmod +x /mnt/var/lib/stratusd/games/$game
 done
 
@@ -152,7 +152,7 @@ echo 'Installation log:'
 echo "    $LOG"
 echo 'Password for stratusd user:'
 echo "    $stratusd_password"
-echo 'A reboot is required.'
+echo 'Please review /etc/stratusd.conf and then reboot the machine.'
 echo '================================================================'
 
 # Copy install log to /var/log/ in the chroot
