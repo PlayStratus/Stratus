@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useLogs } from "./logs"
-import { closeWriterSafely, releaseWriterLock } from "./writer"
+import { closeWriterSafely, releaseWriterLock } from "../utils/writer"
 
 type ManualAxisXValue = -1 | 0 | 1
 

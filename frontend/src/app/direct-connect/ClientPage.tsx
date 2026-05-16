@@ -24,6 +24,7 @@ type MVPPageProps = {
 function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   const [status, setStatus] = useState<StatusType>("LOADING")
   const [averageRenderTimeMs, setAverageRenderTimeMs] = useState(0)
+  const [averageAudioRenderTimeMs, setAverageAudioRenderTimeMs] = useState(0)
   const [fps, setFps] = useState(0)
 
   const router = useRouter()
@@ -58,7 +59,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     setAverageRenderTimeMs,
     setFps,
   )
-  const { handleAudioStreams } = useAudioStream()
+  const { handleAudioStreams } = useAudioStream(setAverageAudioRenderTimeMs)
   const { handleInputStream, setManualAxisX } = useInputStream()
 
   useEffect(() => {
@@ -101,12 +102,14 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
         ref={canvasRef}
         className='h-screen w-screen bg-black'
         data-average-render-time-ms={averageRenderTimeMs}
+        data-average-audio-render-time-ms={averageAudioRenderTimeMs}
         data-fps={fps}
       />
 
       <div className='fixed right-3 top-3 z-20 rounded bg-black/45 px-3 py-2 font-mono text-xs text-white/80'>
         <div>FPS: {fps.toFixed(1)}</div>
-        <div>Avg render: {averageRenderTimeMs.toFixed(1)}ms</div>
+        <div>Avg video render: {averageRenderTimeMs.toFixed(1)}ms</div>
+        <div>Avg audio render: {averageAudioRenderTimeMs.toFixed(1)}ms</div>
       </div>
 
       <InputButtons onAxisXChange={setManualAxisX} />

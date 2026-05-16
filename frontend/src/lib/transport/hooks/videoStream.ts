@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef } from "react"
 
 import { useLogs } from "./logs"
+import { TransportMediaStream } from "../utils/transportMediaStream"
 import { StatusType } from "../types"
-
-const MAX_CHUNK_BATCH_COUNT = 8
-const MAX_CHUNK_BATCH_BYTES = 128 * 1024
-const CHUNK_BATCH_DELAY_MS = 8
 
 export function useVideoStream(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -15,7 +12,7 @@ export function useVideoStream(
 ) {
   const { addLogEvent } = useLogs()
   const workerRef = useRef<Worker | null>(null)
-  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null)
+  const streamRef = useRef<TransportMediaStream | null>(null)
   const isUnmountedRef = useRef(false)
 
   const getWorker = useCallback(() => {
@@ -65,109 +62,49 @@ export function useVideoStream(
     return worker
   }, [addLogEvent, canvasRef, setAverageRenderTimeMs, setFps, setStatus])
 
+  const getStream = useCallback(
+    (worker: Worker) => {
+      if (streamRef.current) {
+        return streamRef.current
+      }
+
+      const stream = new TransportMediaStream({
+        worker,
+        label: "Video",
+        onOpen: () => addLogEvent("VIDEO", "Video stream opened"),
+        onClose: () => addLogEvent("VIDEO", "Video stream closed"),
+        onError: (message) => addLogEvent("VIDEO", message, "error"),
+        isClosed: () => isUnmountedRef.current,
+      })
+
+      streamRef.current = stream
+      return stream
+    },
+    [addLogEvent],
+  )
+
   const handleVideoStreams = useCallback(
     async (
       reader: ReadableStreamDefaultReader<Uint8Array>,
       initialChunk: Uint8Array,
     ) => {
       const worker = getWorker()
-      if (!worker || readerRef.current) {
+      if (!worker) {
         await reader.cancel().catch(() => undefined)
         reader.releaseLock()
         return
       }
 
-      readerRef.current = reader
-
-      let pendingChunks: ArrayBuffer[] = []
-      let pendingChunkBytes = 0
-      let flushTimeoutId: ReturnType<typeof setTimeout> | null = null
-
-      const flushPendingChunks = () => {
-        flushTimeoutId = null
-
-        if (pendingChunks.length === 0) {
-          return
-        }
-
-        const chunks = pendingChunks
-        pendingChunks = []
-        pendingChunkBytes = 0
-        worker.postMessage({ type: "chunk-batch", chunks }, chunks)
-      }
-
-      const queueChunk = (value: Uint8Array) => {
-        if (value.length === 0) {
-          return
-        }
-
-        const chunk = toTransferableBuffer(value)
-        pendingChunks.push(chunk)
-        pendingChunkBytes += chunk.byteLength
-
-        if (
-          pendingChunks.length >= MAX_CHUNK_BATCH_COUNT ||
-          pendingChunkBytes >= MAX_CHUNK_BATCH_BYTES
-        ) {
-          if (flushTimeoutId) {
-            clearTimeout(flushTimeoutId)
-          }
-          flushPendingChunks()
-          return
-        }
-
-        if (!flushTimeoutId) {
-          flushTimeoutId = setTimeout(() => {
-            flushPendingChunks()
-          }, CHUNK_BATCH_DELAY_MS)
-        }
-      }
-
-      try {
-        addLogEvent("VIDEO", "Video stream opened")
-
-        queueChunk(initialChunk)
-
-        while (true) {
-          const { value, done } = await reader.read()
-          if (done) {
-            if (flushTimeoutId) {
-              clearTimeout(flushTimeoutId)
-              flushPendingChunks()
-            } else if (pendingChunks.length > 0) {
-              flushPendingChunks()
-            }
-            addLogEvent("VIDEO", "Video stream closed")
-            return
-          }
-          if (!value?.length) continue
-
-          queueChunk(value)
-        }
-      } catch (error) {
-        if (!isUnmountedRef.current) {
-          addLogEvent(
-            "VIDEO",
-            `Video stream error: ${(error as Error).message}`,
-            "error",
-          )
-        }
-      } finally {
-        if (flushTimeoutId) {
-          clearTimeout(flushTimeoutId)
-          flushPendingChunks()
-        }
-        readerRef.current = null
-        reader.releaseLock()
-      }
+      await getStream(worker).start(reader, initialChunk)
     },
-    [addLogEvent, getWorker],
+    [getStream, getWorker],
   )
 
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true
-      void readerRef.current?.cancel().catch(() => undefined)
+      streamRef.current?.close()
+      streamRef.current = null
       workerRef.current?.postMessage({ type: "close" })
       workerRef.current?.terminate()
       workerRef.current = null
@@ -175,16 +112,4 @@ export function useVideoStream(
   }, [])
 
   return { handleVideoStreams }
-}
-
-function toTransferableBuffer(value: Uint8Array) {
-  if (
-    value.buffer instanceof ArrayBuffer &&
-    value.byteOffset === 0 &&
-    value.byteLength === value.buffer.byteLength
-  ) {
-    return value.buffer
-  }
-
-  return value.slice().buffer
 }
