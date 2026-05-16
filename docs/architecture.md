@@ -159,7 +159,7 @@ aspects of Stratus, and to check out the Stratus source code on
 [blogs-capture]:        ./wayland-proxy.md
 [blogs-future]:         /blogs/todo
 [blogs-games]:          /blogs/todo
-[blogs-os]:             /blogs/todo
+[blogs-os]:             ./stratus-os.md
 [blogs-performance]:    ./blog-stratus-performance.md
 [blogs-transport]:      ./Blog-Post-Webtransport.md
 [blogs-video]:          /blogs/todo
