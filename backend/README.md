@@ -13,6 +13,8 @@ is designed to run on AWS in an EC2 instance that communicates with DynamoDB.
     - `AUTH_SECRET`: the secret used to sign client JWT tokens (**required**)
     - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_ACCESS_KEY_ID`: the AWS access
       credentials (**required**)
+    - `FRONTEND_URL`: the base URL of the frontend (defaults to
+      `http://localhost:3000`)
     - `PORT`: the TCP port to serve the backend on (defaults to 4000)
     - `STRATUSD_PASSWORD`: The password used to authenticate stratusd nodes (if
       left undefined, authentication is disabled)
