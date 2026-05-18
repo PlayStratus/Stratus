@@ -1,7 +1,7 @@
 <p align="center">
 <img src="frontend/src/assets/wordmark-logo.png" width="500px" alt="Stratus logo"/>
 </p>
-<h3 align="center">Low-latency Game Streaming Service</h3>
+<h3 align="center">A Web-Based Game Streaming Service</h3>
 <br/>
 <p align="center">
 <img src="docs/images/supertux-screenshot.png" alt="Stratus screenshot"/>

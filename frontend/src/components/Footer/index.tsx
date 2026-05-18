@@ -25,7 +25,7 @@ export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
             />
           </Link>
           <p className='max-w-sm text-muted-foreground'>
-            An open source game streaming service.
+            A web-based game streaming service.
           </p>
         </div>
 
