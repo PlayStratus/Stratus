@@ -26,6 +26,7 @@ jobs:
 
       - name: Build games
         run: |
+          ./games/build-assaultcube.sh games/build/ac0b6591-7e92-4eb3-afbf-619b1e3319b8
           ./games/build-freedoom.sh games/build/bf03175a-9501-457a-91a7-c50881d030fc
           ./games/build-supertux.sh games/build/101dff3f-61ea-4faa-8fa6-086a72929072
           ./games/build-supertuxkart.sh games/build/c3770c11-ecaf-4852-96b0-37269736a6fc

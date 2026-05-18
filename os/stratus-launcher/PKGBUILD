@@ -8,7 +8,7 @@ arch=('x86_64')
 url='https://github.com/playstratus/stratus'
 license=('MIT')
 
-depends=('bubblewrap' 'fuse' 'wine' 'winetricks' 'wine-mono')
+depends=('bubblewrap' 'curl' 'fuse' 'unzip' 'wine' 'winetricks' 'wine-mono')
 optdepends=('stratusd: stratus-launcher-init.service')
 makedepends=('git')
 
