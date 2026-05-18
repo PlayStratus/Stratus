@@ -106,9 +106,10 @@ export const ControllerGoogleAuth = async (
       email: payload.email,
     }
 
-    if (!googleUser.email?.endsWith("@oregonstate.edu")) {
+    const whitelisted_domain = process.env.WHITELISTED_DOMAIN
+    if (whitelisted_domain && !googleUser.email?.endsWith(`@${whitelisted_domain}`)) {
       return res.status(401).json({
-        error: "Please use your @oregonstate.edu email to sign in.",
+        error: `Please use your @${whitelisted_domain} email to sign in.`,
       })
     }
 

@@ -18,7 +18,10 @@ is designed to run on AWS in an EC2 instance that communicates with DynamoDB.
     - `PORT`: the TCP port to serve the backend on (defaults to 4000)
     - `STRATUSD_PASSWORD`: The password used to authenticate stratusd nodes (if
       left undefined, authentication is disabled)
-    - `WHITELISTED_USERS`: Only include this if you want to have a whitelisted user list. This is checked against in playController.
+    - `WHITELISTED_DOMAIN`: If specified, the email address domain to restrict
+      signups to
+    - `WHITELISTED_USERS`: If specified, the list of users to restrict stream
+      access to
 
 3.  Install the required dependencies with `npm install`
 
