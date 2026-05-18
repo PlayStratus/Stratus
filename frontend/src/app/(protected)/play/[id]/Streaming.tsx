@@ -56,7 +56,8 @@ export default function Streaming({
     hasStartedRef.current = true
 
     const handleMount = async () => {
-      const url = `${webtransportIP}:443`
+      const port = process.env.NEXT_PUBLIC_STRATUSD_PORT || "443"
+      const url = `${webtransportIP}:${port}`
 
       const transport = await handleConnecting(url, tlsFingerprint)
 
