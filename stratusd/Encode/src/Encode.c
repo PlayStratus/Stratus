@@ -148,11 +148,11 @@ int dma_encode_video_frame(
         return -1;
     }
 
-    assert(encode_video_frame(state, pixel_data, stride, 1) == 0);
+    int ret = encode_video_frame(state, pixel_data, stride, 1);
 
     free(pixel_data);
 
-    return 0;
+    return ret;
 }
 
 /* buf_type is the type of buffer that backs the underlying wl_buffer capturing the frame
@@ -232,6 +232,8 @@ void encoder_teardown(encoder_context *state) {
  * Returns 0 on success and -1 on failure.
  */
 int encode_main(struct session_args *args) {
+    int ret = 0;
+
     encoder_context *ctx = encoder_startup(args);
     if (ctx == NULL) {
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
@@ -248,11 +250,15 @@ int encode_main(struct session_args *args) {
             ctx->frame_count[FRAME_DROPPED_PRE_CONNECT]++;
         } else {
             if (frame->shm_data != NULL) {
-                assert(encode_video_frame(ctx, frame->shm_data,
-                                            frame->stride, 0) == 0);
+                if (encode_video_frame(ctx, frame->shm_data, frame->stride, 0) != 0) {
+                    ret = -1;
+                    goto end;
+                }
             } else if (frame->dma_data != NULL) {
-                assert(dma_encode_video_frame(ctx, frame->dma_data,
-                                                frame->stride) == 0);
+                if (dma_encode_video_frame(ctx, frame->dma_data, frame->stride) != 0) {
+                    ret = -1;
+                    goto end;
+                }
             }
         }
         rbuf_pop(ctx->input_queue);
@@ -264,5 +270,5 @@ int encode_main(struct session_args *args) {
 
 end:
     pthread_cleanup_pop(1);
-    return 0;
+    return ret;
 }
