@@ -38,7 +38,7 @@ pkgver() {
 }
 
 build() {
-  cmake -B stratus/stratusd/build -S stratus/stratusd
+  cmake -B stratus/stratusd/build -S stratus/stratusd -DCMAKE_BUILD_TYPE=Release
   cmake --build stratus/stratusd/build
 }
 
