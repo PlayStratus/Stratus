@@ -6,19 +6,25 @@ const faqs = [
   },
   {
     question:
-      "How fast is it? How does it compare to Google Stadia / Nvidia GeForce NOW / Amazon Luna?",
+      "How fast is Stratus?",
     answer:
-      "Stratus is capable of streaming at 1080p at 60fps with an end-to-end latency of as little as 60ms, depending on local network latency and bandwidth.",
+      "Stratus is capable of streaming at 1080p at 60fps with an end-to-end latency of as little as 60ms, depending on local network latency and bandwidth. It also starts new streaming sessions in under 2 seconds.",
+  },
+  {
+    question:
+      "How does Stratus compare to Google Stadia, Nvidia GeForce NOW, Amazon Luna, etc?",
+    answer:
+      "Stratus offers comparable performance to commercial game streaming services such as Google Stadiua, Nvidia GeForce NOW, and Amazon Luna. Unlike these existing solutions however, Stratus supports streaming games directly from a web browser and is 100% free and open-source.",
   },
   {
     question: "What games are supported?",
     answer:
-      "Stratus is capable of streaming most games that run natively on Windows or Linux with controller support. The Stratus library currently contains various popular open-source games including SuperTux, SuperTuxKart, and Freedoom.",
+      "Stratus is capable of streaming most games that run natively on Windows or Linux with controller support. The Stratus library currently contains various popular open-source games including AssaultCube, SuperTux, and SuperTuxKart.",
   },
   {
     question: "What hardware do the servers run on?",
     answer:
-      "The Stratus servers were designed for and tested on a cluster of 12 BC-250s that was originally created to mine cryptocurrency. Each BC-250 contains a PlayStation 5 APU with 6 CPU cores and 16 GB of RAM, making them a great fit for game streaming.",
+      "The Stratus servers were designed for and tested on a cluster of 12 BC-250s that was originally created to mine cryptocurrency. Each BC-250 contains a PlayStation 5 APU with 6 CPU cores, an RX 6000-series GPU, and 16 GB of RAM, making them a great fit for game streaming.",
   },
   {
     question: "Is Stratus available to the public?",

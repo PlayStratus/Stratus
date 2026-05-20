@@ -11,7 +11,7 @@ import FeaturedGames from "@/components/landingPage/FeaturedGames"
 import Highlights from "@/components/landingPage/Highlights"
 import Demo from "@/components/landingPage/Demo"
 import Team from "@/components/landingPage/Team"
-import Faq from "@/components/landingPage/Fag"
+import Faq from "@/components/landingPage/Faq"
 
 import { getAllBlogSummaries } from "@/lib/blogs"
 
