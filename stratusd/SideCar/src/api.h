@@ -54,6 +54,10 @@ typedef int (api_stop_session_msg_handler)(void *userdata, char *session_id);
 
 /*
  * Contains data for an instance of an API client
+ *
+ * Note that if the STRATUSD_BACKEND_URL environment variable is NULL, the curl
+ * field will be set to NULL and the api_poll and api_send_* functions are
+ * no-ops.
  */
 struct api_client {
     api_start_session_msg_handler *on_start_session;
