@@ -126,10 +126,14 @@ static int api_connect(struct api_client *client) {
 
     pw = getenv("STRATUSD_BACKEND_PASSWORD");
     url = getenv("STRATUSD_BACKEND_URL");
-    assert(url != NULL);
 
     if (client->curl != NULL)
         curl_easy_cleanup(client->curl);
+
+    if (url == NULL) {
+        client->curl = NULL;
+        return 0;
+    }
 
     // (re)initialize curl handle
     client->curl = curl_easy_init();
@@ -214,6 +218,9 @@ static int api_send(struct api_client *client, char *msg) {
 
     if (api_debug)
         fprintf(stderr, "[Sidecar] Sending API message: %s\n", msg);
+
+    if (client->curl == NULL)
+        return 0;
 
     size = strlen(msg);
     cum_sent = 0;
@@ -353,6 +360,9 @@ int api_poll(struct api_client *client, int timeout) {
     struct pollfd fd;
     CURLcode ret;
     const struct curl_ws_frame *meta;
+
+    if (client->curl == NULL)
+        return 0;
 
     // Check for new data on file descriptor
     fd.fd = client->fd;
