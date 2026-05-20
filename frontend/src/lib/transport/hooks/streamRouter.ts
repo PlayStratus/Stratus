@@ -117,11 +117,30 @@ export function useStreamRouter() {
         return
       }
 
-      await handlers.handleControlStream(transport)
-      await handlers.handleInputStream(transport)
-
       const reader = transport.incomingUnidirectionalStreams.getReader()
       incomingStreamReaderRef.current = reader
+
+      void Promise.resolve(handlers.handleControlStream(transport)).catch(
+        (error) => {
+          if (isUnmountedRef.current) return
+          addLogEvent(
+            "CONTROL",
+            `Control Stream Error: ${(error as Error).message}`,
+            "error",
+          )
+        },
+      )
+
+      void Promise.resolve(handlers.handleInputStream(transport)).catch(
+        (error) => {
+          if (isUnmountedRef.current) return
+          addLogEvent(
+            "INPUT",
+            `Input Stream Error: ${(error as Error).message}`,
+            "error",
+          )
+        },
+      )
 
       try {
         addLogEvent("ROUTER", "Listening for incoming unidirectional streams.")

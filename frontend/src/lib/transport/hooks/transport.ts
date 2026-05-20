@@ -62,6 +62,7 @@ export function useTransport(handleError: (errorMessage: string) => void) {
       try {
         await newTransport?.ready
         addLogEvent("TRANSPORT", "Connection ready.", "info")
+        logBrowserCapabilities(addLogEvent)
       } catch (error) {
         const errorMessage = `Connection failed: ${(error as Error).message}`
         handleError(errorMessage)
@@ -115,6 +116,34 @@ export function useTransport(handleError: (errorMessage: string) => void) {
   }, [addLogEvent])
 
   return { handleConnecting, handleDisconnect }
+}
+
+function logBrowserCapabilities(
+  addLogEvent: ReturnType<typeof useLogs>["addLogEvent"],
+) {
+  const capabilities = [
+    ["WebTransport", typeof WebTransport !== "undefined"],
+    ["VideoDecoder", typeof VideoDecoder !== "undefined"],
+    ["AudioDecoder", typeof AudioDecoder !== "undefined"],
+    [
+      "AudioWorklet",
+      typeof AudioContext !== "undefined" &&
+        "audioWorklet" in AudioContext.prototype,
+    ],
+    [
+      "transferControlToOffscreen",
+      typeof HTMLCanvasElement !== "undefined" &&
+        "transferControlToOffscreen" in HTMLCanvasElement.prototype,
+    ],
+  ] as const
+
+  capabilities.forEach(([label, isSupported]) => {
+    addLogEvent(
+      "TRANSPORT",
+      `${label}: ${isSupported ? "available" : "unavailable"}.`,
+      isSupported ? "info" : "warn",
+    )
+  })
 }
 
 function normalizeWebTransportUrl(url: string) {
