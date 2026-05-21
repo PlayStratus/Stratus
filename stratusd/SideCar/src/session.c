@@ -248,8 +248,9 @@ struct session *session_start(char *session_id, char *game_id, int width,
         }
         session->thread_states[thread] = 1;
 
-        assert(pthread_setname_np(session->threads[thread],
-                                  thread_data[thread].name) == 0);
+        int ret = pthread_setname_np(session->threads[thread],
+                                 thread_data[thread].name);
+        assert(ret == 0);
     }
 
     // Start game

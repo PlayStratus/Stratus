@@ -114,7 +114,8 @@ static enum wl_iterator_result destroy_object(void *element, void *data,
     assert(msg.closure != NULL);
     msg.closure->sender_id = id;
     msg.closure->opcode = i;
-    assert(handle_message(&msg) != PROXY_ACTION_ERR);
+    int ret = handle_message(&msg);
+    assert(ret != PROXY_ACTION_ERR);
 
     // Assert object is deleted now
     assert(wl_map_lookup(session->obj_data, id) == NULL);
