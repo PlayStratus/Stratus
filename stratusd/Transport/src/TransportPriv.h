@@ -6,6 +6,8 @@
 #include "StratusWebTransportSessionVisitor.h"
 #include "rbuf2.h"
 
+static bool transport_logging_initialized = false;
+
 struct transport_session
 {
     const bool *is_session_active; // used to shutdown in response to SideCar
