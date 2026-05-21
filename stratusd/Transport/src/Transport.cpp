@@ -34,7 +34,10 @@ transport_session* transport_init(int port, struct StratusCertificate *cert)
     transport_session* session = new transport_session();
     StaticTransportSession = session;
 
-    absl::InitializeLog();
+    if (!transport_logging_initialized) {
+        absl::InitializeLog();
+        transport_logging_initialized = true;
+    }
 
     session->port = port;
 
