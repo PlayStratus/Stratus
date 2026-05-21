@@ -141,12 +141,17 @@ static int api_connect(struct api_client *client) {
         perror("[Sidecar] curl_easy_init");
         goto err_pre_init;
     }
-    assert(curl_easy_setopt(client->curl, CURLOPT_URL, url) == CURLE_OK);
-    assert(curl_easy_setopt(client->curl, CURLOPT_CONNECT_ONLY, 2L) == CURLE_OK);
+    ret = curl_easy_setopt(client->curl, CURLOPT_URL, url);
+    assert(ret == CURLE_OK);
+    ret = curl_easy_setopt(client->curl, CURLOPT_CONNECT_ONLY, 2L);
+    assert(ret == CURLE_OK);
     if (pw != NULL) {
-        assert(curl_easy_setopt(client->curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC) == CURLE_OK);
-        assert(curl_easy_setopt(client->curl, CURLOPT_USERNAME, "stratusd") == CURLE_OK);
-        assert(curl_easy_setopt(client->curl, CURLOPT_PASSWORD, pw) == CURLE_OK);
+        ret = curl_easy_setopt(client->curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+        assert(ret == CURLE_OK);
+        ret = curl_easy_setopt(client->curl, CURLOPT_USERNAME, "stratusd");
+        assert(ret == CURLE_OK);
+        ret = curl_easy_setopt(client->curl, CURLOPT_PASSWORD, pw);
+        assert(ret == CURLE_OK);
     }
 
     // Connect to backend server and get socket fd

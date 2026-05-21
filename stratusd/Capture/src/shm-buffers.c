@@ -69,7 +69,8 @@ enum proxy_actions wl_shm_create_pool(struct proxy_message *msg) {
     assert(wl_map_lookup(map, pool->id) == NULL);
     if (wl_map_insert_at(map, 0, pool->id, pool) < 0) {
         perror("[Capture] wl_map_insert_at");
-        assert(munmap(pool->p, pool->size) == 0); // munmap should not fail
+        int ret = munmap(pool->p, pool->size);
+        assert(ret == 0); // munmap should not fail
         free(pool);
         return PROXY_ACTION_ERR;
     }
@@ -88,7 +89,8 @@ static void wl_shm_pool_free(struct wl_shm_pool *pool) {
     assert(pool->id == 0); // The wl_shm_pool must be destroyed
     assert(pool->dependents == 0); // All child wl_buffers must be freed
 
-    assert(munmap(pool->p, pool->size) == 0); // munmap should not fail
+    int ret = munmap(pool->p, pool->size); // munmap should not fail
+    assert(ret == 0); // munmap should not fail
     free(pool);
 }
 

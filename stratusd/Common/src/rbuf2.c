@@ -62,7 +62,8 @@ struct rbuf *rbuf_init(int capacity) {
     buf->size = capacity + 1;
     buf->head = 0;
     buf->tail = buf->size - 1;
-    assert(sem_init(&buf->sem, 0, 0) == 0); // sem_init should not fail
+    int ret = sem_init(&buf->sem, 0, 0);
+    assert(ret == 0); // sem_init should not fail
     buf->free = NULL;
 
     buf->entries = calloc(buf->size, sizeof(void *));
