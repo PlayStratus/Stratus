@@ -3,17 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useLogs } from "./logs"
 import { closeWriterSafely, releaseWriterLock } from "../utils/writer"
 
-type ManualAxisXValue = -1 | 0 | 1
-
 const DEFAULT_GAMEPAD_BUTTON_COUNT = 17
 const DEFAULT_GAMEPAD_AXIS_COUNT = 4
-const LEFT_JOYSTICK_X_AXIS_INDEX = 0
 
 export function useInputStream() {
   const { addLogEvent } = useLogs()
 
   const writerRef = useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null)
-  const manualAxisXRef = useRef<ManualAxisXValue>(0)
   const manualButtonIndicesRef = useRef(new Set<number>())
   const [isInputReady, setIsInputReady] = useState(false)
 
@@ -63,10 +59,6 @@ export function useInputStream() {
     [addLogEvent],
   )
 
-  const setManualAxisX = useCallback((nextAxisX: ManualAxisXValue) => {
-    manualAxisXRef.current = nextAxisX
-  }, [])
-
   const setManualButton = useCallback(
     (buttonIndex: number, isPressed: boolean) => {
       if (!Number.isInteger(buttonIndex) || buttonIndex < 0) {
@@ -111,11 +103,6 @@ export function useInputStream() {
 
         while (axes.length < DEFAULT_GAMEPAD_AXIS_COUNT) {
           axes.push(0)
-        }
-
-        // On-screen controls temporarily override only the controls they own.
-        if (manualAxisXRef.current !== 0) {
-          axes[LEFT_JOYSTICK_X_AXIS_INDEX] = manualAxisXRef.current
         }
 
         manualButtonIndicesRef.current.forEach((buttonIndex) => {
@@ -169,10 +156,9 @@ export function useInputStream() {
       writerRef.current = null
       setIsInputReady(false)
       void closeWriter(writer)
-      manualAxisXRef.current = 0
       manualButtonIndicesRef.current.clear()
     }
   }, [closeWriter])
 
-  return { handleInputStream, setManualAxisX, setManualButton }
+  return { handleInputStream, setManualButton }
 }
