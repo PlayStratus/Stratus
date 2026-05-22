@@ -52,7 +52,7 @@ concurrent stream session.
       `ws://localhost:4000`)
     - `STRATUSD_CAPTURE_DEBUG`: Set to log proxied Wayland messages
     - `STRATUSD_CAPTUREPW_DEBUG`: Set to log captured PipeWire audio chunks
-    - `STRATUSD_ENCODE_DEBUG`: Set to log encoded video frames
+    - `STRATUSD_ENCODE_DEBUG`: Set to log video encoding info & warnings
     - `STRATUSD_GAME_DEBUG`: Set to log game output
     - `STRATUSD_GAME_DIR`: The directory containing the packaged games (defaults
       to `../games/build`)

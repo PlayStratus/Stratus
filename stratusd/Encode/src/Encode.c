@@ -244,7 +244,8 @@ int encode_main(struct session_args *args) {
     while (args->is_active) {
         struct video_encode_queue_frame *frame = rbuf_wait_peak_latest(ctx->input_queue);
         if (rbuf_free_capacity(ctx->output_queue) == 0) {
-            fprintf(stderr, "[Encode] Warning: dropping frame because Transport queue is full\n");
+            if (ctx->debug)
+                fprintf(stderr, "[Encode] Warning: dropping frame because Transport queue is full\n");
             ctx->frame_count[FRAME_DROPPED_BUF_FULL]++;
         } else if (!args->client_connected) {
             ctx->frame_count[FRAME_DROPPED_PRE_CONNECT]++;

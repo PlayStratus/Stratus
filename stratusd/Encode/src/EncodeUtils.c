@@ -72,9 +72,6 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
             return -1;
         }
 
-        if (state->debug)
-            printf("[Encode] Received encoded frame %3ls (size=%5d)\n", state->frame_count, state->pkt->size);
-
         av_packet_unref(state->pkt);
     }
 
