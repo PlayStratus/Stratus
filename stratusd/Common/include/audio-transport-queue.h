@@ -14,6 +14,7 @@
 struct audio_transport_queue_frame {
     int length;
     void *data;
+    int transport_progress;
 };
 
 #endif

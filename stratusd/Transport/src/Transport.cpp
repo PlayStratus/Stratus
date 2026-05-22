@@ -70,9 +70,7 @@ void transport_thread(struct transport_session* session)
         if (frame != NULL) {
             if (StaticTransportSession->WebTransportSession != NULL) {
                 quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
-                absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
-                                                                      frame->is_description ? Codec_Description : Codec_Payload,
-                                                                      frame->data, frame->length);
+                absl::Status ret = CurrentSession->SubmitVideoDataToStream(frame);
                 if (!ret.ok()) {
                     // If the frame failed to send, don't pop it and we will try again later
                     if (session->debug)
@@ -93,8 +91,7 @@ void transport_thread(struct transport_session* session)
             if (StaticTransportSession->WebTransportSession != NULL)
             {
                 quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
-                absl::Status ret = CurrentSession->SubmitAudioDataToStream(Stream_Audio,
-                                                                           audio_frame->data, audio_frame->length);
+                absl::Status ret = CurrentSession->SubmitAudioDataToStream(audio_frame);
                 if (!ret.ok()) {
                     // If the frame failed to send, don't pop it and we will try again later
                     if (session->debug)
