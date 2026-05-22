@@ -15,6 +15,7 @@ struct video_transport_queue_frame {
     int length;
     void *data;
     bool is_description;
+    int transport_progress;
 };
 
 #endif

@@ -229,7 +229,7 @@ struct session *session_start(char *session_id, char *game_id, int width,
     session->args.video_encode_queue = rbuf_init(8);
     if (session->args.video_encode_queue == NULL)
         goto err_rbuf_1;
-    session->args.video_transport_queue = rbuf_init(8);
+    session->args.video_transport_queue = rbuf_init(4);
     if (session->args.video_transport_queue == NULL)
         goto err_rbuf_2;
     session->args.audio_transport_queue = rbuf_init(64);

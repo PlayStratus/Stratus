@@ -65,14 +65,12 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
         }
         memcpy(frame->data, state->pkt->data, frame->length);
         frame->is_description = state->pkt->flags && AV_PKT_FLAG_KEY;
+        frame->transport_progress = 0;
         if (rbuf_push(state->output_queue, frame) < 0) {
             free(frame->data);
             free(frame);
             return -1;
         }
-
-        if (state->debug)
-            printf("[Encode] Received encoded frame %3ls (size=%5d)\n", state->frame_count, state->pkt->size);
 
         av_packet_unref(state->pkt);
     }

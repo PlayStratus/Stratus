@@ -4,6 +4,8 @@
 
 #include "quiche/quic/core/web_transport_interface.h"
 #include "rbuf2.h"
+#include "audio-transport-queue.h"
+#include "video-transport-queue.h"
 
 enum TransportStreamType
 {
@@ -41,8 +43,8 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
 
   void OnCanCreateNewOutgoingUnidirectionalStream() override;
 
-  absl::Status SubmitDataToStream(enum TransportStreamType Stream, enum VideoMessageType MessageType, void* Buffer, int Length);
-  absl::Status SubmitAudioDataToStream(enum TransportStreamType Stream, void* Buffer, int Length);
+  absl::Status SubmitVideoDataToStream(struct video_transport_queue_frame *frame);
+  absl::Status SubmitAudioDataToStream(struct audio_transport_queue_frame *frame);
 
  private:
   static void FreeBuffer(absl::string_view Buffer);

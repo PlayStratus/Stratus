@@ -39,6 +39,8 @@ transport_session* transport_init(int port, struct StratusCertificate *cert)
         transport_logging_initialized = true;
     }
 
+    session->debug = (getenv("STRATUSD_TRANSPORT_DEBUG") != NULL);
+
     session->port = port;
 
     session->WebTransportSession = NULL;
@@ -68,14 +70,18 @@ void transport_thread(struct transport_session* session)
         if (frame != NULL) {
             if (StaticTransportSession->WebTransportSession != NULL) {
                 quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
-                absl::Status ret = CurrentSession->SubmitDataToStream(Stream_Video,
-                                                                      frame->is_description ? Codec_Description : Codec_Payload,
-                                                                      frame->data, frame->length);
+                absl::Status ret = CurrentSession->SubmitVideoDataToStream(frame);
                 if (!ret.ok()) {
-                    std::cerr << "[Transport] " << ret << std::endl;
+                    // If the frame failed to send, don't pop it and we will try again later
+                    if (session->debug)
+                        std::cerr << "[Transport] Warning: " << ret << std::endl;
+                } else {
+                    rbuf_pop(session->video_queue);
                 }
+            } else {
+                // User hasn't connected yet, drop frame
+                rbuf_pop(session->video_queue);
             }
-            rbuf_pop(session->video_queue);
         }
 
         struct audio_transport_queue_frame *audio_frame = (struct audio_transport_queue_frame *)
@@ -85,13 +91,18 @@ void transport_thread(struct transport_session* session)
             if (StaticTransportSession->WebTransportSession != NULL)
             {
                 quic::StratusWebTransportSessionVisitor *CurrentSession = StaticTransportSession->WebTransportSession;
-                absl::Status ret = CurrentSession->SubmitAudioDataToStream(Stream_Audio,
-                                                                           audio_frame->data, audio_frame->length);
+                absl::Status ret = CurrentSession->SubmitAudioDataToStream(audio_frame);
                 if (!ret.ok()) {
-                    std::cerr << "[Transport] " << ret << std::endl;
+                    // If the frame failed to send, don't pop it and we will try again later
+                    if (session->debug)
+                        std::cerr << "[Transport] Warning: " << ret << std::endl;
+                } else {
+                    rbuf_pop(session->audio_queue);
                 }
+            } else {
+                // User hasn't connected yet, drop frame
+                rbuf_pop(session->audio_queue);
             }
-            rbuf_pop(session->audio_queue);
         }
     }
 }
