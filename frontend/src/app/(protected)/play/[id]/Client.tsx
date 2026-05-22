@@ -99,9 +99,9 @@ function Client({ game }: Readonly<Props>) {
           body: JSON.stringify({
             game_id: game.id,
 
-            // Use 720p, but match client aspect ratio and ensure width is even
-            width: 2 * Math.round(720 / viewport.height * viewport.width / 2),
-            height: 720,
+            // Hardcoding 1920 X 1080 res for testing
+            width: 1920,
+            height: 1080,
           }),
           signal: abortController.signal,
         })
