@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { flushSync } from "react-dom"
+import { useRouter } from "next/navigation"
 
 import { useAuth } from "@/components/auth/AuthProvider"
 
@@ -27,6 +28,7 @@ type Props = {
 function Client({ game }: Readonly<Props>) {
   const { token } = useAuth()
 
+  const router = useRouter()
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   const [webtransportIP, setWebtransportIP] = useState<string | null>(null)
@@ -187,6 +189,12 @@ function Client({ game }: Readonly<Props>) {
   }
 
   async function handleErrorMessage(message: string | null) {
+    if (message === "Connection closed.") {
+      router.push(`/browse/${game.id}`)
+      await exitFullscreen()
+      return
+    }
+
     setErrorMessage(message)
     if (message) {
       setStatus("ERROR")
