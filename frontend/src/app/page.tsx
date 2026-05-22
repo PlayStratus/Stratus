@@ -48,7 +48,7 @@ export default async function Home() {
           </div>
 
           <p className='text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl font-medium'>
-            An Open Source Game Streaming Service
+            A Web-Based Game Streaming Service
           </p>
 
           <div className='flex flex-col items-start gap-3'>
