@@ -11,7 +11,7 @@ import FeaturedGames from "@/components/landingPage/FeaturedGames"
 import Highlights from "@/components/landingPage/Highlights"
 import Demo from "@/components/landingPage/Demo"
 import Team from "@/components/landingPage/Team"
-import Faq from "@/components/landingPage/Fag"
+import Faq from "@/components/landingPage/Faq"
 
 import { getAllBlogSummaries } from "@/lib/blogs"
 
@@ -57,10 +57,11 @@ export default async function Home() {
               className={buttonVariants({
                 size: "lg",
                 className:
-                  "text-xl px-32 py-6 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-1 hover:shadow-primary/40",
+                  "text-xl px-32 py-6 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-1 hover:shadow-primary/40 flex-col",
               })}
             >
               Play now!
+              <span className='-mt-3 text-xs text-muted/70'>(closed beta)</span>
             </Link>
 
             <Link

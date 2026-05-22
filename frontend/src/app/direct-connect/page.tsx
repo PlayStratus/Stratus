@@ -49,8 +49,19 @@ export default async function MVPPage({ searchParams }: Readonly<Props>) {
             </h1>
 
             <p className='text-lg leading-8 text-muted-foreground'>
-              Use a host address and TLS fingerprint to connect to a Stratus
-              streaming server directly.
+              Use a host address and TLS fingerprint to manually connect to a
+              session on a streaming server. You can run the Stratus streaming
+              server locally by cloning the <a
+              href='https://github.com/PlayStratus/Stratus'
+              target='_blank'
+              rel='noreferrer'
+              className='font-medium text-primary underline underline-offset-4'
+              >GitHub repository</a> and following the instructions in <a
+              href='https://github.com/PlayStratus/Stratus/blob/main/stratusd/README.md#development-setup'
+              target='_blank'
+              rel='noreferrer'
+              className='font-medium text-primary underline underline-offset-4'
+              >stratusd/README.md</a>.
             </p>
           </div>
 
