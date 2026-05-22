@@ -4,6 +4,7 @@ import { startGameSession } from "../socket/send.js"
 import { getAllNodes } from "../socket/node.js"
 
 import type { Token } from "../lib/authToken.js"
+import { getSessions } from "../socket/sessions.js"
 import {
   getTokenFromAuthorizationHeader,
   verifyAuthToken,
@@ -13,6 +14,10 @@ import { getUserById } from "./authController.js"
 import "dotenv/config"
 
 const whitelist = process.env.WHITELISTED_USERS ? JSON.parse(process.env.WHITELISTED_USERS) : undefined;         //ensure your .env if structured WHITELISTED_USERS='["user1", "user2",..., "userN"]'
+
+export function ControllerGetSessions(req: Request, res: Response) {
+  res.json(Array.from(getSessions().values()))
+}
 
 export const ControllerCreateSession = async (req: Request, res: Response) => {
   const { game_id, height, width } = req.body

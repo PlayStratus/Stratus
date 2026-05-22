@@ -1,7 +1,7 @@
 import { WebSocket } from "ws"
 import { deleteNode, updateHeartbeat, getNodeInfo } from "./node.js"
 import { resolveStart } from "./send.js"
-import { loadSession } from "./sessions.js"
+import { deleteSession, deleteNodeSessions } from "./sessions.js"
 
 export function handleMessage(ws: WebSocket, message: any) {
   //most functions here are currently placeholder to build out
@@ -38,8 +38,6 @@ function start_confirmed(ws: WebSocket, message: any) {
     throw new Error("Missing required fields: session_id, tls_fingerprint")
   }
 
-  loadSession(session_id, ws)
-
   const nodeInfo = getNodeInfo(ws)
   if (nodeInfo) {
     const ip = nodeInfo.node_payload.ip
@@ -50,10 +48,12 @@ function start_confirmed(ws: WebSocket, message: any) {
   resolveStart(message)
 }
 
-function stop_session(ws: WebSocket) {
-  console.log("stop")
+function stop_session(message: any) {
+  const { session_id } = message.payload
+  deleteSession(session_id)
 }
 
-function session_error(ws: WebSocket) {
-  console.log("error")
+function session_error(message: any) {
+  const { session_id } = message.payload
+  deleteSession(session_id)
 }
