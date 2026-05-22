@@ -1,13 +1,23 @@
+"use client"
+
 import Link from "next/link"
 import Image from "next/image"
+import type { ReactNode } from "react"
 
-import wordmarkLogo from "@/assets/wordmark-logo.png"
-
+import { useAuth } from "@/components/auth/AuthProvider"
 import { GithubIcon } from "@/components/ui/brand-icons"
+import wordmarkLogo from "@/assets/wordmark-logo.png"
+import { isStaticExport } from "@/lib/static-export"
 
 type Props = {
   logoLoading?: "eager" | "lazy"
 }
+
+const staticLinks = [
+  { href: "/", label: "Home" },
+  { href: "/#Blogs", label: "Blogs" },
+  { href: "/direct-connect", label: "Direct Connect" },
+]
 
 export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
   return (
@@ -36,24 +46,15 @@ export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
           <h2 className='text-sm font-semibold uppercase tracking-widest text-foreground'>
             Explore
           </h2>
-          <Link
-            href='/'
-            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-          >
-            Home
-          </Link>
-          <Link
-            href='/#Blogs'
-            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-          >
-            Blogs
-          </Link>
-          <Link
-            href='/browse'
-            className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-          >
-            Browse
-          </Link>
+          {isStaticExport ? (
+            staticLinks.map((link) => (
+              <FooterLink key={link.href} href={link.href}>
+                {link.label}
+              </FooterLink>
+            ))
+          ) : (
+            <AppFooterLinks />
+          )}
         </nav>
 
         <div className='flex flex-col items-center gap-4 text-center md:items-start md:text-left'>
@@ -78,5 +79,34 @@ export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
         </p>
       </div>
     </footer>
+  )
+}
+
+function AppFooterLinks() {
+  const { user } = useAuth()
+
+  return (
+    <>
+      <FooterLink href='/'>Home</FooterLink>
+      <FooterLink href='/#Blogs'>Blogs</FooterLink>
+      {user && <FooterLink href='/browse'>Browse</FooterLink>}
+    </>
+  )
+}
+
+function FooterLink({
+  href,
+  children,
+}: Readonly<{
+  href: string
+  children: ReactNode
+}>) {
+  return (
+    <Link
+      href={href}
+      className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+    >
+      {children}
+    </Link>
   )
 }

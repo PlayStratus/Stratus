@@ -5,6 +5,7 @@ import { CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import { HoverCard } from "@/components/ui/hover-card"
 
 import { getGames } from "@/lib/actions/games"
+import { isStaticExport } from "@/lib/static-export"
 import { GameType } from "@/lib/types"
 
 export const metadata: Metadata = {
@@ -12,6 +13,10 @@ export const metadata: Metadata = {
 }
 
 export default async function Browse() {
+  if (isStaticExport) {
+    return null
+  }
+
   const games = await getGames()
 
   const featuredGame = games

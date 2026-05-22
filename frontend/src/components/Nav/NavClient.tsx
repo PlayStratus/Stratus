@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/components/auth/AuthProvider"
+import { isStaticExport } from "@/lib/static-export"
 
 import type { GameType } from "@/lib/types"
 
@@ -32,9 +33,18 @@ export default function NavClient({
   revealOnScroll = false,
   hideSearchBar = false,
 }: Readonly<Props>) {
-  const { user, logout } = useAuth()
-  const router = useRouter()
   const [isRevealed, setIsRevealed] = useState(!revealOnScroll)
+  const navLinks = isStaticExport
+    ? [
+        { href: "/", label: "Home" },
+        { href: "/#Blogs", label: "Blogs" },
+        { href: "/direct-connect", label: "Direct Connect" },
+      ]
+    : [
+        { href: "/", label: "Home" },
+        { href: "/#Blogs", label: "Blogs" },
+        { href: "/browse", label: "Browse" },
+      ]
 
   useEffect(() => {
     if (!revealOnScroll) {
@@ -53,11 +63,6 @@ export default function NavClient({
       window.removeEventListener("scroll", updateNavVisibility)
     }
   }, [revealOnScroll])
-
-  const handleLogout = async () => {
-    await logout()
-    router.push("/")
-  }
 
   return (
     <nav
@@ -78,59 +83,26 @@ export default function NavClient({
           </Link>
 
           <div className='hidden items-center gap-6 md:flex'>
-            <Link
-              href='/'
-              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-            >
-              Home
-            </Link>
-
-            <Link
-              href='/#Blogs'
-              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-            >
-              Blogs
-            </Link>
-
-            <Link
-              href='/browse'
-              className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
-            >
-              Browse
-            </Link>
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className='text-sm font-medium text-muted-foreground transition-colors hover:text-foreground'
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
         </div>
 
-        {!hideSearchBar && (
+        {!hideSearchBar && !isStaticExport && (
           <div className='flex-1 max-w-xl mx-0 md:mx-4'>
             <SearchBar games={games} />
           </div>
         )}
 
         <div className='flex items-center gap-2'>
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>{user.Username}</Button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem asChild>
-                  <button
-                    type='button'
-                    onClick={handleLogout}
-                    className='w-full cursor-pointer text-left'
-                  >
-                    Log Out
-                  </button>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link href='/signin'>
-              <Button>Log In</Button>
-            </Link>
-          )}
+          {!isStaticExport && <AuthControls />}
 
           <div className='md:hidden'>
             <DropdownMenu>
@@ -141,28 +113,56 @@ export default function NavClient({
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align='end'>
-                <DropdownMenuItem asChild>
-                  <Link href='/' className='w-full cursor-pointer'>
-                    Home
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link href='/#Blogs' className='w-full cursor-pointer'>
-                    Blogs
-                  </Link>
-                </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link href='/browse' className='w-full cursor-pointer'>
-                    Browse
-                  </Link>
-                </DropdownMenuItem>
+                {navLinks.map((link) => (
+                  <DropdownMenuItem key={link.href} asChild>
+                    <Link href={link.href} className='w-full cursor-pointer'>
+                      {link.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
       </div>
     </nav>
+  )
+}
+
+function AuthControls() {
+  const { user, logout } = useAuth()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/")
+  }
+
+  if (!user) {
+    return (
+      <Link href='/signin'>
+        <Button>Log In</Button>
+      </Link>
+    )
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button>{user.Username}</Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align='end'>
+        <DropdownMenuItem asChild>
+          <button
+            type='button'
+            onClick={handleLogout}
+            className='w-full cursor-pointer text-left'
+          >
+            Log Out
+          </button>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

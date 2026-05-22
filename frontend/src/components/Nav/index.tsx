@@ -1,4 +1,5 @@
 import { getGames } from "@/lib/actions/games"
+import { isStaticExport } from "@/lib/static-export"
 
 import NavClient from "./NavClient"
 
@@ -11,7 +12,8 @@ export default async function Nav({
   revealOnScroll = false,
   hideSearchBar = false,
 }: Readonly<Props>) {
-  const games = await getGames()
+  const games = hideSearchBar || isStaticExport ? [] : await getGames()
+
   return (
     <NavClient
       games={games ?? []}

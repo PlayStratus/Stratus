@@ -6,13 +6,24 @@ import { buttonVariants } from "@/components/ui/button"
 import { GameGallery } from "@/components/game/game-gallery"
 
 import { getGameById } from "@/lib/actions/games"
+import { isStaticExport } from "@/lib/static-export"
 import { cn } from "@/lib/utils"
 
 type Props = {
   params: Promise<{ id: string }>
 }
 
+export function generateStaticParams() {
+  return isStaticExport ? [{ id: "__static-export-placeholder__" }] : []
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (isStaticExport) {
+    return {
+      title: "Game",
+    }
+  }
+
   const { id } = await params
   const game = await getGameById(id)
 
@@ -22,6 +33,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function Service({ params }: Props) {
+  if (isStaticExport) {
+    return null
+  }
+
   const { id } = await params
 
   const game = await getGameById(id)

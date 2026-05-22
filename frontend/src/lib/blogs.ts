@@ -130,6 +130,44 @@ async function getMarkdownFiles(dir: string): Promise<string[]> {
   return files.flat()
 }
 
+async function getDocsFiles(dir: string): Promise<string[]> {
+  let entries
+
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    ) {
+      console.warn(`Blog docs directory not found: ${dir}`)
+      return []
+    }
+
+    throw error
+  }
+
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(dir, entry.name)
+
+      if (entry.isDirectory()) {
+        return getDocsFiles(entryPath)
+      }
+
+      if (entry.isFile()) {
+        return [entryPath]
+      }
+
+      return []
+    }),
+  )
+
+  return files.flat()
+}
+
 export function resolveDocAssetPath(
   sourceRelativePath: string,
   rawAssetPath: string,
@@ -274,6 +312,19 @@ export async function getAllBlogSummaries(): Promise<BlogSummary[]> {
   return posts.map(
     ({ content, sourcePath, sourceRelativePath, ...summary }) => summary,
   )
+}
+
+export async function getAllBlogSlugs() {
+  const posts = await loadBlogPosts()
+  return posts.map((post) => post.slug)
+}
+
+export async function getAllBlogAssetParams() {
+  const files = await getDocsFiles(DOCS_ROOT)
+
+  return files.map((filePath) => ({
+    path: toPosixPath(path.relative(DOCS_ROOT, filePath)).split("/"),
+  }))
 }
 
 export async function getBlogPostBySlug(slug: string) {
