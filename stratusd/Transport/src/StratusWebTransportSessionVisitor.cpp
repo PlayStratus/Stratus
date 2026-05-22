@@ -79,66 +79,62 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
 
 absl::Status StratusWebTransportSessionVisitor::SubmitDataToStream(enum TransportStreamType StreamType, enum VideoMessageType MessageType, void* Buffer, int Length)
 {
-    if (VideoStream && VideoStream->CanWrite()) {
-        // Huuge Mem leak will fix.
-
-        webtransport::StreamWriteOptions CurrentWriteOptions;
-
-        uint8_t NetStreamType = StreamType;
-        quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
-        absl::Status ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
-        delete StreamTypeData;
-        if (!ret.ok()) return ret;
-
-        uint8_t NetMessageType = MessageType;
-        quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
-        ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
-        delete MessageTypeData;
-        if (!ret.ok()) return ret;
-
-        int NetLength = htonl(Length);
-        quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
-        ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-        delete SizeData;
-        if (!ret.ok()) return ret;
-
-        quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
-        ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-        delete Data;
-        if (!ret.ok()) return ret;
-    } else {
-        std::cerr << "[Transport] Can't write to video stream!\n";
+    if (!VideoStream && !VideoStream->CanWrite()) {
+        return absl::UnavailableError("Can't write to video stream");
     }
+
+    webtransport::StreamWriteOptions CurrentWriteOptions;
+
+    uint8_t NetStreamType = StreamType;
+    quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
+    absl::Status ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
+    delete StreamTypeData;
+    if (!ret.ok()) return ret;
+
+    uint8_t NetMessageType = MessageType;
+    quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
+    ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
+    delete MessageTypeData;
+    if (!ret.ok()) return ret;
+
+    int NetLength = htonl(Length);
+    quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
+    ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+    delete SizeData;
+    if (!ret.ok()) return ret;
+
+    quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)Buffer, Length, FreeBuffer);
+    ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+    delete Data;
+    if (!ret.ok()) return ret;
 
     return absl::OkStatus();
 }
 
 absl::Status StratusWebTransportSessionVisitor::SubmitAudioDataToStream(enum TransportStreamType StreamType, void* Buffer, int Length)
 {
-    if (AudioStream && AudioStream->CanWrite()) {
-        // Huuge Mem leak will fix.
-
-        webtransport::StreamWriteOptions CurrentWriteOptions;
-
-        uint8_t NetStreamType = StreamType;
-        quiche::QuicheMemSlice *StreamTypeData = new quiche::QuicheMemSlice((char *)&NetStreamType, 1, nullptr);
-        absl::Status ret = AudioStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
-        delete StreamTypeData;
-        if (!ret.ok()) return ret;
-
-        int NetLength = htonl(Length);
-        quiche::QuicheMemSlice *SizeData = new quiche::QuicheMemSlice((char *)&NetLength, 4, nullptr);
-        ret = AudioStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-        delete SizeData;
-        if (!ret.ok()) return ret;
-
-        quiche::QuicheMemSlice *Data = new quiche::QuicheMemSlice((char *)Buffer, Length, FreeBuffer);
-        ret = AudioStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-        delete Data;
-        if (!ret.ok()) return ret;
-    } else {
-        std::cerr << "[Transport] Can't write to audio stream" << std::endl;
+    if (!AudioStream || !AudioStream->CanWrite()) {
+        return absl::UnavailableError("Can't write to audio stream");
     }
+
+    webtransport::StreamWriteOptions CurrentWriteOptions;
+
+    uint8_t NetStreamType = StreamType;
+    quiche::QuicheMemSlice *StreamTypeData = new quiche::QuicheMemSlice((char *)&NetStreamType, 1, nullptr);
+    absl::Status ret = AudioStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
+    delete StreamTypeData;
+    if (!ret.ok()) return ret;
+
+    int NetLength = htonl(Length);
+    quiche::QuicheMemSlice *SizeData = new quiche::QuicheMemSlice((char *)&NetLength, 4, nullptr);
+    ret = AudioStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
+    delete SizeData;
+    if (!ret.ok()) return ret;
+
+    quiche::QuicheMemSlice *Data = new quiche::QuicheMemSlice((char *)Buffer, Length, FreeBuffer);
+    ret = AudioStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+    delete Data;
+    if (!ret.ok()) return ret;
 
     return absl::OkStatus();
 }

@@ -63,6 +63,7 @@ concurrent stream session.
       (defaults to 4433)
     - `STRATUSD_SIDECAR_ONESHOT`: Set to make stratusd exit after the first
       session is stopped
+    - `STRATUSD_TRANSPORT_DEBUG`: Set to log transport connection warnings
 
 6.  Run binary located at `./build/src/stratusd`
 
