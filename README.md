@@ -96,7 +96,7 @@ architecture of Stratus.
     tasks. The core streaming service runs under the `stratusd` systemd service.
 
 7.  **Start Streaming:** The streaming servers should appear on the frontend's
-    `/heart` dashboard within 15 minutes. Once they do, you can log in and start
+    `/dashboard` page within 15 minutes. Once they do, you can log in and start
     a stream session.
 
 

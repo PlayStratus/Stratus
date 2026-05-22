@@ -21,12 +21,23 @@ export interface NodeHeartbeat {
   payload: NodePayload
 }
 
+export interface Session {
+  start: number // unix timestamp
+  node: string
+  sessionId: string
+  gameId: string
+  width: number
+  height: number
+  userId: string
+  userName: string
+}
+
 export async function getHeartbeat() {
   try {
     const response = await fetch(getBackendPath("/play/nodes"), {
       method: "GET",
       headers: {
-        
+
       },
       cache: "no-store",
     })
@@ -40,6 +51,30 @@ export async function getHeartbeat() {
     const data: NodeHeartbeat[] = await response.json();
     return data;
   } catch (error) {
-    
+
+  }
+}
+
+export async function getSessions() {
+  console.log('here');
+  try {
+    const response = await fetch(getBackendPath("/play/sessions"), {
+      method: "GET",
+      headers: {
+
+      },
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error body:", errorText);
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data: Session[] = await response.json();
+    return data;
+  } catch (error) {
+
   }
 }
