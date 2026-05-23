@@ -63,7 +63,7 @@ void transport_thread(struct transport_session* session)
     std::cerr << "[Transport] Starting WebTransport on port: " << (int)session->port << std::endl;
 
     while (*session->is_session_active && session->is_thread_active) {
-        server->WaitForEvents();
+        server->event_loop()->RunEventLoopOnce(quic::QuicTime::Delta::FromMilliseconds(1));
 
         struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)
             rbuf_try_peak(session->video_queue);
