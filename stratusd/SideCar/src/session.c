@@ -36,6 +36,11 @@
 #define MAX_DIMENSIONS_LEN 10
 
 /*
+ * The maximum number of seconds to wait for a client to connect
+ */
+#define CLIENT_CONNECT_TIMEOUT 60
+
+/*
  * Per-thread constant data, including a human-readable module name and the
  * module entry function.
  */
@@ -226,6 +231,7 @@ struct session *session_start(char *session_id, char *game_id, int width,
            get_der_hash(session->args.cert));
     strncpy(session->id, session_id, UUID_LEN);
     strncpy(session->game_id, game_id, UUID_LEN);
+    session->start = time(NULL);
     session->args.video_encode_queue = rbuf_init(8);
     if (session->args.video_encode_queue == NULL)
         goto err_rbuf_1;
@@ -290,6 +296,14 @@ err_malloc_1:
  */
 int session_poll(struct session *session) {
     int ret;
+
+    // Check if user failed to connect
+    if (!session->args.client_connected &&
+        time(NULL) - session->start > CLIENT_CONNECT_TIMEOUT) {
+
+        fprintf(stderr, "[Sidecar] Timed out waiting for client to connect\n");
+        return 1;
+    }
 
     // Check if game has exited
     if (session->game_pid == 0 ||
