@@ -63,8 +63,6 @@ void transport_thread(struct transport_session* session)
     std::cerr << "[Transport] Starting WebTransport on port: " << (int)session->port << std::endl;
 
     while (*session->is_session_active && session->is_thread_active) {
-        server->WaitForEvents();
-
         struct video_transport_queue_frame *frame = (struct video_transport_queue_frame *)
             rbuf_try_peak(session->video_queue);
         if (frame != NULL) {
@@ -104,6 +102,9 @@ void transport_thread(struct transport_session* session)
                 rbuf_pop(session->audio_queue);
             }
         }
+
+        // May modify session->is_thread_active, so must be at end of loop
+        server->WaitForEvents();
     }
 }
 
