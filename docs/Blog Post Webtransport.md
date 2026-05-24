@@ -6,8 +6,7 @@ tags: [WebTransport, Architecture]
 ---
 **WebTransport**
 
-![WebTransport](./images/WebTransport_Architecture.png)
-*Figure 1*
+![Figure 1, WebTransport](./images/WebTransport_Architecture.png)
 
 WebTransport is a novel API that enables connection to a HTTP/3 server. Most other game streaming services use WebRTC, an older API used to send their data over the internet. We decided to tackle WebTransport to determine how much improvement we could have over the major game streaming platforms. 
 
