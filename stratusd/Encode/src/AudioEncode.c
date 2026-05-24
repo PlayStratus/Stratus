@@ -153,7 +153,6 @@ int encode_audio_frame(struct audio_encoder_context *ctx,
     }
 
     memcpy(frame->data, packet, frame->length);
-    frame->transport_progress = 0;
     if (rbuf_push(ctx->output_queue, frame) < 0) {
         free(frame->data);
         free(frame);

@@ -8,18 +8,6 @@
 
 static bool transport_logging_initialized = false;
 
-/*
- * Represent how much of a frame has already been transported so we don't
- * retransmit anything by mistake
- */
-enum frame_progress {
-    FRAME_PROGRESS_NONE = 0,
-    FRAME_PROGRESS_STREAM_TYPE,
-    FRAME_PROGRESS_MESSAGE_TYPE,
-    FRAME_PROGRESS_LENGTH,
-    FRAME_PROGRESS_DATA,
-};
-
 struct transport_session
 {
     const bool *is_session_active; // used to shutdown in response to SideCar
