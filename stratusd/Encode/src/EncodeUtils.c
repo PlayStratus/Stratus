@@ -82,5 +82,7 @@ int avcodec_send_and_receive(encoder_context *state, int flush) {
  * Free a frame that was pushed to the transport buffer
  */
 void encode_free_frame(void *frame) {
+    struct video_transport_queue_frame *f = frame;
+    free(f->data);
     free(frame);
 }

@@ -167,6 +167,8 @@ int encode_audio_frame(struct audio_encoder_context *ctx,
  * Free an audio frame after its payload has been handed to transport.
  */
 static void audio_encoder_free_frame(void *frame) {
+    struct audio_transport_queue_frame *f = frame;
+    free(f->data);
     free(frame);
 }
 

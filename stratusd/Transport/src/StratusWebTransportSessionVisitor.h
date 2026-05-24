@@ -47,8 +47,6 @@ class StratusWebTransportSessionVisitor : public WebTransportVisitor {
   absl::Status SubmitAudioDataToStream(struct audio_transport_queue_frame *frame);
 
  private:
-  static void FreeBuffer(absl::string_view Buffer);
-
   WebTransportSession* session_;
   WebTransportStream* ControlStream;
   WebTransportStream* InputStream;
