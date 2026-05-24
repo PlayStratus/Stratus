@@ -124,21 +124,21 @@ export default async function Home() {
         <Highlights />
       </div>
 
-      {/* Featured Games Section */}
+      {/* Demo Section */}
       <div className='bg-muted/30 py-20 w-full border-y border-border/50'>
+        <div className='container mx-auto px-4 max-w-5xl'>
+          <Demo />
+        </div>
+      </div>
+
+      {/* Featured Games Section */}
+      <div className='py-20 w-full'>
         <div className='container mx-auto px-4 max-w-6xl'>
           <h2 className='text-3xl md:text-4xl font-bold mb-8 text-center'>
             Featured Games
           </h2>
 
           <FeaturedGames />
-        </div>
-      </div>
-
-      {/* Demo Section */}
-      <div className='py-20 w-full'>
-        <div className='container mx-auto px-4 max-w-5xl'>
-          <Demo />
         </div>
       </div>
 
