@@ -1,6 +1,7 @@
 import { WebSocket } from "ws"
 import { v4 as uuidv4 } from "uuid"
 import { findNodeByGame, getAllNodes } from "./node.js"
+import { createSession, deleteSession } from "./sessions.js"
 
 const pendingStarts = new Map<string, (confirm: ConfirmStart | null) => void>()
 const pendingStartSessions = new Map<string, string>()
@@ -53,12 +54,23 @@ export function startGameSession(
     //wait for start return
     pendingStarts.set(request_id, resolve) //store id in map
     pendingStartSessions.set(session_id, request_id)
+    createSession({
+      start: Math.floor(new Date().getTime() / 1000),
+      node: nodeInfo?.node_payload.hostname ?? "Unknown",
+      sessionId: startMessage.payload.session_id,
+      gameId: startMessage.payload.game_id,
+      width: startMessage.payload.width,
+      height: startMessage.payload.height,
+      userId: startMessage.payload.user_id,
+      userName: startMessage.payload.user_name,
+    });
 
     setTimeout(() => {
       // timeout if node never responds
       if (pendingStarts.has(request_id)) {
         pendingStarts.delete(request_id) //delete request
         pendingStartSessions.delete(session_id)
+        deleteSession(session_id)
         resolve(null) //return null if unable
       }
     }, 10_000) //wait 10 seconds

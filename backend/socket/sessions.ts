@@ -1,28 +1,40 @@
 import { WebSocket } from "ws"
 
-interface SessionInfo {
+export interface Session {
+  start: number
+  node: string
   sessionId: string
-  node: WebSocket
-  status: string
+  gameId: string
+  width: number
+  height: number
+  userId: string
+  userName: string
 }
 
-const sessions = new Map<string, SessionInfo>()
+const sessions = new Map<string, Session>()
 
-export function loadSession(ses: string, inNode: WebSocket) {              //load node into session
-  if (sessions.has(ses)) {
-    console.warn("Session already exists, updating node:", ses)
+export function createSession(s: Session) {
+  if (sessions.has(s.sessionId)) {
+    console.warn("Overwritting session:", s.sessionId)
+  } else {
+    console.log("Creating session:", s.sessionId)
   }
-  sessions.set(ses, {
-    sessionId: ses,
-    node: inNode,
-    status: "Live",
-  })
+  sessions.set(s.sessionId, s)
 }
 
-export function deleteSession(ses: string) {                          //remove node, here incase there is an issue with a node that we have to take down
-  sessions.delete(ses)
+export function deleteNodeSessions(node: string) {
+  console.log("Deleting sessions for node", node)
+  sessions.forEach((s: Session, id: string) => {
+    if (s.node === node)
+      deleteSession(id)
+  });
 }
 
-export function getSessions() {                                         //remove node, here incase there is an issue with a node that we have to take down
+export function deleteSession(id: string) {
+  console.log("Deleting session:", id)
+  sessions.delete(id)
+}
+
+export function getSessions() {
   return sessions
 }
