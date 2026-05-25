@@ -10,9 +10,10 @@ service created by a team of Oregon State University students for their senior
 capstone project. Stratus is unique among cloud gaming solutions for its use of
 Linux-based streaming servers, the WebTransport protocol for streaming to web
 browsers, and a custom Wayland proxy for capturing game video. This architecture
-has enabled it to keep startup times under 2 seconds and achieve input-to-frame
-latencies of as little as 60ms while streaming 60fps game video at 1080p (see
-our [analysis of Stratus' performance][blogs-performance] for more details).
+has enabled it to keep startup times under 2 seconds and achieve round-trip
+"click-to-photon" latencies of as little as 40ms while streaming 60fps game
+video at 1080p (see our [analysis of Stratus' performance][blogs-performance]
+for more details).
 
 
 ## Overview

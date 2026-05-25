@@ -20,7 +20,7 @@ const highlights = [
     description: (
       <>
         Stratus can stream in 1080p at 60fps with round-trip latencies of as
-        little as 60ms
+        little as 40ms
       </>
     ),
     Icon: Zap,
