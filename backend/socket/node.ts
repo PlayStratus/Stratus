@@ -1,4 +1,5 @@
 import { WebSocket } from "ws"
+import { pruneNodeSessions, deleteNodeSessions } from "./sessions.js"
 
 interface NodePayload {
   hostname: string
@@ -48,6 +49,7 @@ export function updateHeartbeat(ws: WebSocket, payload: any) {
   if (!node) return
   node.last_heartbeat = Date.now()
   node.node_payload = payload
+  pruneNodeSessions(node.name, payload.sessions)
 }
 
 export function findNodeByGame(
@@ -72,6 +74,10 @@ export function findNodeByGame(
 
 export function deleteNode(ws: WebSocket) {
   //remove node, here in case there is an issue with a node that we have to take down
+  let node = nodes.get(ws) //get connection
+  if (node) {
+    deleteNodeSessions(node.name)
+  }
   nodes.delete(ws)
 }
 
