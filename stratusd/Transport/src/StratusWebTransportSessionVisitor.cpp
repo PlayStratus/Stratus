@@ -2,6 +2,25 @@
 #include "InputStreamVisitor.h"
 #include "TransportPriv.h"
 
+/*
+ * The offsets of each component of a video stream packet
+ */
+enum video_packet {
+    VIDEO_PKT_STREAM_TYPE    = 0,
+    VIDEO_PKT_FRAME_TYPE     = VIDEO_PKT_STREAM_TYPE + sizeof(uint8_t),
+    VIDEO_PKT_LENGTH         = VIDEO_PKT_FRAME_TYPE  + sizeof(uint8_t),
+    VIDEO_PKT_DATA           = VIDEO_PKT_LENGTH      + sizeof(int),
+};
+
+/*
+ * The offsets of each component of a video stream packet
+ */
+enum audio_packet {
+    AUDIO_PKT_STREAM_TYPE    = 0,
+    AUDIO_PKT_LENGTH         = AUDIO_PKT_STREAM_TYPE + sizeof(uint8_t),
+    AUDIO_PKT_DATA           = AUDIO_PKT_LENGTH      + sizeof(int),
+};
+
 namespace quic {
 
 StratusWebTransportSessionVisitor::StratusWebTransportSessionVisitor(WebTransportSession* session,
@@ -79,111 +98,52 @@ void StratusWebTransportSessionVisitor::OnCanCreateNewOutgoingUnidirectionalStre
 
 absl::Status StratusWebTransportSessionVisitor::SubmitVideoDataToStream(struct video_transport_queue_frame *frame)
 {
-    if (!VideoStream && !VideoStream->CanWrite()) {
-        return absl::UnavailableError("Can't write to video stream");
-    }
-
     absl::Status ret;
     webtransport::StreamWriteOptions CurrentWriteOptions;
 
-    if (frame->transport_progress < FRAME_PROGRESS_STREAM_TYPE) {
-        uint8_t NetStreamType = Stream_Video;
-        quiche::QuicheMemSlice* StreamTypeData = new quiche::QuicheMemSlice((char*)&NetStreamType, 1, nullptr);
-        ret = VideoStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
-        delete StreamTypeData;
-        if (!ret.ok())
-            return ret;
-        else
-            frame->transport_progress = FRAME_PROGRESS_STREAM_TYPE;
+    if (!VideoStream || !VideoStream->CanWrite()) {
+        return absl::UnavailableError("Can't write to video stream");
     }
 
-    if (frame->transport_progress < FRAME_PROGRESS_MESSAGE_TYPE) {
-        uint8_t NetMessageType = frame->is_description ? Codec_Description : Codec_Payload;
-        quiche::QuicheMemSlice* MessageTypeData = new quiche::QuicheMemSlice((char*)&NetMessageType, 1, nullptr);
-        ret = VideoStream->Writev(absl::MakeSpan(MessageTypeData, 1), CurrentWriteOptions);
-        delete MessageTypeData;
-        if (!ret.ok()) {
-            std::cerr << "[Transport] Failed to send video frame type\n";
-            return ret;
-        } else
-            frame->transport_progress = FRAME_PROGRESS_MESSAGE_TYPE;
-    }
+    // Construct video packet
+    ssize_t buffer_len = VIDEO_PKT_DATA + frame->length;
+    quiche::QuicheBuffer buffer(quiche::SimpleBufferAllocator::Get(), buffer_len);
+    buffer.data()[VIDEO_PKT_STREAM_TYPE] = Stream_Video;
+    buffer.data()[VIDEO_PKT_FRAME_TYPE] = frame->is_description ?
+        Codec_Description : Codec_Payload;
+    *((int*)(buffer.data() + VIDEO_PKT_LENGTH)) = htonl(frame->length);
+    memcpy(buffer.data() + VIDEO_PKT_DATA, frame->data, frame->length);
 
-    if (frame->transport_progress < FRAME_PROGRESS_LENGTH) {
-        int NetLength = htonl(frame->length);
-        quiche::QuicheMemSlice* SizeData = new quiche::QuicheMemSlice((char*)&NetLength, 4, nullptr);
-        ret = VideoStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-        delete SizeData;
-        if (!ret.ok()) {
-            std::cerr << "[Transport] Failed to send video frame length\n";
-            return ret;
-        } else
-            frame->transport_progress = FRAME_PROGRESS_LENGTH;
-    }
+    // Send packet
+    quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice(std::move(buffer));
+    ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+    delete Data;
 
-    if (frame->transport_progress < FRAME_PROGRESS_DATA) {
-        quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice((char*)frame->data, frame->length, FreeBuffer);
-        ret = VideoStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-        delete Data;
-        if (!ret.ok()) {
-            // TODO: If we fail to send data, we will likely get a memory error on the
-            // next call.
-            std::cerr << "[Transport] Failed to send video frame data!\n";
-            return ret;
-        } else
-            frame->transport_progress = FRAME_PROGRESS_DATA;
-    }
-
-    return absl::OkStatus();
+    return ret;
 }
 
 absl::Status StratusWebTransportSessionVisitor::SubmitAudioDataToStream(struct audio_transport_queue_frame *frame)
 {
+    absl::Status ret;
+    webtransport::StreamWriteOptions CurrentWriteOptions;
+
     if (!AudioStream || !AudioStream->CanWrite()) {
         return absl::UnavailableError("Can't write to audio stream");
     }
 
-    absl::Status ret;
-    webtransport::StreamWriteOptions CurrentWriteOptions;
+    // Construct audio packet
+    ssize_t buffer_len = AUDIO_PKT_DATA + frame->length;
+    quiche::QuicheBuffer buffer(quiche::SimpleBufferAllocator::Get(), buffer_len);
+    buffer.data()[AUDIO_PKT_STREAM_TYPE] = Stream_Audio;
+    *((int*)(buffer.data() + AUDIO_PKT_LENGTH)) = htonl(frame->length);
+    memcpy(buffer.data() + AUDIO_PKT_DATA, frame->data, frame->length);
 
-    if (frame->transport_progress < FRAME_PROGRESS_STREAM_TYPE) {
-        uint8_t NetStreamType = Stream_Audio;
-        quiche::QuicheMemSlice *StreamTypeData = new quiche::QuicheMemSlice((char *)&NetStreamType, 1, nullptr);
-        ret = AudioStream->Writev(absl::MakeSpan(StreamTypeData, 1), CurrentWriteOptions);
-        delete StreamTypeData;
-        if (!ret.ok())
-            return ret;
-        else
-            frame->transport_progress = FRAME_PROGRESS_STREAM_TYPE;
-    }
+    // Send packet
+    quiche::QuicheMemSlice* Data = new quiche::QuicheMemSlice(std::move(buffer));
+    ret = AudioStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
+    delete Data;
 
-    if (frame->transport_progress < FRAME_PROGRESS_LENGTH) {
-        int NetLength = htonl(frame->length);
-        quiche::QuicheMemSlice *SizeData = new quiche::QuicheMemSlice((char *)&NetLength, 4, nullptr);
-        ret = AudioStream->Writev(absl::MakeSpan(SizeData, 1), CurrentWriteOptions);
-        delete SizeData;
-        if (!ret.ok())
-            return ret;
-        else
-            frame->transport_progress = FRAME_PROGRESS_LENGTH;
-    }
-
-    if (frame->transport_progress < FRAME_PROGRESS_DATA) {
-        quiche::QuicheMemSlice *Data = new quiche::QuicheMemSlice((char *)frame->data, frame->length, FreeBuffer);
-        ret = AudioStream->Writev(absl::MakeSpan(Data, 1), CurrentWriteOptions);
-        delete Data;
-        if (!ret.ok())
-            return ret;
-        else
-            frame->transport_progress = FRAME_PROGRESS_DATA;
-    }
-
-    return absl::OkStatus();
-}
-
-void StratusWebTransportSessionVisitor::FreeBuffer(absl::string_view test)
-{
-    free((void*)test.data());
+    return ret;
 }
 
 }
