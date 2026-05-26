@@ -22,11 +22,21 @@ export function createSession(s: Session) {
   sessions.set(s.sessionId, s)
 }
 
-export function deleteNodeSessions(node: string) {
-  console.log("Deleting sessions for node", node)
+export function pruneNodeSessions(node: string, nodeSessions: string[]) {
   sessions.forEach((s: Session, id: string) => {
-    if (s.node === node)
+    if (s.node === node && !nodeSessions.includes(s.sessionId)) {
+      console.log("Pruning session", s.sessionId, "for node", node)
       deleteSession(id)
+    }
+  });
+}
+
+export function deleteNodeSessions(node: string) {
+  sessions.forEach((s: Session, id: string) => {
+    if (s.node === node) {
+      console.log("Deleting session", s.sessionId, "for node", node)
+      deleteSession(id)
+    }
   });
 }
 

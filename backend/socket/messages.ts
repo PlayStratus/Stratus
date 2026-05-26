@@ -1,7 +1,7 @@
 import { WebSocket } from "ws"
 import { deleteNode, updateHeartbeat, getNodeInfo } from "./node.js"
 import { resolveStart } from "./send.js"
-import { deleteSession, deleteNodeSessions } from "./sessions.js"
+import { deleteSession } from "./sessions.js"
 
 export function handleMessage(ws: WebSocket, message: any) {
   //most functions here are currently placeholder to build out
