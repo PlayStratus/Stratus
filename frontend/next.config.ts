@@ -11,4 +11,10 @@ const nextConfig: NextConfig = {
   },
 }
 
+module.exports = {
+  images: {
+    remotePatterns: [new URL('https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/**')],
+  },
+}
+
 export default nextConfig

@@ -1,7 +1,7 @@
 ---
 title: Stratus Stream Performance
 author: Amin Hussien
-image: ./images/MinecraftGlasstoGlass.webp
+image: /images/MinecraftGlasstoGlass.webp
 tags: [Performance]
 ---
 
@@ -11,12 +11,12 @@ It only takes a second for a player to complain that a game stream is lagging. Y
 
 | Stratus     | Geforce Now  |
 | ----------- | ------------ |
-| ![](./images/StratusLaunch.webp) | ![](./images/GeforceLaunch.webp) |
+| ![](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/StratusLaunch.webp) | ![](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/GeforceLaunch.webp) |
 
 
 | Amazon Luna  | Xbox Cloud Gaming |
 | ----------- | ------------ |
-| ![](./images/LunaLaunch.webp) | ![](./images/XboxLaunch.webp)|
+| ![](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/LunaLaunch.webp) | ![](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/XboxLaunch.webp)|
 
 | Stratus | Geforce Now  | Amazon Luna | Xbox Cloud Gaming |
 | :--- | :--- | :--- | :--- |
@@ -37,7 +37,7 @@ The most straightforward method we found for recording glass to glass latency ha
 
 In our testing, Stratus 1080P 60 FPS streams have an average Glass to Glass latency as low as 20 ms without the use of hardware video encoding. 
 
-![Glass to Glass Latency Test Recorded at 240 FPS](./images/MinecraftGlasstoGlassTimeCode.webp)
+![Glass to Glass Latency Test Recorded at 240 FPS](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/MinecraftGlasstoGlassTimeCode.webp)
 
 ### Encode Time
 Due to our choice of server hardware (BC-250s), we are unable to use hardware video encoding therefore we spend 16 MS encoding each frame of video. If we were to implement hardware encode support encode latency would drop down to 2-4 MS.
@@ -54,6 +54,6 @@ Due to our novel frame capture method of intercepting Wayland messages from the 
 Click-to-photon latency is the most representative latency metric for a game streaming service, as it does not matter how smooth the video stream appears if it takes forever to respond to your inputs. In our testing, Stratus has a click-to-photon latency as fast as 40 ms under ideal conditions.
 
 
-![Click to Photon Latency Test](./images/ClickToPhoton.webp)
+![Click to Photon Latency Test](https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/ClickToPhoton.webp)
 
 
