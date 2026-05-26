@@ -1,6 +1,11 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      new URL("https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/**"),
+    ],
+  },
   outputFileTracingIncludes: {
     "/": [".vercel-blog-docs/**/*"],
     "/blogs/[slug]": [".vercel-blog-docs/**/*"],
@@ -8,12 +13,6 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: __dirname,
-  },
-}
-
-module.exports = {
-  images: {
-    remotePatterns: [new URL('https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/**')],
   },
 }
 
