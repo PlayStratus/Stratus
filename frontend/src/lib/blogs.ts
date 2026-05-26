@@ -96,7 +96,9 @@ async function getMarkdownFiles(dir: string): Promise<string[]> {
   let entries
 
   try {
-    entries = await readdir(dir, { withFileTypes: true })
+    entries = await readdir(/* turbopackIgnore: true */ dir, {
+      withFileTypes: true,
+    })
   } catch (error) {
     if (
       error &&
@@ -246,7 +248,10 @@ async function loadBlogPosts() {
   const maybePosts = await Promise.all(
     markdownFiles.map(async (filePath) => {
       try {
-        const fileContents = await readFile(filePath, "utf8")
+        const fileContents = await readFile(
+          /* turbopackIgnore: true */ filePath,
+          "utf8",
+        )
         return toBlogPost(filePath, fileContents)
       } catch (error) {
         console.error(`Skipping blog post "${filePath}".`, error)
