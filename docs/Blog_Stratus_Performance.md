@@ -1,7 +1,7 @@
 ---
 title: Stratus Stream Performance
 author: Amin Hussien
-image: https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/images/MinecraftGlasstoGlass.webp
+image: /images/MinecraftGlasstoGlass.webp
 tags: [Performance]
 ---
 
