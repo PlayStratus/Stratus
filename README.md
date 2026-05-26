@@ -13,10 +13,11 @@
 
 Stratus is a game streaming service that enables users to play games directly
 from their web browser. It starts stream sessions in under 2 seconds and
-achieves input-to-frame latencies of as little as 60ms while streaming 1080p
-game video at 60fps. Stratus is unique among cloud gaming solutions for its use
-of Linux-based streaming servers, the WebTransport protocol for streaming to web
-browsers, and a custom Wayland proxy for capturing game video.
+achieves round-trip "click-to-photon" latencies of as little as 40ms while
+streaming 1080p game video at 60fps. Stratus is unique among cloud gaming
+solutions for its use of Linux-based streaming servers, the WebTransport
+protocol for streaming to web browsers, and a custom Wayland proxy for capturing
+game video.
 
 For more information, visit [playstratus.io](https://www.playstratus.io).
 
