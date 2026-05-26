@@ -3,6 +3,7 @@ title: Overall Architecture
 author: Asher Morgan
 image: ./images/architecture-overview.png
 tags: [Video, Audio, Games, Streaming Server, Web Client]
+pinned: true
 ---
 
 This post documents the architecture of Stratus, an open-source game streaming
@@ -155,7 +156,7 @@ aspects of Stratus, and to check out the Stratus source code on
 
 
 [blogs]:                /#Blogs
-[blogs-audio]:          ./blogs/Audio_Capture_Pipeline.md
+[blogs-audio]:          ./blogs/Audio_Pipeline.md
 [blogs-capture]:        ./wayland-proxy.md
 [blogs-games]:          ./game-packaging.md
 [blogs-os]:             ./stratus-os.md

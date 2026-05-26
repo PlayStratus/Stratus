@@ -1,13 +1,13 @@
 ---
-title: Audio Pipeline
+title: Audio Streaming Pipeline
 author: Nathen dela Torre
 image: ./images/audio/thumbnail.jpg
-tags: [Streaming Node, Audio, WebTransport]
+tags: [Audio, Streaming Server, Web Client]
 ---
 
-# Audio Pipeline
+# Audio Streaming Pipeline
 
-![Audio Pipeline Diagram](./images/audio/pipeline.jpeg)
+![Audio Streaming Pipeline Diagram](./images/audio/pipeline.jpeg)
 
 ## Overview
 

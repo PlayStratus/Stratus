@@ -3,6 +3,7 @@ title: Stratus Stream Performance
 author: Amin Hussien
 image: /images/MinecraftGlasstoGlass.webp
 tags: [Performance]
+pinned: true
 ---
 
 It only takes a second for a player to complain that a game stream is lagging. Yet quantifying this lag is more nuanced than you might think. For the purpose of this post, we will identify 3 types of latency. Time to First Image is the time it takes between pressing play and the game appearing on your screen. Glass to Glass Latency is the time it takes for a video frame on the server to reach the client. And lastly, Click to Photon latency is the time it takes for the stream to react to player input. 
