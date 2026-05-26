@@ -6,6 +6,17 @@ import { closeWriterSafely, releaseWriterLock } from "../utils/writer"
 const DEFAULT_GAMEPAD_BUTTON_COUNT = 17
 const DEFAULT_GAMEPAD_AXIS_COUNT = 4
 
+function getPrimaryGamepad() {
+  if (typeof navigator.getGamepads !== "function") {
+    return null
+  }
+
+  return (
+    Array.from(navigator.getGamepads()).find((gamepad) => gamepad?.connected) ??
+    null
+  )
+}
+
 export function useInputStream() {
   const { addLogEvent } = useLogs()
 
@@ -76,20 +87,63 @@ export function useInputStream() {
   )
 
   useEffect(() => {
+    const handleGamepadConnected = (event: GamepadEvent) => {
+      addLogEvent(
+        "INPUT",
+        `Gamepad connected: ${event.gamepad.id} (index ${event.gamepad.index})`,
+      )
+    }
+
+    const handleGamepadDisconnected = (event: GamepadEvent) => {
+      addLogEvent(
+        "INPUT",
+        `Gamepad disconnected: ${event.gamepad.id} (index ${event.gamepad.index})`,
+      )
+    }
+
+    globalThis.addEventListener("gamepadconnected", handleGamepadConnected)
+    globalThis.addEventListener(
+      "gamepaddisconnected",
+      handleGamepadDisconnected,
+    )
+
+    return () => {
+      globalThis.removeEventListener("gamepadconnected", handleGamepadConnected)
+      globalThis.removeEventListener(
+        "gamepaddisconnected",
+        handleGamepadDisconnected,
+      )
+    }
+  }, [addLogEvent])
+
+  useEffect(() => {
     if (!isInputReady) return
 
     let rafId = 0
     let disposed = false
     const encoder = new TextEncoder()
     let lastSentPayload = ""
+    let lastGamepadIndex: number | null = null
 
     const loop = async () => {
       if (disposed) return
       const writer = writerRef.current
 
       if (writer) {
-        const gamepads = navigator.getGamepads()
-        const gp = gamepads[0]
+        const gp = getPrimaryGamepad()
+
+        if (gp?.index !== lastGamepadIndex) {
+          lastGamepadIndex = gp?.index ?? null
+
+          addLogEvent(
+            "INPUT",
+            gp
+              ? `Polling gamepad: ${gp.id} (index ${gp.index})`
+              : "No connected gamepad detected.",
+            "info",
+          )
+        }
+
         const buttons = gp
           ? gp.buttons.map((button) => button.value)
           : ([] as number[])
