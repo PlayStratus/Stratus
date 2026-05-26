@@ -178,15 +178,13 @@ or resources to perform a thorough comparison with alternative video capture
 solutions, we believe that our unique Wayland proxy architecture achieves
 latencies that are close to the limit of what is possible for Wayland video
 capture. While there remains low hanging fruit for improving latency in Stratus'
-encoding and transport stages (see our [future work][blogs-future] post), this
-is not the case with the capture stage. The video capture system provides a
-solid low-latency foundation that the rest of the Stratus video pipeline builds
-on top of. For a detailed analysis of Stratus' overall performance, including a
-comparison with other game streaming services, see [this
-post][blogs-performance].
+encoding and transport stages, this is not the case with the capture stage. The
+video capture system provides a solid low-latency foundation that the rest of
+the Stratus video pipeline builds on top of. For a detailed analysis of Stratus'
+overall performance, including a comparison with other game streaming services,
+see [this post][blogs-performance].
 
 [blogs-performance]:    ./Blog_Stratus_Performance.md
-[blogs-future]:         /blogs/todo
 
 
 ## Limitations

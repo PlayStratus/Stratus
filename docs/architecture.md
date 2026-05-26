@@ -146,8 +146,7 @@ the kernel's evdev interface.
 ## Conclusion
 
 Stratus' architecture has proven to be efficient yet reliable. There are many
-improvements that could be made if we had more time (some of which are described
-in our [future work][blogs-future] blog post), but we are proud to have created
+improvements that could be made if we had more time, but we are proud to have created
 such a performant game streaming service in the short nine months of our senior
 capstone. If you're interested in learning more about Stratus, we encourage you
 to read our other [blog posts][blogs], which go into more detail on different
@@ -158,7 +157,6 @@ aspects of Stratus, and to check out the Stratus source code on
 [blogs]:                /#Blogs
 [blogs-audio]:          ./blogs/Audio_Capture_Pipeline.md
 [blogs-capture]:        ./wayland-proxy.md
-[blogs-future]:         /blogs/todo
 [blogs-games]:          ./game-packaging.md
 [blogs-os]:             ./stratus-os.md
 [blogs-performance]:    ./blog-stratus-performance.md
