@@ -13,9 +13,9 @@ type Props = {
   params: Promise<{ id: string }>
 }
 
-export function generateStaticParams() {
-  return isStaticExport ? [{ id: "__static-export-placeholder__" }] : []
-}
+export const generateStaticParams = isStaticExport
+  ? () => [{ id: "__static-export-placeholder__" }]
+  : undefined
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (isStaticExport) {
