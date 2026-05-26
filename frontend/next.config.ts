@@ -1,11 +1,24 @@
 import type { NextConfig } from "next"
 
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
-      new URL("https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/**"),
+      new URL(
+        "https://us-west-stratus-game-image.s3.us-west-2.amazonaws.com/**",
+      ),
     ],
   },
+  ...(isStaticExport
+    ? {
+        output: "export" as const,
+        trailingSlash: true,
+        images: {
+          unoptimized: true,
+        },
+      }
+    : {}),
   outputFileTracingIncludes: {
     "/": [".vercel-blog-docs/**/*"],
     "/blogs/[slug]": [".vercel-blog-docs/**/*"],

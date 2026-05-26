@@ -14,8 +14,7 @@ import Team from "@/components/landingPage/Team"
 import Faq from "@/components/landingPage/Faq"
 
 import { getAllBlogSummaries } from "@/lib/blogs"
-
-export const dynamic = "force-dynamic"
+import { isStaticExport } from "@/lib/static-export"
 
 export default async function Home() {
   const posts = await getAllBlogSummaries()
@@ -52,17 +51,37 @@ export default async function Home() {
           </p>
 
           <div className='flex flex-col items-start gap-3'>
-            <Link
-              href='/signin'
-              className={buttonVariants({
-                size: "lg",
-                className:
-                  "text-xl px-32 py-6 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-1 hover:shadow-primary/40 flex-col",
-              })}
-            >
-              Play now!
-              <span className='-mt-3 text-xs text-muted/70'>(closed beta)</span>
-            </Link>
+            {isStaticExport ? (
+              <button
+                type='button'
+                disabled
+                aria-disabled='true'
+                className={buttonVariants({
+                  size: "lg",
+                  className:
+                    "text-xl px-32 py-6 shadow-lg shadow-primary/10 opacity-60 cursor-not-allowed flex-col",
+                })}
+              >
+                Play now!
+                <span className='-mt-3 text-xs text-muted/70'>
+                  (closed beta)
+                </span>
+              </button>
+            ) : (
+              <Link
+                href='/signin'
+                className={buttonVariants({
+                  size: "lg",
+                  className:
+                    "text-xl px-32 py-6 shadow-lg shadow-primary/25 transition-transform hover:-translate-y-1 hover:shadow-primary/40 flex-col",
+                })}
+              >
+                Play now!
+                <span className='-mt-3 text-xs text-muted/70'>
+                  (closed beta)
+                </span>
+              </Link>
+            )}
 
             <Link
               href='/direct-connect'
@@ -147,13 +166,13 @@ export default async function Home() {
         id='Blogs'
         className='bg-muted/30 py-20 w-full border-y border-border/50'
       >
-        <div className='container mx-auto px-4 max-w-6xl'>
+        <div className='container mx-auto px-4 max-w-6xl scroll-mt-20'>
           <h2 className='text-3xl md:text-4xl font-bold mb-6 text-center'>
             Blogs
           </h2>
 
           <p className='text-lg text-muted-foreground mb-12 text-center max-w-3xl mx-auto'>
-            Learn more about Stratus’s architecture, implementation, and
+            Learn more about Stratus&apos;s architecture, implementation, and
             performance on our blog:
           </p>
 

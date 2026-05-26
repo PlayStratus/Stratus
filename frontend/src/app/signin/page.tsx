@@ -2,6 +2,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google"
 import type { Metadata } from "next"
 
 import Nav from "@/components/Nav"
+import { isStaticExport } from "@/lib/static-export"
 
 import SignInPageClient from "./SignInPageClient"
 
@@ -14,13 +15,16 @@ type Props = {
 }
 
 async function SignInPageContent({ searchParams }: Props) {
-  const params = await searchParams
-  const error = params.error ? decodeURIComponent(params.error) : null
+  const { error } = await searchParams
 
-  return <SignInPageClient error={error} />
+  return <SignInPageClient error={error ?? null} />
 }
 
 export default function SignInPage({ searchParams }: Props) {
+  if (isStaticExport) {
+    return null
+  }
+
   return (
     <GoogleOAuthProvider clientId={process.env.GOOGLE_CLIENT_ID || ""}>
       <div className='flex min-h-0 flex-1 flex-col'>

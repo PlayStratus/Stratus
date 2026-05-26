@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { DOCS_ROOT } from "@/lib/blog-docs"
+import { getAllBlogAssetParams } from "@/lib/blogs"
 
 type Props = {
   params: Promise<{ path: string[] }>
@@ -19,7 +20,11 @@ const MIME_TYPES: Record<string, string> = {
   ".webp": "image/webp",
 }
 
-export const dynamic = "force-dynamic"
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  return getAllBlogAssetParams()
+}
 
 function getContentType(filePath: string) {
   return (

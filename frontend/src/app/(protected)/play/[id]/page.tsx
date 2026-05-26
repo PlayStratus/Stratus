@@ -5,6 +5,7 @@ import Link from "next/link"
 import { buttonVariants } from "@/components/ui/button"
 
 import { getGameById } from "@/lib/actions/games"
+import { isStaticExport } from "@/lib/static-export"
 import { cn } from "@/lib/utils"
 
 import Client from "./Client"
@@ -13,7 +14,17 @@ type Props = {
   params: Promise<{ id: string }>
 }
 
+export function generateStaticParams() {
+  return isStaticExport ? [{ id: "__static-export-placeholder__" }] : []
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (isStaticExport) {
+    return {
+      title: "Play",
+    }
+  }
+
   const { id } = await params
   const game = await getGameById(id)
 
@@ -23,6 +34,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PlayPage({ params }: Readonly<Props>) {
+  if (isStaticExport) {
+    return null
+  }
+
   const { id } = await params
 
   const game = await getGameById(id)
