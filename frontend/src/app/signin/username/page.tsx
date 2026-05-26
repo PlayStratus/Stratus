@@ -8,8 +8,17 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/auth/AuthProvider"
 import NavClient from "@/components/Nav/NavClient"
+import { isStaticExport } from "@/lib/static-export"
 
 export default function SetUsernamePage() {
+  if (isStaticExport) {
+    return null
+  }
+
+  return <SetUsernameContent />
+}
+
+function SetUsernameContent() {
   const router = useRouter()
   const { createUsername, status } = useAuth()
   const [error, setError] = useState<string | null>(null)

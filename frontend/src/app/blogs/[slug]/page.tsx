@@ -11,6 +11,7 @@ import { ExpandableImage } from "@/components/ui/expandable-image"
 
 import {
   buildBlogAssetUrl,
+  getAllBlogSlugs,
   getBlogPostBySlug,
   resolveDocLinkHref,
   resolveDocAssetPath,
@@ -39,7 +40,12 @@ function hasMarkdownImage(children: ReactNode) {
   })
 }
 
-export const dynamic = "force-dynamic"
+export const dynamicParams = false
+
+export async function generateStaticParams() {
+  const slugs = await getAllBlogSlugs()
+  return slugs.map((slug) => ({ slug }))
+}
 
 export default async function BlogPostPage({ params }: Readonly<Props>) {
   const { slug } = await params

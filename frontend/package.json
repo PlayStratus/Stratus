@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "NEXT_PUBLIC_STATIC_EXPORT=true next build && node scripts/prune-static-export.mjs",
     "start": "next start"
   },
   "dependencies": {

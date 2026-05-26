@@ -5,7 +5,7 @@ import { Analytics } from "@vercel/analytics/next"
 
 import { AuthProvider } from "@/components/auth/AuthProvider"
 import ConditionalFooter from "@/components/Footer/ConditionalFooter"
-
+import { isStaticExport } from "@/lib/static-export"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -39,19 +39,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const content = (
+    <>
+      <div className='flex min-h-0 flex-1 flex-col'>{children}</div>
+      <Suspense fallback={null}>
+        <ConditionalFooter />
+      </Suspense>
+    </>
+  )
+
   return (
     <html lang='en' className='dark'>
       <body
         className={`${geistSans.variable} ${inclusiveSans.variable} antialiased min-h-screen flex flex-col`}
       >
-        <AuthProvider>
-          <div className='flex min-h-0 flex-1 flex-col'>{children}</div>
-          <Suspense fallback={null}>
-            <ConditionalFooter />
-          </Suspense>
-        </AuthProvider>
+        {isStaticExport ? (
+          content
+        ) : (
+          <AuthProvider>
+            {content}
 
-        <Analytics />
+            <Analytics />
+          </AuthProvider>
+        )}
       </body>
     </html>
   )

@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 
+import NavClient from "@/components/Nav/NavClient"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { dumpLogs, LogsProvider, useLogs } from "@/lib/transport/hooks/logs"
 import { useTransport } from "@/lib/transport/hooks/transport"
 import { useStreamRouter } from "@/lib/transport/hooks/streamRouter"
@@ -16,12 +22,22 @@ import InputButtons from "./InputButtons"
 
 import { StatusType } from "@/lib/transport/types"
 
+const DEFAULT_URL = "localhost:4433"
+
 type MVPPageProps = {
   url: string
   tlsCert: string
 }
 
-function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
+type MVPPageComponentProps = MVPPageProps & {
+  onConnectionError: (errorMessage: string) => void
+}
+
+function MVPPage({
+  url,
+  tlsCert,
+  onConnectionError,
+}: Readonly<MVPPageComponentProps>) {
   const [status, setStatus] = useState<StatusType>("LOADING")
   const [averageRenderTimeMs, setAverageRenderTimeMs] = useState(0)
   const [averageAudioRenderTimeMs, setAverageAudioRenderTimeMs] = useState(0)
@@ -42,6 +58,7 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     }
 
     hasRedirectedRef.current = true
+    onConnectionError(errorMessage)
 
     const params = new URLSearchParams({
       url,
@@ -88,6 +105,9 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
     handleAudioStreams,
     handleInputStream,
     handleVideoStreams,
+    onConnectionError,
+    tlsCert,
+    url,
   ])
 
   useEffect(() => {
@@ -119,10 +139,142 @@ function MVPPage({ url, tlsCert }: Readonly<MVPPageProps>) {
   )
 }
 
-export default function ClientPage({ url, tlsCert }: Readonly<MVPPageProps>) {
+function DirectConnectForm() {
+  const [url, setUrl] = useState(DEFAULT_URL)
+  const [tlsCert, setTlsCert] = useState("")
+  const [error, setError] = useState("")
+  const [connection, setConnection] = useState<MVPPageProps | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const nextUrl = params.get("url")?.trim() || DEFAULT_URL
+    const nextTlsCert = params.get("tls_cert")?.trim() || ""
+    const nextError = params.get("error")?.trim() || ""
+
+    setUrl(nextUrl)
+    setTlsCert(nextTlsCert)
+    setError(nextError)
+
+    if (nextUrl && nextTlsCert && !nextError) {
+      setConnection({ url: nextUrl, tlsCert: nextTlsCert })
+    }
+  }, [])
+
+  if (connection) {
+    return (
+      <MVPPage
+        url={connection.url}
+        tlsCert={connection.tlsCert}
+        onConnectionError={(errorMessage) => {
+          setError(errorMessage)
+          setConnection(null)
+        }}
+      />
+    )
+  }
+
+  return (
+    <>
+      <NavClient games={[]} hideSearchBar />
+
+      <main className='flex flex-1 items-center bg-background px-4 py-12 md:py-16'>
+        <section className='container mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-[minmax(0,0.9fr)_minmax(360px,520px)]'>
+          <div className='max-w-2xl space-y-5'>
+            <p className='text-sm font-semibold uppercase tracking-widest text-muted-foreground'>
+              Direct Connect
+            </p>
+
+            <h1 className='text-4xl font-bold tracking-tight text-foreground md:text-5xl'>
+              Connect to a Stratus streaming server
+            </h1>
+
+            <p className='text-lg leading-8 text-muted-foreground'>
+              Use a host address and TLS fingerprint to manually connect to a
+              session on a streaming server. You can run the Stratus streaming
+              server locally by cloning the{" "}
+              <a
+                href='https://github.com/PlayStratus/Stratus'
+                target='_blank'
+                rel='noreferrer'
+                className='font-medium text-primary underline underline-offset-4'
+              >
+                GitHub repository
+              </a>{" "}
+              and following the instructions in{" "}
+              <a
+                href='https://github.com/PlayStratus/Stratus/blob/main/stratusd/README.md#development-setup'
+                target='_blank'
+                rel='noreferrer'
+                className='font-medium text-primary underline underline-offset-4'
+              >
+                stratusd/README.md
+              </a>
+              .
+            </p>
+          </div>
+
+          <Card className='border-border/80 bg-card/80 shadow-xl shadow-black/20 backdrop-blur'>
+            <CardHeader className='space-y-2'>
+              <CardTitle className='text-2xl font-semibold tracking-tight'>
+                Connection Details
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              <form action='/direct-connect' method='GET' className='space-y-6'>
+                {error ? (
+                  <Alert variant='destructive'>
+                    <AlertTitle>Connection error</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className='space-y-2'>
+                  <Label htmlFor='url'>URL</Label>
+                  <Input
+                    id='url'
+                    name='url'
+                    type='text'
+                    value={url}
+                    onChange={(event) => setUrl(event.target.value)}
+                    required
+                    spellCheck={false}
+                    autoCapitalize='none'
+                    autoCorrect='off'
+                    placeholder='localhost:4433'
+                  />
+                </div>
+
+                <div className='space-y-2'>
+                  <Label htmlFor='tls-cert'>TLS Fingerprint</Label>
+                  <textarea
+                    id='tls-cert'
+                    name='tls_cert'
+                    value={tlsCert}
+                    onChange={(event) => setTlsCert(event.target.value)}
+                    required
+                    spellCheck={false}
+                    className='min-h-40 w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30'
+                    placeholder='"Generated TLS certificate: ..."'
+                  />
+                </div>
+
+                <Button type='submit' size='lg' className='w-full'>
+                  Open Client
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </>
+  )
+}
+
+export default function ClientPage() {
   return (
     <LogsProvider>
-      <MVPPage url={url} tlsCert={tlsCert} />
+      <DirectConnectForm />
     </LogsProvider>
   )
 }
