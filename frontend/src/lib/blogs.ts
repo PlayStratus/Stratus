@@ -9,6 +9,7 @@ export type BlogFrontmatter = {
   image: string
   author: string
   tags: string[]
+  pinned?: boolean
 }
 
 export type BlogSummary = {
@@ -18,6 +19,7 @@ export type BlogSummary = {
   tags: string[]
   imageUrl: string
   searchText: string
+  pinned: boolean
 }
 
 export type BlogPost = BlogSummary & {
@@ -89,6 +91,7 @@ function validateFrontmatter(data: unknown, filePath: string): BlogFrontmatter {
     author: source.author.trim(),
     image: source.image.trim(),
     tags,
+    pinned: source.pinned === true,
   }
 }
 
@@ -229,6 +232,7 @@ function toBlogPost(filePath: string, rawFile: string): BlogPost {
     author: frontmatter.author,
     tags: frontmatter.tags,
     imageUrl: buildBlogAssetUrl(resolvedImagePath),
+    pinned: frontmatter.pinned ?? false,
     searchText: normalizeSearchText(
       [
         frontmatter.title,
@@ -270,7 +274,13 @@ async function loadBlogPosts() {
     slugs.add(post.slug)
   }
 
-  return posts.sort((left, right) => left.title.localeCompare(right.title))
+  return posts.sort((left, right) => {
+    if (left.pinned !== right.pinned) {
+      return left.pinned ? -1 : 1
+    }
+
+    return left.title.localeCompare(right.title)
+  })
 }
 
 export async function getAllBlogSummaries(): Promise<BlogSummary[]> {
