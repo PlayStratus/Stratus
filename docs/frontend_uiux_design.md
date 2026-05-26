@@ -2,7 +2,7 @@
 title: Frontend UI/UX Design
 author: Carol Rang
 image: ./images/homepage_banner.png
-tags: [Frontend, Design, UI/UX]
+tags: [Web Client, Design, UI/UX]
 ---
 
 # Frontend UI/UX Design

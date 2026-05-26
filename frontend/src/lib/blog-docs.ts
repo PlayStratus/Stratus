@@ -16,6 +16,6 @@ function getBlogDocsRoot() {
 }
 
 export const DOCS_ROOT = path.resolve(
-  process.cwd(),
+  /* turbopackIgnore: true */ process.cwd(),
   getBlogDocsRoot(),
 )

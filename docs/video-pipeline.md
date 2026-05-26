@@ -2,7 +2,7 @@
 title: Video Streaming Pipeline
 author: Izzy Lerman & Nathen dela Torre
 image: ./images/architecture-video-pipeline.png
-tags: [Video, Streaming Server]
+tags: [Video, Streaming Server, Web Client]
 ---
 
 ## Overview

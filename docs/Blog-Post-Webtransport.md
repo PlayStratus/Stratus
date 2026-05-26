@@ -2,7 +2,7 @@
 title: WebTransport Blog
 author: John Polasek
 image: ./images/WebTransport_Architecture.png
-tags: [WebTransport, Architecture]
+tags: [WebTransport, Streaming Server, Web Client]
 ---
 **WebTransport**
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { Geist, Inclusive_Sans } from "next/font/google"
+import { Analytics } from "@vercel/analytics/next"
 
 import { AuthProvider } from "@/components/auth/AuthProvider"
 import ConditionalFooter from "@/components/Footer/ConditionalFooter"
@@ -17,19 +18,20 @@ const inclusiveSans = Inclusive_Sans({
   subsets: ["latin"],
 })
 
-const DESCRIPTION = "Stratus is a low-latency game streaming service that enables users to play games directly from their web browser.";
+const DESCRIPTION =
+  "Stratus is a low-latency game streaming service that enables users to play games directly from their web browser."
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.playstratus.io'),
+  metadataBase: new URL("https://www.playstratus.io"),
   title: "Stratus",
   description: DESCRIPTION,
   openGraph: {
-    type: 'website',
-    url: '/',
-    title: 'Stratus',
+    type: "website",
+    url: "/",
+    title: "Stratus",
     description: DESCRIPTION,
-    images: '/opengraph.png',
-  }
+    images: "/opengraph.png",
+  },
 }
 
 export default function RootLayout({
@@ -48,6 +50,8 @@ export default function RootLayout({
             <ConditionalFooter />
           </Suspense>
         </AuthProvider>
+
+        <Analytics />
       </body>
     </html>
   )

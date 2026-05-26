@@ -55,7 +55,7 @@ export async function GET(_request: Request, { params }: Props) {
   }
 
   try {
-    const fileContents = await readFile(filePath)
+    const fileContents = await readFile(/* turbopackIgnore: true */ filePath)
 
     return new Response(fileContents, {
       headers: {
