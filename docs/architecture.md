@@ -161,5 +161,5 @@ aspects of Stratus, and to check out the Stratus source code on
 [blogs-os]:             ./stratus-os.md
 [blogs-performance]:    ./blog-stratus-performance.md
 [blogs-transport]:      ./Blog-Post-Webtransport.md
-[blogs-video]:          /blogs/todo
+[blogs-video]:          ./video-pipeline.md
 [github]:               https://github.com/PlayStratus/Stratus
