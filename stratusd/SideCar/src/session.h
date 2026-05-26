@@ -26,6 +26,8 @@ enum threads {
 struct session {
     char id[UUID_LEN];
 
+    time_t start;
+
     struct session_args args; // Arguments passed to every module
 
     char game_id[UUID_LEN];
