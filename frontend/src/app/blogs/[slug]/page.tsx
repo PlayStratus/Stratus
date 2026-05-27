@@ -182,6 +182,8 @@ export default async function BlogPostPage({ params }: Readonly<Props>) {
                     alt={alt ?? "Blog image"}
                     width={1200}
                     height={800}
+                    sizes='(min-width: 1024px) 960px, calc(100vw - 2rem)'
+                    unoptimized
                     showCaption={true}
                   />
                 )

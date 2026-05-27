@@ -53,6 +53,7 @@ export default function FeaturedGames() {
                 <Image
                   src={game.image}
                   alt={game.title}
+                  sizes='(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw'
                   className='w-full h-full object-cover transition-transform duration-500 group-hover:scale-105'
                 />
               </div>

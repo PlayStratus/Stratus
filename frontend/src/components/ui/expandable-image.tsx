@@ -14,6 +14,9 @@ interface ExpandableImageProps {
   height: number
   className?: string
   imageClassName?: string
+  sizes?: string
+  modalSizes?: string
+  unoptimized?: boolean
   showCaption?: boolean, // whether to show alt caption when not expanded
 }
 
@@ -24,6 +27,9 @@ export function ExpandableImage({
   height,
   className,
   imageClassName,
+  sizes,
+  modalSizes = "100vw",
+  unoptimized,
   showCaption,
 }: Readonly<ExpandableImageProps>) {
   const [isOpen, setIsOpen] = useState(false)
@@ -78,6 +84,8 @@ export function ExpandableImage({
           alt={alt}
           width={width}
           height={height}
+          sizes={sizes}
+          unoptimized={unoptimized}
           className={cn(
             "w-full h-auto object-contain transition-transform group-hover:scale-[1.02]",
             imageClassName,
@@ -118,6 +126,8 @@ export function ExpandableImage({
                   src={src}
                   alt={alt}
                   fill
+                  sizes={modalSizes}
+                  unoptimized={unoptimized}
                   className='object-contain animate-in zoom-in-95 fade-in duration-200'
                 />
               </div>

@@ -41,6 +41,7 @@ export default async function Home() {
               src={wordmarkLogo}
               alt='Stratus'
               priority
+              unoptimized
               className='h-auto w-full drop-shadow-md'
               sizes='(min-width: 768px) 720px, 92vw'
             />
