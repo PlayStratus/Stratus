@@ -29,16 +29,18 @@ static bool input_debug = false;
  * Contains data associated with an instance of the Input module
  */
 struct input_session {
+    char msg_buffer[INPUT_PKT_LENGTH];
+    ssize_t msg_buffer_len; // Current number of buffer bytes used
     struct gamepad *gamepad;
     struct rbuf *input_queue;
 };
 
 /*
- * Parse an input message and update the state of the virtual gamepad device
+ * Parse an input event and update the state of the virtual gamepad device
  *
  * Returns 0 on success and -1 on failure.
  */
-int input_recv(struct input_session *session, const char *event) {
+static int input_recv_event(struct input_session *session, const char *event) {
     int ret, idx;
     struct gamepad_state state = {0};
 
@@ -46,7 +48,7 @@ int input_recv(struct input_session *session, const char *event) {
     if (idx != 0) {
         // TODO: add support for multiple gamepads
         printf("[Input] Skipping event for unknown gamepad #%d\n", idx);
-        return -1;
+        return 0;
     }
 
     for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
@@ -64,6 +66,49 @@ int input_recv(struct input_session *session, const char *event) {
     }
 
     return gamepad_update(session->gamepad, &state);
+}
+
+/*
+ * Handle a raw input message containing (buffers events if necessary)
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+static int input_recv_raw(struct input_session *session,
+                          struct input_queue_msg *msg) {
+
+    if (msg->length != INPUT_PKT_LENGTH)
+        printf("[Input] Received %zd byte input packet\n", msg->length);
+
+    while (true) {
+        // Note that Input owns the msg->data and msg->length fields, so we
+        // inc/decrement them directly to keep track of what has been parsed.
+
+        if (session->msg_buffer_len == 0 && msg->length >= INPUT_PKT_LENGTH) {
+            // Parse event directly from message, no buffering required
+            if (input_recv_event(session, msg->data) < 0)
+                return -1;
+            msg->data += INPUT_PKT_LENGTH;
+            msg->length -= INPUT_PKT_LENGTH;
+        }
+
+        // Copy next message chunk to buffer
+        while (session->msg_buffer_len < INPUT_PKT_LENGTH && msg->length > 0) {
+            session->msg_buffer[session->msg_buffer_len++] = msg->data[0];
+            msg->data++;
+            msg->length--;
+        }
+
+        if (session->msg_buffer_len == INPUT_PKT_LENGTH) {
+            printf("[INPUT] Handled buffered input event\n");
+            // Parse event from full buffer
+            if (input_recv_event(session, session->msg_buffer) < 0)
+                return -1;
+            session->msg_buffer_len = 0;
+        }
+
+        if (msg->length == 0)
+            return 0;
+    }
 }
 
 /*
@@ -90,6 +135,7 @@ int input_main(struct session_args *args) {
         perror("[Input] malloc");
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+    session->msg_buffer_len = 0;
     session->input_queue = args->input_queue;
 
     pthread_cleanup_push((void (*)(void*))input_destroy, session);
@@ -105,8 +151,10 @@ int input_main(struct session_args *args) {
 
     while (args->is_active) {
         struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
-        assert(msg->length == INPUT_PKT_LENGTH); // TODO: buffer event messages
-        input_recv(session, msg->data);
+        if (input_recv_raw(session, msg) < 0) {
+            ret = -1;
+            goto end;
+        }
         rbuf_pop(session->input_queue);
     }
 
