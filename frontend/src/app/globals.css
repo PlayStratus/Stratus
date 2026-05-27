@@ -120,3 +120,29 @@
     font-family: var(--font-inclusive-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+@layer components {
+  [data-controller-current="true"] {
+    @apply outline-none ring-[3px] ring-ring/70 ring-offset-2 ring-offset-background;
+  }
+
+  [data-controller-current="true"][data-controller-surface="hover-card"] {
+    @apply ring-0 ring-offset-0;
+  }
+
+  [data-controller-current="true"][data-controller-surface="hover-card"]
+    > [data-slot="card"] {
+    @apply -translate-y-1.5 shadow-xl shadow-blue-400/30;
+  }
+
+  [data-controller-current="true"][data-controller-surface="hover-card"]
+    [data-slot="card"]
+    img {
+    @apply scale-105;
+  }
+
+  [data-controller-current="true"][data-controller-surface="hover-card"]
+    [data-slot="card-title"] {
+    @apply text-primary;
+  }
+}
