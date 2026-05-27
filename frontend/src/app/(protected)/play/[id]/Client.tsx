@@ -35,6 +35,8 @@ function Client({ game }: Readonly<Props>) {
   const [tlsFingerprint, setTlsFingerprint] = useState<string | null>(null)
   const [status, setStatus] = useState<StatusType>("NOT_STARTED")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isCursorHidden, setIsCursorHidden] = useState(false)
 
   const { logs } = useLogs()
   const { handleConnecting, handleDisconnect } =
@@ -43,16 +45,80 @@ function Client({ game }: Readonly<Props>) {
   useEffect(() => {
     const onChange = () => {
       if (document.fullscreenElement === wrapperRef.current) {
+        setIsFullscreen(true)
         return
       }
 
+      setIsFullscreen(false)
       handleDisconnect()
       setStatus("NOT_STARTED")
     }
 
     document.addEventListener("fullscreenchange", onChange)
     return () => document.removeEventListener("fullscreenchange", onChange)
-  }, [])
+  }, [handleDisconnect])
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setIsCursorHidden(false)
+      return
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && document.fullscreenElement) {
+        void exitFullscreen()
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [isFullscreen])
+
+  useEffect(() => {
+    const container = wrapperRef.current
+    if (!container || !isFullscreen) {
+      setIsCursorHidden(false)
+      return
+    }
+
+    let timeout: number | undefined
+    let cursorHidden = false
+
+    const updateCursorHidden = (hidden: boolean) => {
+      cursorHidden = hidden
+      setIsCursorHidden(hidden)
+    }
+
+    const queueCursorHide = () => {
+      window.clearTimeout(timeout)
+      timeout = window.setTimeout(() => updateCursorHidden(true), 1800)
+    }
+
+    const revealCursor = () => {
+      if (cursorHidden) {
+        updateCursorHidden(false)
+      }
+      queueCursorHide()
+    }
+
+    revealCursor()
+
+    container.addEventListener("mousemove", revealCursor)
+    container.addEventListener("mousedown", revealCursor)
+    container.addEventListener("touchstart", revealCursor)
+    container.addEventListener("touchmove", revealCursor)
+    document.addEventListener("keydown", revealCursor)
+
+    return () => {
+      window.clearTimeout(timeout)
+      container.removeEventListener("mousemove", revealCursor)
+      container.removeEventListener("mousedown", revealCursor)
+      container.removeEventListener("touchstart", revealCursor)
+      container.removeEventListener("touchmove", revealCursor)
+      document.removeEventListener("keydown", revealCursor)
+      setIsCursorHidden(false)
+    }
+  }, [isFullscreen])
 
   useEffect(() => {
     if (status !== "LOADING") {
@@ -206,7 +272,11 @@ function Client({ game }: Readonly<Props>) {
   const hasSessionDetails = Boolean(webtransportIP && tlsFingerprint)
 
   return (
-    <div className='flex flex-1 bg-background' ref={wrapperRef}>
+    <div
+      className='play-fullscreen-surface flex flex-1 bg-background'
+      data-cursor-hidden={isFullscreen && isCursorHidden ? "true" : undefined}
+      ref={wrapperRef}
+    >
       {status === "LOADING" && !hasSessionDetails ? <LoadingScreen /> : null}
 
       {status === "STREAMING" || (status === "LOADING" && hasSessionDetails) ? (

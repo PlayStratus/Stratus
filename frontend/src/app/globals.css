@@ -122,6 +122,28 @@
 }
 
 @layer components {
+  .play-fullscreen-surface:fullscreen {
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    cursor: default;
+  }
+
+  .play-fullscreen-surface:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    cursor: default;
+  }
+
+  .play-fullscreen-surface[data-cursor-hidden="true"]:fullscreen {
+    cursor: none;
+  }
+
+  .play-fullscreen-surface[data-cursor-hidden="true"]:-webkit-full-screen {
+    cursor: none;
+  }
+
   [data-controller-current="true"] {
     @apply outline-none ring-[3px] ring-ring/70 ring-offset-2 ring-offset-background;
   }
