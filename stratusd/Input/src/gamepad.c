@@ -15,6 +15,29 @@
 #include "gamepad.h"
 
 /*
+ * Names for gamepad buttons
+ */
+const char *gamepad_button_names[GAMEPAD_BUTTON_COUNT] = {
+    [GAMEPAD_A]              = "A",
+    [GAMEPAD_B]              = "B",
+    [GAMEPAD_X]              = "X",
+    [GAMEPAD_Y]              = "Y",
+    [GAMEPAD_LEFT_SHOULDER]  = "LB",
+    [GAMEPAD_RIGHT_SHOULDER] = "RB",
+    [GAMEPAD_LEFT_TRIGGER]   = "LT",
+    [GAMEPAD_RIGHT_TRIGGER]  = "RT",
+    [GAMEPAD_SELECT]         = "SELECT",
+    [GAMEPAD_START]          = "START",
+    [GAMEPAD_LEFT_THUMB]     = "LS",
+    [GAMEPAD_RIGHT_THUMB]    = "RS",
+    [GAMEPAD_UP]             = "UP",
+    [GAMEPAD_DOWN]           = "DOWN",
+    [GAMEPAD_LEFT]           = "LEFT",
+    [GAMEPAD_RIGHT]          = "RIGHT",
+    [GAMEPAD_MODE]           = "MODE",
+};
+
+/*
  * Linux input event codes for gamepad buttons
  */
 const unsigned int gamepad_button_codes[GAMEPAD_BUTTON_COUNT] = {
@@ -53,12 +76,12 @@ const unsigned int gamepad_axis_codes[GAMEPAD_AXIS_COUNT] = {
  * TODO: Update config to match the configuration of a typical physical gamepad.
  */
 const struct input_absinfo absinfo = {
-    0,      // value
-    -127,   // minimum
-    127,    // maximum
-    0,      // fuzz (controls filter)
-    0,      // flat (controls dead-zone)
-    1,      // resolution
+    0,                   // value
+    -GAMEPAD_AXIS_RANGE, // minimum
+    +GAMEPAD_AXIS_RANGE, // maximum
+    0,                   // fuzz (controls filter)
+    0,                   // flat (controls dead-zone)
+    1,                   // resolution
 };
 
 /*
@@ -116,6 +139,22 @@ err_event_code:
     free(gamepad);
 err_malloc:
     return NULL;
+}
+
+/*
+ * Print a gamepad state as a string
+ */
+void gamepad_print_state(struct gamepad_state *state) {
+    for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
+        if (state->buttons[i]) {
+            printf("%s, ", gamepad_button_names[i]);
+        }
+    }
+    printf("[");
+    for (int i = 0; i < GAMEPAD_AXIS_COUNT; i++) {
+        printf("%d, ", state->axes[i]);
+    }
+    printf("]");
 }
 
 /*

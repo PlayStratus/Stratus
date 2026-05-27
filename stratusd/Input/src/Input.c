@@ -1,13 +1,22 @@
-#include <cjson/cJSON.h>
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "Input.h"
 #include "gamepad.h"
 #include "input-queue.h"
+
+/*
+ * The offsets of each component of an input event packet
+ */
+enum input_packet {
+    INPUT_PKT_DEVICE  = 0,
+    INPUT_PKT_BUTTONS = INPUT_PKT_DEVICE  + sizeof(uint8_t),
+    INPUT_PKT_AXES    = INPUT_PKT_BUTTONS + sizeof(uint8_t) * GAMEPAD_BUTTON_COUNT,
+    INPUT_PKT_LENGTH  = INPUT_PKT_AXES    + sizeof(float) * GAMEPAD_AXIS_COUNT,
+};
 
 /*
  * Whether to log all incoming input messages
@@ -29,55 +38,32 @@ struct input_session {
  *
  * Returns 0 on success and -1 on failure.
  */
-int input_recv(struct input_session *session, const char *msg) {
-    int ret;
-    cJSON *json, *arr, *el;
+int input_recv(struct input_session *session, const char *event) {
+    int ret, idx;
     struct gamepad_state state = {0};
 
-    if (input_debug)
-        printf("[Input] received message: %s\n", msg);
-
-    json = cJSON_Parse(msg);
-    if (json == NULL) {
-        fprintf(stderr, "[Sidecar] cJSON_Parse: Error before \"%s\"\n",
-                cJSON_GetErrorPtr());
-        goto err;
+    idx = event[INPUT_PKT_DEVICE];
+    if (idx != 0) {
+        // TODO: add support for multiple gamepads
+        printf("[Input] Skipping event for unknown gamepad #%d\n", idx);
+        return -1;
     }
 
-    arr = cJSON_GetObjectItemCaseSensitive(json, "buttons");
-    if (!cJSON_IsArray(arr))
-        goto err;
-    if (cJSON_GetArraySize(arr) < GAMEPAD_BUTTON_COUNT)
-        goto err;
     for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
-        el = cJSON_GetArrayItem(arr, i);
-        if (!cJSON_IsNumber(el))
-            goto err;
-        state.buttons[i] = el->valuedouble >= 0.5;
+        state.buttons[i] = event[INPUT_PKT_BUTTONS + i];
     }
-
-    arr = cJSON_GetObjectItemCaseSensitive(json, "axes");
-    if (!cJSON_IsArray(arr))
-        goto err;
-    if (cJSON_GetArraySize(arr) < GAMEPAD_AXIS_COUNT)
-        goto err;
     for (int i = 0; i < GAMEPAD_AXIS_COUNT; i++) {
-        el = cJSON_GetArrayItem(arr, i);
-        if (!cJSON_IsNumber(el))
-            goto err;
-        state.axes[i] = el->valuedouble * 127; // TODO: tune min/max values?
+        state.axes[i] = ((float*)(event + INPUT_PKT_AXES))[i]
+            * GAMEPAD_AXIS_RANGE;
     }
 
-    ret = gamepad_update(session->gamepad, &state);
+    if (input_debug) {
+        printf("[Input] received message: ");
+        gamepad_print_state(&state);
+        printf("\n");
+    }
 
-    cJSON_Delete(json);
-
-    return ret;
-
-err:
-    cJSON_Delete(json);
-    fprintf(stderr, "[Input] Error: received invalid message\n");
-    return -1;
+    return gamepad_update(session->gamepad, &state);
 }
 
 /*
@@ -119,7 +105,8 @@ int input_main(struct session_args *args) {
 
     while (args->is_active) {
         struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
-        input_recv(session, msg->c_str);
+        assert(msg->length == INPUT_PKT_LENGTH); // TODO: buffer event messages
+        input_recv(session, msg->data);
         rbuf_pop(session->input_queue);
     }
 

@@ -15,8 +15,9 @@ void InputStreamVisitor::OnCanRead() {
     webtransport::Stream::ReadResult ret = stream->Read(buf);
 
     struct input_queue_msg *msg = new input_queue_msg();
-    msg->c_str = buf->c_str();
     msg->cpp_str = buf;
+    msg->data = buf->c_str();
+    msg->length = buf->length();
     rbuf_push(queue, (void*)msg);
 }
 
