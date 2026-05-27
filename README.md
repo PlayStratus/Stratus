@@ -101,15 +101,8 @@ architecture of Stratus.
     a stream session.
 
 
-## Project Authors
-
-Stratus was developed by a team of Oregon State University students as a
-capstone project.
-
-<!--
 ## Project Status
 
-Stratus was developed by a team of Oregon State University students as a
+Stratus was developed by a team of Oregon State University students as a senior
 capstone project. It was released in May 2026, and is no longer actively
 developed or hosted publicly.
--->

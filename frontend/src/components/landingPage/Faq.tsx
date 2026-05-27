@@ -29,7 +29,7 @@ const faqs = [
   {
     question: "Is Stratus available to the public?",
     answer:
-      "Stratus is currently only available to students at Oregon State University. We unfortunately have no plans to expand access due to hosting costs and complexities.",
+      "Stratus is no longer hosted publicly due to various costs and complexities. However, you can still run a Stratus server locally and connect via the Direct Connect page."
   },
 ]
 
