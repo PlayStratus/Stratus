@@ -20,6 +20,9 @@ const MIME_TYPES: Record<string, string> = {
   ".webp": "image/webp",
 }
 
+const LONG_LIVED_IMAGE_CACHE_CONTROL = "public, max-age=2678400, immutable"
+const DEFAULT_CACHE_CONTROL = "public, max-age=0, must-revalidate"
+
 export const dynamicParams = false
 
 export async function generateStaticParams() {
@@ -31,6 +34,13 @@ function getContentType(filePath: string) {
     MIME_TYPES[path.extname(filePath).toLowerCase()] ??
     "application/octet-stream"
   )
+}
+
+function getCacheControl(filePath: string) {
+  const contentType = getContentType(filePath)
+  return contentType.startsWith("image/")
+    ? LONG_LIVED_IMAGE_CACHE_CONTROL
+    : DEFAULT_CACHE_CONTROL
 }
 
 function resolveDocsFilePath(segments: string[]) {
@@ -64,7 +74,7 @@ export async function GET(_request: Request, { params }: Props) {
 
     return new Response(fileContents, {
       headers: {
-        "cache-control": "public, max-age=0, must-revalidate",
+        "cache-control": getCacheControl(filePath),
         "content-type": getContentType(filePath),
       },
     })

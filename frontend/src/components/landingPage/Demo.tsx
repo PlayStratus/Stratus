@@ -45,6 +45,7 @@ export default function Demo() {
                 alt={asset.alt}
                 width={1200}
                 height={800}
+                sizes='(min-width: 1280px) 1120px, (min-width: 768px) calc(100vw - 7rem), calc(100vw - 2rem)'
                 className='w-full aspect-video flex items-center justify-center rounded-lg overflow-hidden bg-black/5'
                 imageClassName='w-full h-full object-cover object-center'
               /> : <video

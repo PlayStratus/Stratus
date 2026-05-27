@@ -79,7 +79,12 @@ export default function NavClient({
       <div className='container flex h-16 items-center justify-between px-4 mx-auto gap-4'>
         <div className='flex items-center gap-6'>
           <Link href='/'>
-            <Image src={Logo} alt='Stratus' className='h-8 w-auto' />
+            <Image
+              src={Logo}
+              alt='Stratus'
+              unoptimized
+              className='h-8 w-auto'
+            />
           </Link>
 
           <div className='hidden items-center gap-6 md:flex'>

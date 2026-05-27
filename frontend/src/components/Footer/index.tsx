@@ -31,6 +31,7 @@ export default function Footer({ logoLoading = "lazy" }: Readonly<Props>) {
               src={wordmarkLogo}
               alt='Stratus'
               loading={logoLoading}
+              unoptimized
               className='h-10 w-auto brightness-0 invert drop-shadow-md transition-transform duration-300 group-hover:scale-105 md:h-14'
             />
           </Link>
