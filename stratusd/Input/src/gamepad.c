@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "gamepad.h"
 
@@ -131,6 +132,9 @@ struct gamepad *gamepad_init(char *name) {
     }
 
     libevdev_free(dev);
+
+    usleep(10000);  // Wait 10ms for gamepad device to be detected
+
     return gamepad;
 
 err_create:

@@ -9,6 +9,11 @@
 #include "input-queue.h"
 
 /*
+ * The maximum number of simultaneous virtual gamepads
+ */
+#define MAX_GAMEPADS 4
+
+/*
  * The offsets of each component of an input event packet
  */
 enum input_packet {
@@ -31,7 +36,7 @@ static bool input_debug = false;
 struct input_session {
     char msg_buffer[INPUT_PKT_LENGTH];
     ssize_t msg_buffer_len; // Current number of buffer bytes used
-    struct gamepad *gamepad;
+    struct gamepad *gamepads[MAX_GAMEPADS];
     struct rbuf *input_queue;
 };
 
@@ -45,10 +50,16 @@ static int input_recv_event(struct input_session *session, const char *event) {
     struct gamepad_state state = {0};
 
     idx = event[INPUT_PKT_DEVICE];
-    if (idx != 0) {
-        // TODO: add support for multiple gamepads
-        printf("[Input] Skipping event for unknown gamepad #%d\n", idx);
-        return 0;
+    if (idx < 0 || idx >= MAX_GAMEPADS) {
+        printf("[Input] Warning: Illegal gamepad index (%d)\n", idx);
+        return 0; // Drop event
+    }
+    if (session->gamepads[idx] == NULL) {
+        if (input_debug)
+            printf("[Input] Creating new gamepad (#%d)\n", idx);
+        session->gamepads[idx] = gamepad_init("stratus");
+        if (session->gamepads[idx] == NULL)
+            return -1;
     }
 
     for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
@@ -60,12 +71,12 @@ static int input_recv_event(struct input_session *session, const char *event) {
     }
 
     if (input_debug) {
-        printf("[Input] received message: ");
+        printf("[Input] received message for gamepad #%d: ", idx);
         gamepad_print_state(&state);
         printf("\n");
     }
 
-    return gamepad_update(session->gamepad, &state);
+    return gamepad_update(session->gamepads[idx], &state);
 }
 
 /*
@@ -115,7 +126,10 @@ static int input_recv_raw(struct input_session *session,
  * Destroy an input session and free its resources
  */
 static void input_destroy(struct input_session *session) {
-    gamepad_destroy(session->gamepad);
+    for (int i = 0; i < MAX_GAMEPADS; i++) {
+        if (session->gamepads[i] != NULL)
+            gamepad_destroy(session->gamepads[i]);
+    }
     free(session);
 }
 
@@ -140,14 +154,14 @@ int input_main(struct session_args *args) {
 
     pthread_cleanup_push((void (*)(void*))input_destroy, session);
 
-    session->gamepad = gamepad_init("stratus");
-    if (session->gamepad == NULL) {
+    // Initialize the first gamepad. Subsequent gamepads will be initialized on
+    // first use.
+    session->gamepads[0] = gamepad_init("stratus");
+    if (session->gamepads[0] == NULL) {
         free(session);
         ret = -1;
         goto end;
     }
-
-    usleep(10000);  // Wait 10ms for gamepad device to be detected
 
     while (args->is_active) {
         struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
