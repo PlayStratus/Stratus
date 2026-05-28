@@ -27,7 +27,7 @@ export default async function Browse() {
   return (
     <div data-controller-scope='browse'>
       <ControllerNavigationBoundary
-        backHref='/'
+        backHref={null}
         scopeSelector="[data-controller-scope='browse']"
       />
       <FeaturedGame game={featuredGame} />

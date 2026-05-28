@@ -3,7 +3,7 @@
 import { useControllerNavigation } from "@/lib/hooks/useControllerNavigation"
 
 type Props = {
-  backHref: string
+  backHref?: string | null
   enabled?: boolean
   scopeSelector?: string
 }

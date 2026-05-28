@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 
 type ControllerNavigationOptions = {
   enabled?: boolean
-  backHref: string
+  backHref?: string | null
   scopeSelector?: string
 }
 
@@ -291,7 +291,7 @@ export function useControllerNavigation({
       if (isAPressed && !previousARef.current && activeElement) {
         setControllerFocus(activeElement)
         activateElement(activeElement)
-      } else if (isBPressed && !previousBRef.current) {
+      } else if (isBPressed && !previousBRef.current && backHref) {
         router.push(backHref)
       } else if (direction && activeElement) {
         if (!focusedElement) {
