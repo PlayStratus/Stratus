@@ -4,10 +4,16 @@ import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 type Props = React.ComponentProps<"div"> & {
+  "data-controller-focus"?: string
   href?: string
 }
 
-export function HoverCard({ className, href, ...props }: Readonly<Props>) {
+export function HoverCard({
+  className,
+  href,
+  "data-controller-focus": controllerFocus,
+  ...props
+}: Readonly<Props>) {
   const card = (
     <Card
       className={cn(
@@ -20,7 +26,12 @@ export function HoverCard({ className, href, ...props }: Readonly<Props>) {
 
   if (href) {
     return (
-      <Link href={href} className='block h-full cursor-pointer'>
+      <Link
+        href={href}
+        className='block h-full cursor-pointer'
+        data-controller-surface='hover-card'
+        data-controller-focus={controllerFocus}
+      >
         {card}
       </Link>
     )

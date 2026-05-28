@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 
+import { ControllerNavigationBoundary } from "@/components/controller-navigation-boundary"
 import { CardContent, CardTitle, CardDescription } from "@/components/ui/card"
 import { HoverCard } from "@/components/ui/hover-card"
 
@@ -24,7 +25,11 @@ export default async function Browse() {
     : null
 
   return (
-    <>
+    <div data-controller-scope='browse'>
+      <ControllerNavigationBoundary
+        backHref={null}
+        scopeSelector="[data-controller-scope='browse']"
+      />
       <FeaturedGame game={featuredGame} />
 
       <main className='container mx-auto px-4 py-14 md:px-6 md:py-16'>
@@ -35,6 +40,7 @@ export default async function Browse() {
             <HoverCard
               href={"/browse/" + game.GameID}
               className='h-full cursor-pointer gap-0 overflow-hidden rounded-lg py-0'
+              data-controller-focus=''
               key={game.GameID}
             >
               <div className='relative aspect-video w-full overflow-hidden rounded-t-lg bg-muted'>
@@ -63,7 +69,7 @@ export default async function Browse() {
           ))}
         </section>
       </main>
-    </>
+    </div>
   )
 }
 
@@ -79,6 +85,7 @@ function FeaturedGame({ game }: Readonly<{ game: GameType | null }>) {
     <section className='px-4 pt-6 md:px-6 md:pt-8'>
       <Link
         href={`/browse/${game.GameID}`}
+        data-controller-focus=''
         className='group relative isolate block overflow-hidden rounded-4xl border border-white/10 bg-zinc-950 shadow-2xl shadow-black/15'
       >
         <img
