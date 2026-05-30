@@ -1,13 +1,27 @@
-#include <cjson/cJSON.h>
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #include "Input.h"
 #include "gamepad.h"
 #include "input-queue.h"
+
+/*
+ * The maximum number of simultaneous virtual gamepads
+ */
+#define MAX_GAMEPADS 4
+
+/*
+ * The offsets of each component of an input event packet
+ */
+enum input_packet {
+    INPUT_PKT_DEVICE  = 0,
+    INPUT_PKT_BUTTONS = INPUT_PKT_DEVICE  + sizeof(uint8_t),
+    INPUT_PKT_AXES    = INPUT_PKT_BUTTONS + sizeof(uint8_t) * GAMEPAD_BUTTON_COUNT,
+    INPUT_PKT_LENGTH  = INPUT_PKT_AXES    + sizeof(float) * GAMEPAD_AXIS_COUNT,
+};
 
 /*
  * Whether to log all incoming input messages
@@ -20,71 +34,102 @@ static bool input_debug = false;
  * Contains data associated with an instance of the Input module
  */
 struct input_session {
-    struct gamepad *gamepad;
+    char msg_buffer[INPUT_PKT_LENGTH];
+    ssize_t msg_buffer_len; // Current number of buffer bytes used
+    struct gamepad *gamepads[MAX_GAMEPADS];
     struct rbuf *input_queue;
 };
 
 /*
- * Parse an input message and update the state of the virtual gamepad device
+ * Parse an input event and update the state of the virtual gamepad device
  *
  * Returns 0 on success and -1 on failure.
  */
-int input_recv(struct input_session *session, const char *msg) {
-    int ret;
-    cJSON *json, *arr, *el;
+static int input_recv_event(struct input_session *session, const char *event) {
+    int ret, idx;
     struct gamepad_state state = {0};
 
-    if (input_debug)
-        printf("[Input] received message: %s\n", msg);
-
-    json = cJSON_Parse(msg);
-    if (json == NULL) {
-        fprintf(stderr, "[Sidecar] cJSON_Parse: Error before \"%s\"\n",
-                cJSON_GetErrorPtr());
-        goto err;
+    idx = event[INPUT_PKT_DEVICE];
+    if (idx < 0 || idx >= MAX_GAMEPADS) {
+        printf("[Input] Warning: Illegal gamepad index (%d)\n", idx);
+        return 0; // Drop event
+    }
+    if (session->gamepads[idx] == NULL) {
+        if (input_debug)
+            printf("[Input] Creating new gamepad (#%d)\n", idx);
+        session->gamepads[idx] = gamepad_init("stratus");
+        if (session->gamepads[idx] == NULL)
+            return -1;
     }
 
-    arr = cJSON_GetObjectItemCaseSensitive(json, "buttons");
-    if (!cJSON_IsArray(arr))
-        goto err;
-    if (cJSON_GetArraySize(arr) < GAMEPAD_BUTTON_COUNT)
-        goto err;
     for (int i = 0; i < GAMEPAD_BUTTON_COUNT; i++) {
-        el = cJSON_GetArrayItem(arr, i);
-        if (!cJSON_IsNumber(el))
-            goto err;
-        state.buttons[i] = el->valuedouble >= 0.5;
+        state.buttons[i] = event[INPUT_PKT_BUTTONS + i];
     }
-
-    arr = cJSON_GetObjectItemCaseSensitive(json, "axes");
-    if (!cJSON_IsArray(arr))
-        goto err;
-    if (cJSON_GetArraySize(arr) < GAMEPAD_AXIS_COUNT)
-        goto err;
     for (int i = 0; i < GAMEPAD_AXIS_COUNT; i++) {
-        el = cJSON_GetArrayItem(arr, i);
-        if (!cJSON_IsNumber(el))
-            goto err;
-        state.axes[i] = el->valuedouble * 127; // TODO: tune min/max values?
+        state.axes[i] = ((float*)(event + INPUT_PKT_AXES))[i]
+            * GAMEPAD_AXIS_RANGE;
     }
 
-    ret = gamepad_update(session->gamepad, &state);
+    if (input_debug) {
+        printf("[Input] received message for gamepad #%d: ", idx);
+        gamepad_print_state(&state);
+        printf("\n");
+    }
 
-    cJSON_Delete(json);
+    return gamepad_update(session->gamepads[idx], &state);
+}
 
-    return ret;
+/*
+ * Handle a raw input message containing (buffers events if necessary)
+ *
+ * Returns 0 on success and -1 on failure.
+ */
+static int input_recv_raw(struct input_session *session,
+                          struct input_queue_msg *msg) {
 
-err:
-    cJSON_Delete(json);
-    fprintf(stderr, "[Input] Error: received invalid message\n");
-    return -1;
+    if (msg->length != INPUT_PKT_LENGTH)
+        printf("[Input] Received %zd byte input packet\n", msg->length);
+
+    while (true) {
+        // Note that Input owns the msg->data and msg->length fields, so we
+        // inc/decrement them directly to keep track of what has been parsed.
+
+        if (session->msg_buffer_len == 0 && msg->length >= INPUT_PKT_LENGTH) {
+            // Parse event directly from message, no buffering required
+            if (input_recv_event(session, msg->data) < 0)
+                return -1;
+            msg->data += INPUT_PKT_LENGTH;
+            msg->length -= INPUT_PKT_LENGTH;
+        }
+
+        // Copy next message chunk to buffer
+        while (session->msg_buffer_len < INPUT_PKT_LENGTH && msg->length > 0) {
+            session->msg_buffer[session->msg_buffer_len++] = msg->data[0];
+            msg->data++;
+            msg->length--;
+        }
+
+        if (session->msg_buffer_len == INPUT_PKT_LENGTH) {
+            printf("[INPUT] Handled buffered input event\n");
+            // Parse event from full buffer
+            if (input_recv_event(session, session->msg_buffer) < 0)
+                return -1;
+            session->msg_buffer_len = 0;
+        }
+
+        if (msg->length == 0)
+            return 0;
+    }
 }
 
 /*
  * Destroy an input session and free its resources
  */
 static void input_destroy(struct input_session *session) {
-    gamepad_destroy(session->gamepad);
+    for (int i = 0; i < MAX_GAMEPADS; i++) {
+        if (session->gamepads[i] != NULL)
+            gamepad_destroy(session->gamepads[i]);
+    }
     free(session);
 }
 
@@ -104,22 +149,26 @@ int input_main(struct session_args *args) {
         perror("[Input] malloc");
         return -1; // No need to jump to end outside of pthread_cleanup_* macro
     }
+    session->msg_buffer_len = 0;
     session->input_queue = args->input_queue;
 
     pthread_cleanup_push((void (*)(void*))input_destroy, session);
 
-    session->gamepad = gamepad_init("stratus");
-    if (session->gamepad == NULL) {
+    // Initialize the first gamepad. Subsequent gamepads will be initialized on
+    // first use.
+    session->gamepads[0] = gamepad_init("stratus");
+    if (session->gamepads[0] == NULL) {
         free(session);
         ret = -1;
         goto end;
     }
 
-    usleep(10000);  // Wait 10ms for gamepad device to be detected
-
     while (args->is_active) {
         struct input_queue_msg *msg = rbuf_wait_peak_latest(session->input_queue);
-        input_recv(session, msg->c_str);
+        if (input_recv_raw(session, msg) < 0) {
+            ret = -1;
+            goto end;
+        }
         rbuf_pop(session->input_queue);
     }
 

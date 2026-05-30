@@ -6,11 +6,14 @@
  * modules for their input queue.
  */
 
+#include <unistd.h>
+
 /*
  * Contains data for a single input message
  */
 struct input_queue_msg {
-    const char *c_str;
+    const char *data;   // pointer owned by Input
+    ssize_t length;     // owned by Input
     void *cpp_str;
 };
 
