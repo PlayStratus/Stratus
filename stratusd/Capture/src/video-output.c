@@ -228,7 +228,13 @@ enum proxy_actions wl_surface_commit(struct proxy_message *msg) {
     session = msg->conn->session->proxy->userdata;
 
     if (buf != NULL) {
-        if (buf->width == session->width && buf->height == session->height) {
+        if (buf->width >= session->width  && buf->height >= session->height &&
+            buf->width < session->width+8 && buf->height < session->height+8) {
+            // We allow capture of frames up to 8px larger than desired to
+            // account for some games that render frames like this. It is still
+            // safe to pass these frames to Encode because we also pass accurate
+            // width, height, and (most importantly) stride metadata.
+
             assert(buf->shm_buf == NULL ^ buf->dma_buf == NULL);
 
             // Queue frame to be encoded
