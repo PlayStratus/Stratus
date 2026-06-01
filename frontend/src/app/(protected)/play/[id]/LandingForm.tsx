@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react"
 
+import { ControllerNavigationBoundary } from "@/components/controller-navigation-boundary"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -87,7 +88,15 @@ export default function LandingForm({
         : "Start Game"
 
   return (
-    <main className='container mx-auto flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-12'>
+    <main
+      className='container mx-auto flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-12'
+      data-controller-scope='play-landing'
+    >
+      <ControllerNavigationBoundary
+        backHref={`/browse/${game.id}`}
+        enabled={!isStarting}
+        scopeSelector="[data-controller-scope='play-landing']"
+      />
       <Link
         href={`/browse/${game.id}`}
         className={cn(
@@ -227,6 +236,7 @@ export default function LandingForm({
 
             <Button
               size='lg'
+              data-controller-focus=''
               className={cn(
                 "h-11 w-full text-base font-semibold sm:h-10",
                 hasUnsupportedRequirement

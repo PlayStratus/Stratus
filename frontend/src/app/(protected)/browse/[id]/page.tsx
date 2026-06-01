@@ -2,6 +2,7 @@ import { ArrowLeft, Play } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 
+import { ControllerNavigationBoundary } from "@/components/controller-navigation-boundary"
 import { buttonVariants } from "@/components/ui/button"
 import { GameGallery } from "@/components/game/game-gallery"
 
@@ -42,7 +43,14 @@ export default async function Service({ params }: Props) {
   const game = await getGameById(id)
   if (!game) {
     return (
-      <main className='container mx-auto flex flex-1 flex-col px-4 py-10 sm:px-6 lg:px-8'>
+      <main
+        className='container mx-auto flex flex-1 flex-col px-4 py-10 sm:px-6 lg:px-8'
+        data-controller-scope='game-detail'
+      >
+        <ControllerNavigationBoundary
+          backHref='/browse'
+          scopeSelector="[data-controller-scope='game-detail']"
+        />
         <Link
           href='/browse'
           className={cn(buttonVariants({ variant: "outline" }), "w-fit")}
@@ -66,7 +74,14 @@ export default async function Service({ params }: Props) {
   const description = game.lDescript || game.sDescript
 
   return (
-    <main className='container mx-auto flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-12'>
+    <main
+      className='container mx-auto flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-12'
+      data-controller-scope='game-detail'
+    >
+      <ControllerNavigationBoundary
+        backHref='/browse'
+        scopeSelector="[data-controller-scope='game-detail']"
+      />
       <Link
         href='/browse'
         className={cn(
@@ -113,6 +128,7 @@ export default async function Service({ params }: Props) {
 
           <Link
             href={"/play/" + game.GameID}
+            data-controller-focus=''
             className={cn(
               buttonVariants({ variant: "default", size: "lg" }),
               "mt-7 h-12 w-full text-base font-semibold sm:h-11 sm:w-fit sm:px-8",
