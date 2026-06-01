@@ -45,6 +45,15 @@ architecture of Stratus.
 
 ## Deployment
 
+To deploy an entire fully-featured Stratus instance from scratch, follow the
+instructions below. Alternatively, it is possible to run just the Stratus
+streaming server and connect via our [Direct Connect][direct-connect] page
+without any additional setup (no Google OAuth, AWS DynamoDB, coordination
+server, etc) by following the instructions [here][stratusd-setup].
+
+[direct-connect]: https://www.playstratus.io/direct-connect
+[stratusd-setup]: https://github.com/PlayStratus/Stratus/blob/main/stratusd/README.md#development-setup
+
 1.  **Google OAuth:** Register a Google OAuth client and obtain the access
     credentials (client ID and secret).
 
