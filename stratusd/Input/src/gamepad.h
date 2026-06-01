@@ -42,6 +42,13 @@ enum gamepad_axes {
 };
 
 /*
+ * The value used for minimum and maximum gamepad axis values
+ *
+ * TODO: tune this parameter?
+ */
+#define GAMEPAD_AXIS_RANGE 127
+
+/*
  * The state of a gamepad's buttons and axes
  *
  * See the gamepad_buttons and gamepad_axes enumerations for the order of the
@@ -61,6 +68,8 @@ struct gamepad {
 };
 
 struct gamepad *gamepad_init(char *name);
+
+void gamepad_print_state(struct gamepad_state *state);
 
 int gamepad_update(struct gamepad *gamepad, struct gamepad_state *new_state);
 
