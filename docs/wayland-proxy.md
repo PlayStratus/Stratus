@@ -19,13 +19,17 @@ protocol that enables clients (i.e. applications) to send frames to a server
 (also called a *compositor*) to be displayed. The compositor's job is to combine
 (or *composit*) the output of each client into a single frame (along with
 wallpapers, toolbars, window borders, etc) and then render it on the user's
-screen. The client and compositor maintain a shared state consisting of a set of
-objects that are manipulated by requests (messages from the client to
-compositor) and/or events (messages from the compositor to client). The
-underlying format for these messages is relatively straight-forward and is
-described well in the official [Wayland Book][wayland-book-wire].
+screen. (Stratus uses a headless instance of the [Sway][sway] compositor, which
+is based on the popular [wlroots][wlroots] library.) The client and compositor
+maintain a shared state consisting of a set of objects that are manipulated by
+requests (messages from the client to compositor) and/or events (messages from
+the compositor to client). The underlying format for these messages is
+relatively straight-forward and is described well in the official [Wayland
+Book][wayland-book-wire].
 
 [wayland]: https://wayland.freedesktop.org
+[sway]: https://swaywm.org/
+[wlroots]: https://gitlab.freedesktop.org/wlroots/wlroots
 [wayland-book-wire]: https://wayland-book.com/protocol-design/wire-protocol.html
 
 
@@ -34,30 +38,28 @@ described well in the official [Wayland Book][wayland-book-wire].
 Having a low latency is the most important requirement of a video capture system
 for game streaming. We wanted to find a method for getting access to each frame
 as soon as it is rendered by the game, without any additional delays or
-overhead. In particular, since we only need to capture the output of individual
-Wayland clients, we wanted to be able to skip over the compositing step, which
-would only add latency to our system.
+overhead. Unfortunately, our needs were not easily satisfied by existing
+solutions.
 
-Unfortunately, this requirement was not easily satisfied by existing solutions.
-Two standard options for video capture on Wayland are the
-[`xdg-desktop-portal-wlr`][xdg-desktop-portal-wlr] portal and the
-[`wlr_export_dmabuf_unstable_v1`][wlr-export-dmabuf] Wayland protocol. However,
-both only support capturing the contents of entire composited screens. [^1] A
-third technique used by other game streaming services such as NVIDIA GeForce NOW
-is to create virtual monitors and write a driver to capture the frames rendered
-to them. But this suffers from the same fundamental limitation as the first two.
+A standard option for video capture on Wayland is the
+[`ext-image-copy-capture`][ext-image-copy-capture] protocol. However, when we
+started working on Stratus in late 2025, wlroots' implementation of this
+protocol only supported capturing the contents of entire composed screens, not
+individual windows. (This was finally resolved in March 2026 with the release of
+[wlroots 0.20.0][wlroots-0.20.0].) This would have made it more difficult to
+support multiple simultaneous streaming sessions on a single server (one of our
+initial goals for Stratus), and would have also introduced some additional
+compositing overhead. Another technique used by other game streaming services
+such as NVIDIA GeForce NOW is to create virtual monitors and write a driver to
+capture the frames rendered to them. This not only suffers from the same
+fundamental limitation as the first option, but it also adds additional latency
+due to frames being rendered to the display at a fixed refresh rate rather than
+immediately after they are made available by the game.
 
-[^1]: At least on wlroots-based compositors in late 2025. Support for capturing
-    individual windows was finally added to `xdg-desktop-portal-wlr` in March
-    2026 with the release of [wlroots 0.20.0][wlroots-0.20.0]. See [this
-    issue][wlroots-capture-issue] for more details.
-
-[xdg-desktop-portal-wlr]: https://github.com/emersion/xdg-desktop-portal-wlr
-[wlr-export-dmabuf]: https://wayland.app/protocols/wlr-export-dmabuf-unstable-v1
+[ext-image-copy-capture]: https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/main/staging/ext-image-copy-capture/ext-image-copy-capture-v1.xml
 [wlroots-0.20.0]: https://gitlab.freedesktop.org/wlroots/wlroots/-/releases/0.20.0
-[wlroots-capture-issue]: https://github.com/emersion/xdg-desktop-portal-wlr/issues/107
 
-Another option that we began investigating was to build our own Wayland
+A third option that we began investigating was to build our own Wayland
 compositor that could capture video frames as they were sent by clients. This
 would give us access to frames from individual windows before they were
 composited like we wanted, and could theoretically give us the earliest possible
@@ -66,13 +68,8 @@ found that this would have required much more development work than we had the
 capacity for, most of which wasn't even directly related to video capture. So
 instead, we settled on a different, even more novel option: capture frames via a
 custom Wayland proxy. The proxy would sit in between clients and the real
-Wayland compositor[^2] and forward messages between them while listening for
+Wayland compositor and forward messages between them while listening for
 messages related to new frames.
-
-[^2]: The compositor used on the Stratus streaming servers is a headless
-    instance of [Sway][sway].
-
-[sway]: https://swaywm.org/
 
 ## The Proxy
 
@@ -166,18 +163,18 @@ allows clients to destroy objects "out of order" (for example, destroying a
 must track object dependencies to ensure that an object's resources are only
 freed after they are no longer required by any other object.
 
-![Using the Wayland proxy to intercept SHM frames. Capturing from DMA
-buffers works very similarly.](./images/wayland-proxy-shm-buffers.png)
+![Using the Wayland proxy to intercept frames from SHM buffers. Capturing from
+DMA buffers works very similarly.](./images/wayland-proxy-shm-buffers.png)
 
 
 ## Results
 
 The final capture system flawlessly intercepts frames for Stratus games with a
-per-frame overhead of under 10 microseconds. Although we have not had the time
-or resources to perform a thorough comparison with alternative video capture
+per-frame overhead of around 10 microseconds. Although we have not had the
+chance to perform a thorough comparison with alternative video capture
 solutions, we believe that our unique Wayland proxy architecture achieves
-latencies that are close to the limit of what is possible for Wayland video
-capture. While there remains low hanging fruit for improving latency in Stratus'
+latencies that are close to the limit of what is possible for video capture on
+Wayland. While there remains low hanging fruit for improving latency in Stratus'
 encoding and transport stages, this is not the case with the capture stage. The
 video capture system provides a solid low-latency foundation that the rest of
 the Stratus video pipeline builds on top of. For a detailed analysis of Stratus'
