@@ -45,6 +45,15 @@ architecture of Stratus.
 
 ## Deployment
 
+To deploy an entire fully-featured Stratus instance from scratch, follow the
+instructions below. Alternatively, it is possible to run just the Stratus
+streaming server and connect via our [Direct Connect][direct-connect] page
+without any additional setup (no Google OAuth, AWS DynamoDB, coordination
+server, etc) by following the instructions [here][stratusd-setup].
+
+[direct-connect]: https://www.playstratus.io/direct-connect
+[stratusd-setup]: https://github.com/PlayStratus/Stratus/blob/main/stratusd/README.md#development-setup
+
 1.  **Google OAuth:** Register a Google OAuth client and obtain the access
     credentials (client ID and secret).
 
@@ -101,15 +110,8 @@ architecture of Stratus.
     a stream session.
 
 
-## Project Authors
-
-Stratus was developed by a team of Oregon State University students as a
-capstone project.
-
-<!--
 ## Project Status
 
-Stratus was developed by a team of Oregon State University students as a
+Stratus was developed by a team of Oregon State University students as a senior
 capstone project. It was released in May 2026, and is no longer actively
 developed or hosted publicly.
--->

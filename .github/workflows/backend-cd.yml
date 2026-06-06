@@ -15,27 +15,29 @@ jobs:
         working-directory: backend
 
     steps:
-      - name: SSH deploy
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: ${{ secrets.EC2_PORT || 22 }}
-          script: |
-            set -e
+      - run: exit 0 # no-op
 
-            # Adjust if your repo path is different
-            cd /home/deploy/Stratus
-
-            git fetch --all
-            git reset --hard origin/main
-
-            cd backend
-            npm ci
-            npm run build
-
-            pm2 restart stratus-api
-            pm2 save
-
-            pm2 status
+      # - name: SSH deploy
+      #   uses: appleboy/ssh-action@v1.2.0
+      #   with:
+      #     host: ${{ secrets.EC2_HOST }}
+      #     username: ${{ secrets.EC2_USER }}
+      #     key: ${{ secrets.EC2_SSH_KEY }}
+      #     port: ${{ secrets.EC2_PORT || 22 }}
+      #     script: |
+      #       set -e
+      #
+      #       # Adjust if your repo path is different
+      #       cd /home/deploy/Stratus
+      #
+      #       git fetch --all
+      #       git reset --hard origin/main
+      #
+      #       cd backend
+      #       npm ci
+      #       npm run build
+      #
+      #       pm2 restart stratus-api
+      #       pm2 save
+      #
+      #       pm2 status

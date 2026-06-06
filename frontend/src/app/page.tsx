@@ -65,7 +65,7 @@ export default async function Home() {
               >
                 Play now!
                 <span className='-mt-3 text-xs text-muted/70'>
-                  (closed beta)
+                  (unavailable)
                 </span>
               </button>
             ) : (
